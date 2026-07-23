@@ -14,7 +14,7 @@
 from __future__ import annotations
 import argparse, json
 from collections import OrderedDict, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -22,7 +22,8 @@ WEEK_ORDER = ["6/27-7/3", "7/4-10", "7/11-17", "7/18起"]
 
 # ---------- 聚合 ----------
 def _num(x):
-    try: return float(x)
+    # ⚠️ Metabase query/json 把大数返回成带千分位逗号的字符串("3,065"),必须先去逗号再转
+    try: return float(str(x).replace(",", "").strip())
     except (TypeError, ValueError): return 0.0
 
 def _nd(d):
@@ -51,7 +52,7 @@ def _agg(rows, val, by=None, how="sum", dc="date"):
     for r in rows:
         d = r.get(dc)
         if d is None: continue
-        s = str(r.get(by)) if by else "总计"
+        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "总计"
         a = acc[(s, _nd(d))]; a[0] += _num(r.get(val)); a[1] += 1
     out = defaultdict(list)
     for (s, d), (t, c) in acc.items():
@@ -64,7 +65,7 @@ def _rate(rows, num, den, by=None, dc="date"):
     for r in rows:
         d = r.get(dc)
         if d is None: continue
-        s = str(r.get(by)) if by else "总计"
+        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "总计"
         a = acc[(s, _nd(d))]; a[0] += _num(r.get(num)); a[1] += _num(r.get(den))
     out = defaultdict(list)
     for (s, d), (n, dd) in acc.items():
@@ -78,7 +79,7 @@ def _share(rows, col, value, by=None, dc="date"):
     for r in rows:
         d = r.get(dc)
         if d is None: continue
-        s = str(r.get(by)) if by else "总计"
+        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "总计"
         a = acc[(s, _nd(d))]; a[1] += 1
         if str(r.get(col)) == value: a[0] += 1
     out = defaultdict(list)
@@ -92,24 +93,37 @@ def _cap(ser, n=6):
     items = sorted(ser.items(), key=lambda kv: kv[1][-1][1] if kv[1] else 0, reverse=True)
     return OrderedDict(items[:n])
 
+def _ord(ser, order):
+    """按 order 固定序列顺序,其余接后面。"""
+    od = OrderedDict((k, ser[k]) for k in order if k in ser)
+    for k in ser:
+        if k not in od: od[k] = ser[k]
+    return od
+
+_ADG = lambda r: f"{r.get('source')}_{r.get('adgroup')}"   # source×adgroup 组合序列
+
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); rate_cols: cols+den; ret_multi: cards; funnel: 无参
 SECTIONS = [
  ("① 增长 · Growth", [
-   ("growth_dau", "日活跃用户数 DAU", "line", dict(val="value",
-       dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by adgroup","adgroup")])),
-   ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "line", dict(val="value",
-       dims=[("user_type","new/returning","user_type")])),
-   ("growth_new_user", "新用户数 · New Users", "line", dict(val="value",
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by adgroup","adgroup")])),
-   ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value",
+   ("growth_dau", "日活跃用户数 DAU", "line", dict(val="value", cap=12,
+       dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
+   ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "pct_split", dict(val="value", by="user_type", fmt="pct0",
+       note="新/老用户各占当天 DAU 的比例")),
+   ("growth_new_user", "新用户数 · New Users", "line", dict(val="value", cap=12,
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
+   ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value", cap=12,
        note="激活新用户 = 新用户中当天对话≥3轮的人(1问1答=1轮)",
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by adgroup","adgroup")])),
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
  ]),
  ("② 激活 · Activation", [
    ("activation_funnel", "激活漏斗 Activation Funnel · 4 版本周", "funnel",
        dict(note="activated=对话≥3轮 · deep=对话≥5轮(1问1答=1轮)")),
+   ("activation_funnel_by_adgroup", "激活漏斗 · 分 adgroup · by Ad Group", "funnel",
+       dict(note="按 source×广告类型分组对比,右上/toolbar 切组;近4版本周·取前8组")),
+   ("activation_guardrail_funnel", "护栏漏斗 · 分版本 · Guardrail by Version", "funnel",
+       dict(note="onboarding 漏斗按 app_version 对比(看新 chip 有没有增流失);近30天·选topic=主动选")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
    ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
@@ -119,22 +133,15 @@ SECTIONS = [
        dims=[("overall","Overall",None)])),
  ]),
  ("③ 留存 · Retention", [
-   ("__ret__", "留存率 · Retention D1/D3/D7", "ret_multi",
-       dict(note="注册后第 N 天回访开 App 的比例", cards=[
-       ("retention_d1","D1","d1_retained","new_users"),
-       ("retention_d3","D3","d3_retained","new_users"),
-       ("retention_d7","D7","d7_retained","new_users")])),
-   ("retention_by_path", "留存 by path · Retention", "rate_days",
-       dict(den="new_users", split="path", order=["text","voice","unknown"],
-            days=[("D1","d1_retained"),("D3","d3_retained"),("D7","d7_retained")])),
-   ("retention_by_activated", "留存 by activation · Retention", "rate_days",
-       dict(den="new_users", split="is_activated", order=["activated","not_activated"],
-            note="激活 = 注册当天对话≥3轮",
-            days=[("D1","d1_retained"),("D3","d3_retained"),("D7","d7_retained")])),
+   ("retention_d1", "留存 D1 · Retention D1", "retention_day",
+       dict(day="d1", note="注册后第1天回访开App的比例;可切 Overall/来源/adgroup/path/激活")),
+   ("retention_d3", "留存 D3 · Retention D3", "retention_day", dict(day="d3")),
+   ("retention_d7", "留存 D7 · Retention D7", "retention_day",
+       dict(day="d7", note="⚠️ 近7天 cohort 的 D7 未成熟(窗口未到),看趋势排除末尾几天")),
  ]),
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "四 Tab 渗透率 · Tab Penetration", "rate_cols",
-       dict(note="当天开 App 用户中访问过各 Tab 的比例",
+       dict(note="当天开 App 用户中访问过各 Tab 的比例", fmt="pct0",
             den="active_users", cols=[("Stars","stars_users"),("Chat","chat_users"),
             ("Discover","discover_users"),("Me","me_users")])),
    ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate_cols",
@@ -146,10 +153,12 @@ SECTIONS = [
  ]),
  ("⑤ Chat", [
    ("chat_msgs_per_user", "人均消息数 · Msgs per User (avg)", "line", dict(val="total_msgs", agg="avg",
+       note="统计期内每人总消息数(来回都算)取平均;分母=真聊过的用户,非DAU",
        dims=[("overall","Overall",None)])),
    ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
        note="1 问 1 答 = 1 轮", dims=[("overall","Overall",None)])),
    ("chat_session_duration", "对话时长 · Session Duration (avg min)", "line", dict(val="duration_min", agg="avg",
+       note="单场会话首末消息时长,取平均(含中途挂机)",
        dims=[("overall","Overall",None)])),
    ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
        note="有进无出:开了会话但没发消息的比例",
@@ -161,15 +170,15 @@ SECTIONS = [
    ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(val="char_len", agg="avg",
        dims=[("overall","Overall",None)])),
  ]),
- ("⑥ 星图 · StarMap", [
+ ("⑥ Star", [
    ("starmap_seed_funnel", "种子星漏斗 Seed-Star Funnel · 4 版本周", "funnel",
        dict(note="冷启动展示 → 点种子星 → 转成实心星")),
    ("starmap_new_user_stars", "新用户人均星数 · Stars per New User", "line", dict(val="star_count", agg="avg",
        dims=[("overall","Overall",None)])),
    ("starmap_cluster_maturity", "星主题分布 · Star Cluster", "line", dict(val="stars", where=("dim","cluster"),
-       dims=[("value","by cluster","value")])),
+       dims=[("value","by cluster","value")], note="每天新增星按主题:core/heart/voice/mind/bond")),
    ("starmap_cluster_maturity", "星成熟度分布 · Star Maturity", "line", dict(val="stars", where=("dim","maturity"),
-       dims=[("value","by maturity","value")])),
+       dims=[("value","by maturity","value")], note="每天新增星按成熟度:emerging→confirmed→faded 等")),
    ("starmap_card_interaction", "星卡互动 · Star-Card Actions", "line", dict(val="taps",
        dims=[("action","by action","action")])),
  ]),
@@ -222,9 +231,21 @@ def build_card(metrics, mid, title, kind, p):
         if kind == "funnel":
             rows = metrics.get(mid) or []
             if not rows or "step" not in rows[0]: return None
+            if "grp" in rows[0]:   # 分组对比漏斗(如 adgroup):每组一条,可切换;取 step1 最大的前 8 组
+                groups = {}
+                for r in rows:
+                    g = str(r["grp"]); st = r["step"]
+                    groups.setdefault(g, {}); groups[g][st] = groups[g].get(st, 0) + _num(r.get("users"))
+                steps = sorted({r["step"] for r in rows}); s1 = steps[0] if steps else None
+                order = sorted(groups, key=lambda g: groups[g].get(s1, 0), reverse=True)[:8]
+                base.update(steps=steps, weeks=order,
+                            matrix={st: {g: groups[g].get(st, 0) for g in order} for st in steps})
+                return base
             wcol = "wk_start" if "wk_start" in rows[0] else ("wk" if "wk" in rows[0] else None)
             if wcol:  # 长表(自动滚动近四周):step, wk_start, users
-                def _wl(iso): return f"{int(iso[5:7])}/{int(iso[8:10])}"  # 周六起始 → M/D
+                def _wl(iso):   # 周六起始 → "M/D–M/D"(整周区间,别被当成单日)
+                    d0 = datetime.strptime(iso, "%Y-%m-%d"); d1 = d0 + timedelta(days=6)
+                    return f"{d0.month}/{d0.day}–{d1.month}/{d1.day}"
                 wks = sorted({_nd(r[wcol]) for r in rows})[-4:]           # 最近 4 个版本周
                 wmap = {w: _wl(w) for w in wks}
                 matrix = {}
@@ -248,15 +269,37 @@ def build_card(metrics, mid, title, kind, p):
             base.update(kind="line", pct=True, fmt="pct",
                         dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
             return base
+        if kind == "retention_day":   # 单张 Dx:overall/source/adgroup(来自 retention_dX)+ path/activation(来自另两卡)
+            num = p["day"] + "_retained"; dims = []
+            main = metrics.get(mid)
+            if main:
+                dc = _dc(main)
+                dims.append({"key":"overall","label":"Overall","data":dict(_rate(main,num,"new_users",None,dc=dc))})
+                dims.append({"key":"source","label":"by source","data":dict(_cap(_rate(main,num,"new_users","source",dc=dc)))})
+                dims.append({"key":"adgroup","label":"by adgroup","data":dict(_cap(_rate(main,num,"new_users",_ADG,dc=dc),12))})
+            pr = metrics.get("retention_by_path")
+            if pr:
+                dims.append({"key":"path","label":"by path","data":_ord(dict(_rate(pr,num,"new_users","path",dc=_dc(pr))),["text","voice","unknown"])})
+            ar = metrics.get("retention_by_activated")
+            if ar:
+                dims.append({"key":"act","label":"by activation","data":_ord(dict(_rate(ar,num,"new_users","is_activated",dc=_dc(ar))),["activated","not_activated"])})
+            if not any(d["data"] for d in dims): return None
+            base.update(kind="line", pct=True, fmt="pct", dims=dims)
+            return base
         rows = metrics.get(mid)
         if not rows: return None
         if p.get("where"):
             wc, wv = p["where"]; rows = [r for r in rows if str(r.get(wc)) == wv]
             if not rows: return None
         dc = _dc(rows)
-        pct = p.get("pct", kind in ("rate", "rate_cols", "share", "rate_days"))
+        pct = p.get("pct", kind in ("rate", "rate_cols", "share", "rate_days", "pct_split"))
         dims = []
-        if kind == "rate_cols":
+        if kind == "pct_split":            # 每类别占当天总量的比例(如 DAU 新老占比)
+            tot = {d: v for d, v in _agg(rows, p["val"], None, "sum", dc=dc).get("总计", [])}
+            ser = _agg(rows, p["val"], p["by"], "sum", dc=dc)
+            data = {s: [[d, round(v / tot[d], 4) if tot.get(d) else 0] for d, v in pts] for s, pts in ser.items()}
+            dims = [{"key": "overall", "label": "", "data": data}]
+        elif kind == "rate_cols":
             data = {}
             den = p["den"]
             for lbl, nc in p["cols"]:
@@ -275,7 +318,7 @@ def build_card(metrics, mid, title, kind, p):
             for key, label, by in p["dims"]:
                 ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc) if kind == "rate" \
                       else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc)
-                ser = ser if (p.get("only") or p.get("order")) else _cap(ser)
+                ser = ser if (p.get("only") or p.get("order")) else _cap(ser, p.get("cap", 6))
                 dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
         dims = _finish(dims, p)
         base.update(kind="line", pct=pct, fmt=_fmt_of(kind, pct, p), dims=dims)
@@ -318,6 +361,19 @@ border-radius:999px;padding:3px 11px;cursor:pointer}
 .cw{position:relative;height:320px}
 .empty{color:var(--mut);font-size:12px;padding:26px 0;text-align:center}
 .cnote{color:var(--mut);font-size:11.5px;margin:1px 0 4px;line-height:1.4}
+.chead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.chead h3{margin:0 0 2px}
+.latest{font-size:12px;color:var(--acc);font-weight:600;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 5px}
+.chip{font-size:11px;color:var(--ts);background:transparent;border:1px solid var(--bd);border-radius:999px;padding:2px 9px;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.vlink{text-align:right;margin-top:4px;font-size:11.5px;color:var(--acc);cursor:pointer}
+.vlink:hover{text-decoration:underline}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;align-items:center;justify-content:center}
+.modalbox{background:var(--surface);border:1px solid var(--bd);border-radius:12px;width:min(1000px,92vw);max-height:88vh;overflow:auto;padding:18px 20px;position:relative}
+.mtitle{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--tp);padding-right:24px}
+.mbody{min-height:320px;height:64vh}
+.mclose{position:absolute;top:10px;right:14px;border:none;background:transparent;font-size:17px;cursor:pointer;color:var(--ts)}
 .frow{display:grid;grid-template-columns:132px 1fr 42px;align-items:center;gap:8px;margin:6px 0}
 .flab{font-size:11.5px;color:var(--ts);text-align:right;line-height:1.2}
 .fbarwrap{display:flex;justify-content:center}
@@ -364,6 +420,7 @@ APP_JS = r"""
 const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
 function fmtV(v,fmt){if(v==null)return'';
   if(fmt==='pct')return(v*100).toFixed(1)+'%';
+  if(fmt==='pct0')return(v*100).toFixed(0)+'%';
   if(fmt==='d1')return(+v).toFixed(1);
   return Math.round(v).toLocaleString();}
 const STEPMAP={'打开':'打开 Open','Welcome':'Welcome','进入onboarding':'进入 Onboarding',
@@ -379,6 +436,23 @@ function drawFunnel(el,card,wk){
       '<div class="fbarwrap"><div class="fbar" style="width:'+w.toFixed(1)+'%">'+v.toLocaleString()+'</div></div>'+
       '<span class="fpc">'+(i===0?'':conv.toFixed(0)+'%')+'</span>';
     el.appendChild(row);});}
+function latestOf(dd,fmt){const ds=allDates(dd);if(!ds.length)return'';const d=ds[ds.length-1];
+  let v;if(dd['总计']){const p=dd['总计'].find(x=>x[0]===d);v=p?p[1]:0;}
+  else{v=0;for(const k in dd){const p=dd[k].find(x=>x[0]===d);if(p)v+=p[1];}}
+  return fmtV(v,fmt);}   // 右上角只显示最新值,不带日期
+const modal=$('div','modal');
+modal.innerHTML='<div class="modalbox"><button class="mclose">✕</button><div class="mtitle"></div><div class="mbody"></div></div>';
+document.body.appendChild(modal);
+modal.addEventListener('click',e=>{if(e.target===modal||e.target.className==='mclose')modal.style.display='none';});
+let modalChart=null;
+function openLineDetail(card,data){modal.querySelector('.mtitle').textContent=card.title;
+  const mb=modal.querySelector('.mbody');mb.style.height='64vh';mb.innerHTML='';
+  const cv=document.createElement('canvas');mb.appendChild(cv);
+  if(modalChart)modalChart.destroy();modalChart=new Chart(cv,lineCfg(data,card.fmt));modalChart.$fmt=card.fmt;
+  modal.style.display='flex';}
+function openFunnelDetail(card,wk){modal.querySelector('.mtitle').textContent=card.title+(wk?'  ·  '+wk:'');
+  const mb=modal.querySelector('.mbody');mb.style.height='auto';mb.innerHTML='';
+  const box=$('div');mb.appendChild(box);drawFunnel(box,card,wk);modal.style.display='flex';}
 const valueLabels={id:'vlab',afterDatasetsDraw(chart){const ctx=chart.ctx,fmt=chart.$fmt||'int',bar=chart.config.type==='bar';
   const ic=ink();ctx.save();ctx.font='600 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';
   chart.data.datasets.forEach((ds,di)=>{const m=chart.getDatasetMeta(di);if(m.hidden)return;
@@ -403,7 +477,7 @@ function lineCfg(dimData,fmt){
     plugins:{legend:{display:names.length>1,position:'top',align:'start',
       labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',color:c.ts,font:{size:11}}},
       tooltip:{callbacks:{label:x=>x.dataset.label+': '+fmtV(x.parsed.y,fmt)}}},
-    scales:{x:{grid:{display:false},ticks:{color:c.mut,font:{size:10},maxRotation:0,autoSkipPadding:16,
+    scales:{x:{grid:{display:false},ticks:{color:c.mut,font:{size:9},maxRotation:55,autoSkip:true,autoSkipPadding:4,
         callback:function(v){return this.getLabelForValue(v).slice(5);}},border:{color:c.grid}},
       y:{grid:{color:c.grid},border:{display:false},ticks:{color:c.mut,font:{size:10},
         callback:v=>fmtV(v,fmt)}}}}};
@@ -428,26 +502,46 @@ function build(){
     const nb=$('button','nb',sec.title.replace(/^[①-⑳\s]+/,''));
     nb.onclick=()=>wrap.scrollIntoView({behavior:'smooth',block:'start'});nav.appendChild(nb);navbtns.push(nb);
     sec.cards.forEach(card=>{
-      const el=$('div','card');el.appendChild($('h3',null,card.title));if(card.note)el.appendChild($('div','cnote',card.note));
+      const el=$('div','card');
+      const hd=$('div','chead');hd.appendChild($('h3',null,card.title));
+      const lv=$('span','latest');hd.appendChild(lv);el.appendChild(hd);
+      if(card.note)el.appendChild($('div','cnote',card.note));
       if(card.error){el.appendChild($('div','empty','渲染失败: '+card.error));g.appendChild(el);return;}
-      const cw=$('div','cw');const cv=document.createElement('canvas');cw.appendChild(cv);
       if(card.kind==='funnel'){
-        const wks=card.weeks||[];const tb=$('div','toolbar');const body=$('div');
+        const wks=card.weeks||[];let curw=wks.length?wks[wks.length-1]:null;
+        const tb=$('div','toolbar');const body=$('div');
         wks.forEach((w,i)=>{const b=$('button','tbtn'+(i===wks.length-1?' on':''),w);
-          b.onclick=()=>{drawFunnel(body,card,w);tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
+          b.onclick=()=>{curw=w;drawFunnel(body,card,w);lv.textContent='最新 '+w;tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
           tb.appendChild(b);});
-        if(wks.length>1)el.appendChild(tb);el.appendChild(body);g.appendChild(el);
-        if(wks.length)drawFunnel(body,card,wks[wks.length-1]);return;}
-      const dims=card.dims||[];
+        if(wks.length>1)el.appendChild(tb);el.appendChild(body);
+        const vd=$('div','vlink','View details ↗');vd.onclick=()=>openFunnelDetail(card,curw);el.appendChild(vd);
+        g.appendChild(el);
+        if(curw){drawFunnel(body,card,curw);lv.textContent='最新 '+curw;}
+        return;}
+      const dims=card.dims||[];let cur=0,vis=new Set();
+      const cw=$('div','cw');const cv=document.createElement('canvas');cw.appendChild(cv);
+      const chipbar=$('div','chips');
       if(dims.length>1){const tb=$('div','toolbar');
         dims.forEach((dm,i)=>{const b=$('button','tbtn'+(i===0?' on':''),dm.label);
-          b.onclick=()=>{const ch=cw._chart;const cfg=lineCfg(dm.data,card.fmt);
-            ch.data=cfg.data;ch.options=cfg.options;ch.update();
-            tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
+          b.onclick=()=>{tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');applyDim(i);};
           tb.appendChild(b);});el.appendChild(tb);}
-      el.appendChild(cw);g.appendChild(el);
-      const d0=(dims[0]&&dims[0].data)||{};
-      const ch=new Chart(cv,lineCfg(d0,card.fmt));ch.$fmt=card.fmt;cw._chart=ch;charts.push(ch);
+      el.appendChild(chipbar);el.appendChild(cw);
+      const vd=$('div','vlink','View details ↗');vd.onclick=()=>openLineDetail(card,curData());el.appendChild(vd);
+      g.appendChild(el);
+      const ch=new Chart(cv,lineCfg({},card.fmt));ch.$fmt=card.fmt;cw._chart=ch;charts.push(ch);
+      function curData(){const dd=(dims[cur]||{data:{}}).data,o={};for(const k in dd)if(vis.has(k))o[k]=dd[k];return o;}
+      function redraw(){const fd=curData(),cfg=lineCfg(fd,card.fmt),c2=cw._chart;c2.data=cfg.data;c2.options=cfg.options;c2.update();lv.textContent=latestOf(fd,card.fmt);}
+      function chips(){chipbar.innerHTML='';const names=Object.keys((dims[cur]||{data:{}}).data);
+        if(names.length<=1){chipbar.style.display='none';return;}chipbar.style.display='flex';
+        const all=$('button','chip'+(vis.size===names.length?' on':''),'全部');
+        all.onclick=()=>{vis=new Set(names);chips();redraw();};chipbar.appendChild(all);
+        names.forEach(n=>{const b=$('button','chip'+(vis.has(n)?' on':''),n);
+          b.onclick=()=>{if(vis.size===names.length){vis=new Set([n]);}      // 全开时点一个=只看它(单选)
+            else if(vis.has(n)){vis.delete(n);if(!vis.size)vis=new Set(names);}// 关到空则复位
+            else{vis.add(n);}                                                 // 否则加选(多选)
+            chips();redraw();};chipbar.appendChild(b);});}
+      function applyDim(i){cur=i;vis=new Set(Object.keys((dims[i]||{data:{}}).data));chips();redraw();}
+      applyDim(0);
     });
   });
   nav.appendChild($('div','sp'));
