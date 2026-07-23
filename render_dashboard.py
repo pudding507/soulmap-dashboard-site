@@ -14,6 +14,7 @@
 from __future__ import annotations
 import argparse, json
 from collections import OrderedDict, defaultdict
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -24,29 +25,65 @@ def _num(x):
     try: return float(x)
     except (TypeError, ValueError): return 0.0
 
-def _agg(rows, val, by=None, how="sum"):
+def _nd(d):
+    """把各种日期格式统一成 ISO(YYYY-MM-DD),保证按时间正确排序 + 干净标签。
+    Metabase JSON 可能返回 'Jun 30, 2026' / '2026-06-30' / '2026-06-30T…' 等。"""
+    s = str(d).strip()
+    if len(s) >= 10 and s[4:5] == "-" and s[7:8] == "-":
+        return s[:10]
+    s2 = s.split("T")[0].strip()
+    for fmt in ("%b %d, %Y", "%B %d, %Y", "%m/%d/%Y", "%Y/%m/%d", "%d %b %Y"):
+        try: return datetime.strptime(s2, fmt).strftime("%Y-%m-%d")
+        except ValueError: pass
+    return s2
+
+def _dc(rows):
+    """识别日期列:优先 date,否则第一个以 date 开头的列(date_msg/date_session/date_turn/date_first_chat…)。"""
+    if not rows: return "date"
+    r0 = rows[0]
+    if "date" in r0: return "date"
+    for k in r0:
+        if str(k).startswith("date"): return k
+    return "date"
+
+def _agg(rows, val, by=None, how="sum", dc="date"):
     acc = defaultdict(lambda: [0.0, 0])
     for r in rows:
-        d = r.get("date")
+        d = r.get(dc)
         if d is None: continue
         s = str(r.get(by)) if by else "总计"
-        a = acc[(s, str(d)[:10])]; a[0] += _num(r.get(val)); a[1] += 1
+        a = acc[(s, _nd(d))]; a[0] += _num(r.get(val)); a[1] += 1
     out = defaultdict(list)
     for (s, d), (t, c) in acc.items():
         out[s].append((d, round(t / c, 3) if (how == "avg" and c) else round(t, 3)))
     for s in out: out[s].sort()
     return out
 
-def _rate(rows, num, den, by=None):
+def _rate(rows, num, den, by=None, dc="date"):
     acc = defaultdict(lambda: [0.0, 0.0])
     for r in rows:
-        d = r.get("date")
+        d = r.get(dc)
         if d is None: continue
         s = str(r.get(by)) if by else "总计"
-        a = acc[(s, str(d)[:10])]; a[0] += _num(r.get(num)); a[1] += _num(r.get(den))
+        a = acc[(s, _nd(d))]; a[0] += _num(r.get(num)); a[1] += _num(r.get(den))
     out = defaultdict(list)
     for (s, d), (n, dd) in acc.items():
         out[s].append((d, round(n / dd, 4) if dd else 0.0))
+    for s in out: out[s].sort()
+    return out
+
+def _share(rows, col, value, by=None, dc="date"):
+    """某列取某值的占比(如 modality='voice' 的比例),按 date(×by)。"""
+    acc = defaultdict(lambda: [0, 0])
+    for r in rows:
+        d = r.get(dc)
+        if d is None: continue
+        s = str(r.get(by)) if by else "总计"
+        a = acc[(s, _nd(d))]; a[1] += 1
+        if str(r.get(col)) == value: a[0] += 1
+    out = defaultdict(list)
+    for (s, d), (n, t) in acc.items():
+        out[s].append((d, round(n / t, 4) if t else 0.0))
     for s in out: out[s].sort()
     return out
 
@@ -73,9 +110,9 @@ SECTIONS = [
    ("activation_funnel", "激活漏斗 · 4 版本周", "funnel", {}),
    ("activation_onboarding_dropoff", "Onboarding 流失", "line", dict(val="value",
        dims=[("overall","总体",None),("last_scene","按断点","last_scene")])),
-   ("activation_user_first_latency", "用户首条消息时延(日均)", "line", dict(val="value", agg="avg",
+   ("activation_user_first_latency", "用户首条消息时延(日均秒)", "line", dict(val="avg_secs", agg="avg",
        dims=[("overall","总体",None)])),
-   ("activation_ai_first_latency", "AI 首条响应时延(日均)", "line", dict(val="value", agg="avg",
+   ("activation_ai_first_latency", "AI 首条响应时延(日均秒)", "line", dict(val="avg_secs", agg="avg",
        dims=[("overall","总体",None)])),
  ]),
  ("③ 留存", [
@@ -101,17 +138,17 @@ SECTIONS = [
  ("⑤ Chat", [
    ("chat_msgs_per_user", "人均消息数(日均)", "line", dict(val="total_msgs", agg="avg",
        dims=[("overall","总体",None)])),
-   ("chat_turns_distribution", "每场对话轮数(日均)", "line", dict(val="turns", agg="avg",
+   ("chat_turns_distribution", "每场对话轮数(日均)", "line", dict(val="turn_count", agg="avg",
        dims=[("overall","总体",None)])),
-   ("chat_session_duration", "对话时长(日均分钟)", "line", dict(val="dur_min", agg="avg",
+   ("chat_session_duration", "对话时长(日均分钟)", "line", dict(val="duration_min", agg="avg",
        dims=[("overall","总体",None)])),
    ("chat_silent_rate", "Silent 会话率", "rate", dict(rate=("silent_sessions","sessions"),
        dims=[("overall","总体",None),("path","按 path","path")])),
-   ("chat_voice_text_ratio", "语音消息占比", "rate", dict(rate=("voice_msgs","total_msgs"),
+   ("chat_voice_text_ratio", "语音消息占比", "share", dict(col="modality", value="voice",
        dims=[("overall","总体",None)])),
-   ("chat_ai_latency", "AI 响应时延(日均 ms)", "line", dict(val="duration_ms", agg="avg",
+   ("chat_ai_latency", "AI 响应时延(日均秒)", "line", dict(val="latency_sec", agg="avg",
        dims=[("overall","总体",None)])),
-   ("chat_msg_length", "用户消息长度(日均字符)", "line", dict(val="chars", agg="avg",
+   ("chat_msg_length", "用户消息长度(日均字符)", "line", dict(val="char_len", agg="avg",
        dims=[("overall","总体",None)])),
  ]),
  ("⑥ 星图", [
@@ -144,7 +181,7 @@ def build_card(metrics, mid, title, kind, p):
     try:
         if kind == "funnel":
             rows = metrics.get(mid) or []
-            if not rows: return None
+            if not rows or "step" not in rows[0]: return None   # 卡还是旧格式(非4版本周)→ 先跳过
             weeks = [w for w in WEEK_ORDER if w in rows[0]]
             base.update(steps=[r["step"] for r in rows], weeks=weeks,
                         matrix={r["step"]: {w: _num(r.get(w)) for w in weeks} for r in rows})
@@ -153,7 +190,7 @@ def build_card(metrics, mid, title, kind, p):
             data = {}
             for cmid, lbl, num, den in p["cards"]:
                 r = metrics.get(cmid)
-                if r: data[lbl] = _rate(r, num, den).get("总计", [])
+                if r: data[lbl] = _rate(r, num, den, dc=_dc(r)).get("总计", [])
             if not data: return None
             base.update(kind="line", pct=True, dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
             return base
@@ -162,18 +199,23 @@ def build_card(metrics, mid, title, kind, p):
         if p.get("where"):
             wc, wv = p["where"]; rows = [r for r in rows if str(r.get(wc)) == wv]
             if not rows: return None
-        pct = p.get("pct", kind in ("rate", "rate_cols"))
+        dc = _dc(rows)
+        pct = p.get("pct", kind in ("rate", "rate_cols", "share"))
         dims = []
         if kind == "rate_cols":
             data = {}
             den = p["den"]
             for lbl, nc in p["cols"]:
-                data[lbl] = _rate(rows, nc, den).get("总计", [])
+                data[lbl] = _rate(rows, nc, den, dc=dc).get("总计", [])
             dims = [{"key": "overall", "label": "", "data": data}]
+        elif kind == "share":
+            for key, label, by in p["dims"]:
+                ser = _cap(_share(rows, p["col"], p["value"], by, dc=dc))
+                dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
         else:
             for key, label, by in p["dims"]:
-                ser = _rate(rows, p["rate"][0], p["rate"][1], by) if kind == "rate" \
-                      else _agg(rows, p["val"], by, p.get("agg", "sum"))
+                ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc) if kind == "rate" \
+                      else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc)
                 ser = _cap(ser)
                 dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
         base.update(kind="line", pct=pct, dims=dims)

@@ -99,6 +99,8 @@ def main() -> int:
     ap.add_argument("--out", default=str(HERE / "raw_metrics.json"))
     ap.add_argument("--run-date", default=date.today().isoformat())
     ap.add_argument("--limit", type=int, default=0, help="只抓前 N 张卡(冒烟测试)")
+    ap.add_argument("--rounds", type=int, default=6, help="多轮重试,每轮把没抓到的再试一遍")
+    ap.add_argument("--gap", type=int, default=15, help="轮间隔秒数")
     args = ap.parse_args()
 
     tok = login()
@@ -107,17 +109,27 @@ def main() -> int:
         cards = cards[:args.limit]
         print(f"⚠️ --limit {args.limit}:只抓前 {len(cards)} 张")
 
-    metrics, failed = {}, []
-    for i, c in enumerate(cards, 1):
-        cid, cname = c["card_id"], c["card_name"]
-        mid = safe_metric_id(cname)
-        t0 = time.time()
-        rows = run_card_with_retry(tok, cid)
-        if rows is None:
-            failed.append(cname); continue
-        metrics[mid] = rows
-        keys = list(rows[0].keys()) if rows else []
-        print(f"  [{i}/{len(cards)}] {cname} -> {mid}  {len(rows)}行 {time.time()-t0:.1f}s  {keys}")
+    # 多轮制:每轮把还没抓到的卡再试一遍,轮间隔一会儿,去碰 RDS 空档(仿 kix"多试几次就成")
+    metrics = {}
+    todo = [(c["card_id"], c["card_name"], safe_metric_id(c["card_name"])) for c in cards]
+    for rd in range(1, args.rounds + 1):
+        print(f"\n===== 第 {rd}/{args.rounds} 轮 · 待抓 {len(todo)} 卡 =====")
+        still = []
+        for cid, cname, mid in todo:
+            t0 = time.time()
+            rows = run_card_with_retry(tok, cid, max_retries=0)   # 每轮 1 次,靠多轮磨
+            if rows is None:
+                still.append((cid, cname, mid))
+                print(f"  ✗ {cname}(留待下轮)")
+            else:
+                metrics[mid] = rows
+                print(f"  ✓ {cname} -> {mid}  {len(rows)}行 {time.time()-t0:.0f}s")
+        todo = still
+        if not todo:
+            print("全部抓到 ✅"); break
+        if rd < args.rounds:
+            print(f"  本轮还差 {len(todo)} 卡,歇 {args.gap}s 再来…"); time.sleep(args.gap)
+    failed = [cname for _, cname, _ in todo]
 
     out = {
         "_meta": {"run_date": args.run_date, "dashboard_id": args.dashboard_id,
@@ -127,7 +139,8 @@ def main() -> int:
     outp = Path(args.out)
     outp.write_text(json.dumps(out, ensure_ascii=False, default=str), encoding="utf-8")
     print(f"\n✅ 写出 {outp}  ({len(metrics)} 卡" + (f", {len(failed)} 失败: {failed}" if failed else "") + ")")
-    return 0 if not failed else 1
+    # 部分卡失败也算成功:有数据就渲染上线,别因为一两张 504 卡住整条流水线
+    return 0 if metrics else 1
 
 
 if __name__ == "__main__":
