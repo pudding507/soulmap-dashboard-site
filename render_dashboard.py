@@ -96,95 +96,148 @@ def _cap(ser, n=6):
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); rate_cols: cols+den; ret_multi: cards; funnel: 无参
 SECTIONS = [
- ("① 增长", [
-   ("growth_dau", "日活跃用户数 (DAU)", "line", dict(val="value",
-       dims=[("overall","总体",None),("user_type","按新老","user_type"),("source","按来源","source")])),
-   ("growth_dau_new_returning", "DAU 新老占比", "line", dict(val="value",
-       dims=[("user_type","新/老","user_type")])),
-   ("growth_new_user", "新用户数", "line", dict(val="value",
-       dims=[("overall","总体",None),("source","按来源","source")])),
-   ("growth_new_activated_user", "激活新用户数", "line", dict(val="value",
-       dims=[("overall","总体",None),("source","按来源","source")])),
+ ("① 增长 · Growth", [
+   ("growth_dau", "日活跃用户数 DAU", "line", dict(val="value",
+       dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by adgroup","adgroup")])),
+   ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "line", dict(val="value",
+       dims=[("user_type","new/returning","user_type")])),
+   ("growth_new_user", "新用户数 · New Users", "line", dict(val="value",
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by adgroup","adgroup")])),
+   ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value",
+       note="激活新用户 = 新用户中当天对话≥3轮的人(1问1答=1轮)",
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by adgroup","adgroup")])),
  ]),
- ("② 激活", [
-   ("activation_funnel", "激活漏斗 · 4 版本周", "funnel", {}),
-   ("activation_onboarding_dropoff", "Onboarding 流失", "line", dict(val="value",
-       dims=[("overall","总体",None),("last_scene","按断点","last_scene")])),
-   ("activation_user_first_latency", "用户首条消息时延(日均秒)", "line", dict(val="avg_secs", agg="avg",
-       dims=[("overall","总体",None)])),
-   ("activation_ai_first_latency", "AI 首条响应时延(日均秒)", "line", dict(val="avg_secs", agg="avg",
-       dims=[("overall","总体",None)])),
+ ("② 激活 · Activation", [
+   ("activation_funnel", "激活漏斗 Activation Funnel · 4 版本周", "funnel",
+       dict(note="activated=对话≥3轮 · deep=对话≥5轮(1问1答=1轮)")),
+   ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(val="value",
+       dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
+   ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
+       note="用户看到 AI 首句后多久发出第一条消息",
+       dims=[("overall","Overall",None)])),
+   ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
+       dims=[("overall","Overall",None)])),
  ]),
- ("③ 留存", [
-   ("__ret__", "留存率 D1/D3/D7", "ret_multi", dict(cards=[
+ ("③ 留存 · Retention", [
+   ("__ret__", "留存率 · Retention D1/D3/D7", "ret_multi",
+       dict(note="注册后第 N 天回访开 App 的比例", cards=[
        ("retention_d1","D1","d1_retained","new_users"),
        ("retention_d3","D3","d3_retained","new_users"),
        ("retention_d7","D7","d7_retained","new_users")])),
-   ("retention_by_path", "留存 · 按 path(D1)", "rate", dict(rate=("d1_retained","new_users"),
-       dims=[("path","按 path","path")])),
-   ("retention_by_activated", "留存 · 按激活(D1)", "rate", dict(rate=("d1_retained","new_users"),
-       dims=[("is_activated","按激活","is_activated")])),
+   ("retention_by_path", "留存 by path · Retention", "rate_days",
+       dict(den="new_users", split="path", order=["text","voice","unknown"],
+            days=[("D1","d1_retained"),("D3","d3_retained"),("D7","d7_retained")])),
+   ("retention_by_activated", "留存 by activation · Retention", "rate_days",
+       dict(den="new_users", split="is_activated", order=["activated","not_activated"],
+            note="激活 = 注册当天对话≥3轮",
+            days=[("D1","d1_retained"),("D3","d3_retained"),("D7","d7_retained")])),
  ]),
- ("④ 模块", [
-   ("module_tab_penetration", "四 Tab 渗透率", "rate_cols",
-       dict(den="active_users", cols=[("Stars","stars_users"),("Chat","chat_users"),
+ ("④ 模块 · Modules", [
+   ("module_tab_penetration", "四 Tab 渗透率 · Tab Penetration", "rate_cols",
+       dict(note="当天开 App 用户中访问过各 Tab 的比例",
+            den="active_users", cols=[("Stars","stars_users"),("Chat","chat_users"),
             ("Discover","discover_users"),("Me","me_users")])),
-   ("module_tab_opens_per_user", "人均 Tab 打开次数", "rate_cols",
+   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate_cols",
        dict(den="active_users", pct=False, cols=[("Stars","stars_opens"),("Chat","chat_opens"),
             ("Discover","discover_opens"),("Me","me_opens")])),
-   ("module_locked_tab_tap", "锁定 Tab 点击率", "rate", dict(rate=("users","active_users"),
-       dims=[("tab_name","按 tab","tab_name")])),
+   ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"),
+       note="点击未解锁 Tab 的人 ÷ 当天活跃",
+       dims=[("tab_name","by tab","tab_name")])),
  ]),
  ("⑤ Chat", [
-   ("chat_msgs_per_user", "人均消息数(日均)", "line", dict(val="total_msgs", agg="avg",
-       dims=[("overall","总体",None)])),
-   ("chat_turns_distribution", "每场对话轮数(日均)", "line", dict(val="turn_count", agg="avg",
-       dims=[("overall","总体",None)])),
-   ("chat_session_duration", "对话时长(日均分钟)", "line", dict(val="duration_min", agg="avg",
-       dims=[("overall","总体",None)])),
-   ("chat_silent_rate", "Silent 会话率", "rate", dict(rate=("silent_sessions","sessions"),
-       dims=[("overall","总体",None),("path","按 path","path")])),
-   ("chat_voice_text_ratio", "语音消息占比", "share", dict(col="modality", value="voice",
-       dims=[("overall","总体",None)])),
-   ("chat_ai_latency", "AI 响应时延(日均秒)", "line", dict(val="latency_sec", agg="avg",
-       dims=[("overall","总体",None)])),
-   ("chat_msg_length", "用户消息长度(日均字符)", "line", dict(val="char_len", agg="avg",
-       dims=[("overall","总体",None)])),
+   ("chat_msgs_per_user", "人均消息数 · Msgs per User (avg)", "line", dict(val="total_msgs", agg="avg",
+       dims=[("overall","Overall",None)])),
+   ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
+       note="1 问 1 答 = 1 轮", dims=[("overall","Overall",None)])),
+   ("chat_session_duration", "对话时长 · Session Duration (avg min)", "line", dict(val="duration_min", agg="avg",
+       dims=[("overall","Overall",None)])),
+   ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
+       note="有进无出:开了会话但没发消息的比例",
+       dims=[("overall","Overall",None),("path","by path","path")])),
+   ("chat_voice_text_ratio", "语音消息占比 · Voice Msg Share", "share", dict(col="modality", value="voice",
+       dims=[("overall","Overall",None)])),
+   ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "line", dict(val="latency_sec", agg="avg",
+       dims=[("overall","Overall",None)])),
+   ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(val="char_len", agg="avg",
+       dims=[("overall","Overall",None)])),
  ]),
- ("⑥ 星图", [
-   ("starmap_seed_funnel", "种子星漏斗 · 4 版本周", "funnel", {}),
-   ("starmap_new_user_stars", "新用户人均星数(按安装日)", "line", dict(val="star_count", agg="avg",
-       dims=[("overall","总体",None)])),
-   ("starmap_cluster_maturity", "星主题分布 (cluster)", "line", dict(val="stars", where=("dim","cluster"),
-       dims=[("value","按主题","value")])),
-   ("starmap_cluster_maturity", "星成熟度分布 (maturity)", "line", dict(val="stars", where=("dim","maturity"),
-       dims=[("value","按成熟度","value")])),
-   ("starmap_card_interaction", "星卡互动:展开动作", "line", dict(val="taps",
-       dims=[("action","按动作","action")])),
+ ("⑥ 星图 · StarMap", [
+   ("starmap_seed_funnel", "种子星漏斗 Seed-Star Funnel · 4 版本周", "funnel",
+       dict(note="冷启动展示 → 点种子星 → 转成实心星")),
+   ("starmap_new_user_stars", "新用户人均星数 · Stars per New User", "line", dict(val="star_count", agg="avg",
+       dims=[("overall","Overall",None)])),
+   ("starmap_cluster_maturity", "星主题分布 · Star Cluster", "line", dict(val="stars", where=("dim","cluster"),
+       dims=[("value","by cluster","value")])),
+   ("starmap_cluster_maturity", "星成熟度分布 · Star Maturity", "line", dict(val="stars", where=("dim","maturity"),
+       dims=[("value","by maturity","value")])),
+   ("starmap_card_interaction", "星卡互动 · Star-Card Actions", "line", dict(val="taps",
+       dims=[("action","by action","action")])),
  ]),
  ("⑦ Discover", [
-   ("discover_visit_rate", "Discover 访问率", "rate", dict(rate=("discover_users","active_users"),
-       dims=[("overall","总体",None),("user_stage","按阶段","user_stage")])),
-   ("discover_scroll_depth", "滚动深度分布", "line", dict(val="users",
-       dims=[("depth_pct","按深度","depth_pct")])),
-   ("discover_card_ctr", "卡片 CTR(按位)", "rate", dict(rate=("taps","impressions"),
-       dims=[("position","按位置","position")])),
-   ("discover_empty_state", "空状态表现", "line", dict(val="empty_users",
-       dims=[("reason","按原因","reason")])),
-   ("discover_click_destination", "点击去向", "line", dict(val="taps",
-       dims=[("destination","按去向","destination")])),
+   ("discover_visit_rate", "Discover 访问率 · Visit Rate", "rate", dict(rate=("discover_users","active_users"),
+       note="进 Discover 的用户 ÷ 当天活跃",
+       dims=[("overall","Overall",None),("user_stage","by stage","user_stage")])),
+   ("discover_scroll_depth", "滚动深度分布 · Scroll Depth", "line", dict(val="users", slfmt=(lambda s: str(int(float(s)))+"%"),
+       dims=[("depth_pct","by depth","depth_pct")])),
+   ("discover_card_ctr", "卡片 CTR · Card CTR (top-10 pos)", "rate", dict(rate=("taps","impressions"),
+       note="仅前 10 个排位;深位曝光少、CTR 噪声大已略去",
+       only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
+       dims=[("position","by position","position")])),
+   ("discover_empty_state", "空状态表现 · Empty State", "line", dict(val="empty_users",
+       slfmt=(lambda s: {"early_turn":"轮次太少","generating":"生成中"}.get(s,s)),
+       note="Discover 冷启动填充失败:轮次太少/内容生成中",
+       dims=[("reason","by reason","reason")])),
+   ("discover_click_destination", "点击去向 · Click Destination", "line", dict(val="taps",
+       dims=[("destination","by destination","destination")])),
  ]),
 ]
 
+def _fmt_of(kind, pct, p):
+    """每张图统一的小数格式:pct=百分比1位 / d1=1位小数 / int=整数。"""
+    if p.get("fmt"): return p["fmt"]
+    if pct: return "pct"
+    if kind == "rate_cols" or p.get("agg") == "avg": return "d1"
+    return "int"
+
+def _finish(dims, p):
+    """按 order 固定序列顺序 + 按 slfmt 改序列名(如 25→25%、position→位N、reason→中文)。"""
+    order, slfmt, only = p.get("order"), p.get("slfmt"), p.get("only")
+    for dm in dims:
+        data = dm["data"]
+        if only:
+            data = {k: v for k, v in data.items() if k in only}
+        if order:
+            od = OrderedDict((k, data[k]) for k in order if k in data)
+            for k in data:
+                if k not in od: od[k] = data[k]
+            data = od
+        if slfmt:
+            data = OrderedDict((slfmt(k), v) for k, v in data.items())
+        dm["data"] = data
+    return dims
+
 def build_card(metrics, mid, title, kind, p):
-    base = dict(id=mid, title=title, kind=kind)
+    base = dict(id=mid, title=title, kind=kind, note=p.get("note"))
     try:
         if kind == "funnel":
             rows = metrics.get(mid) or []
-            if not rows or "step" not in rows[0]: return None   # 卡还是旧格式(非4版本周)→ 先跳过
-            weeks = [w for w in WEEK_ORDER if w in rows[0]]
-            base.update(steps=[r["step"] for r in rows], weeks=weeks,
-                        matrix={r["step"]: {w: _num(r.get(w)) for w in weeks} for r in rows})
+            if not rows or "step" not in rows[0]: return None
+            wcol = "wk_start" if "wk_start" in rows[0] else ("wk" if "wk" in rows[0] else None)
+            if wcol:  # 长表(自动滚动近四周):step, wk_start, users
+                def _wl(iso): return f"{int(iso[5:7])}/{int(iso[8:10])}"  # 周六起始 → M/D
+                wks = sorted({_nd(r[wcol]) for r in rows})[-4:]           # 最近 4 个版本周
+                wmap = {w: _wl(w) for w in wks}
+                matrix = {}
+                for r in rows:
+                    w = _nd(r[wcol])
+                    if w not in wmap: continue
+                    st = r["step"]; matrix.setdefault(st, {})
+                    matrix[st][wmap[w]] = matrix[st].get(wmap[w], 0) + _num(r.get("users") or r.get("value"))
+                base.update(steps=sorted(matrix.keys()), weeks=[wmap[w] for w in wks], matrix=matrix)
+            else:     # 旧宽表:step + 各周列(动态读,不依赖 WEEK_ORDER)
+                weeks = [k for k in rows[0].keys() if k != "step"]
+                base.update(steps=[r["step"] for r in rows], weeks=weeks,
+                            matrix={r["step"]: {w: _num(r.get(w)) for w in weeks} for r in rows})
             return base
         if kind == "ret_multi":
             data = {}
@@ -192,7 +245,8 @@ def build_card(metrics, mid, title, kind, p):
                 r = metrics.get(cmid)
                 if r: data[lbl] = _rate(r, num, den, dc=_dc(r)).get("总计", [])
             if not data: return None
-            base.update(kind="line", pct=True, dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
+            base.update(kind="line", pct=True, fmt="pct",
+                        dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
             return base
         rows = metrics.get(mid)
         if not rows: return None
@@ -200,7 +254,7 @@ def build_card(metrics, mid, title, kind, p):
             wc, wv = p["where"]; rows = [r for r in rows if str(r.get(wc)) == wv]
             if not rows: return None
         dc = _dc(rows)
-        pct = p.get("pct", kind in ("rate", "rate_cols", "share"))
+        pct = p.get("pct", kind in ("rate", "rate_cols", "share", "rate_days"))
         dims = []
         if kind == "rate_cols":
             data = {}
@@ -208,6 +262,11 @@ def build_card(metrics, mid, title, kind, p):
             for lbl, nc in p["cols"]:
                 data[lbl] = _rate(rows, nc, den, dc=dc).get("总计", [])
             dims = [{"key": "overall", "label": "", "data": data}]
+        elif kind == "rate_days":              # 留存:D1/D3/D7 各一个切换,序列 = split 值
+            den, split = p["den"], p["split"]
+            for dlbl, num in p["days"]:
+                ser = _rate(rows, num, den, split, dc=dc)
+                dims.append({"key": dlbl, "label": dlbl, "data": {s: pts for s, pts in ser.items()}})
         elif kind == "share":
             for key, label, by in p["dims"]:
                 ser = _cap(_share(rows, p["col"], p["value"], by, dc=dc))
@@ -216,12 +275,13 @@ def build_card(metrics, mid, title, kind, p):
             for key, label, by in p["dims"]:
                 ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc) if kind == "rate" \
                       else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc)
-                ser = _cap(ser)
+                ser = ser if (p.get("only") or p.get("order")) else _cap(ser)
                 dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
-        base.update(kind="line", pct=pct, dims=dims)
+        dims = _finish(dims, p)
+        base.update(kind="line", pct=pct, fmt=_fmt_of(kind, pct, p), dims=dims)
         return base
     except Exception as ex:
-        base.update(kind="line", pct=False, dims=[], error=str(ex))
+        base.update(kind="line", pct=False, fmt="int", dims=[], error=str(ex))
         return base
 
 # ---------- 柔和统一配色 ----------
@@ -257,6 +317,12 @@ border-radius:999px;padding:3px 11px;cursor:pointer}
 .tbtn.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .cw{position:relative;height:320px}
 .empty{color:var(--mut);font-size:12px;padding:26px 0;text-align:center}
+.cnote{color:var(--mut);font-size:11.5px;margin:1px 0 4px;line-height:1.4}
+.frow{display:grid;grid-template-columns:132px 1fr 42px;align-items:center;gap:8px;margin:6px 0}
+.flab{font-size:11.5px;color:var(--ts);text-align:right;line-height:1.2}
+.fbarwrap{display:flex;justify-content:center}
+.fbar{background:var(--acc);color:#fff;text-align:center;border-radius:5px;padding:5px 6px;font-size:11px;font-weight:600;white-space:nowrap;min-width:24px}
+.fpc{font-size:11px;color:var(--mut);text-align:right}
 .nav{position:sticky;top:0;z-index:8;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
 padding:8px 24px;margin-bottom:4px;background:var(--plane);border-bottom:1px solid var(--bd)}
 .nav .nb{font-size:12.5px;color:var(--ts);background:transparent;border:none;border-radius:7px;padding:5px 12px;cursor:pointer}
@@ -280,12 +346,12 @@ def render(raw_path: Path, out_path: Path):
     chartjs = (HERE / "lib" / "chart.umd.min.js").read_text(encoding="utf-8")
     payload = json.dumps({"sections": sections, "pal": PAL, "wkpal": WKPAL}, ensure_ascii=False)
     failed = meta.get("failed") or []
-    hdr = (f'<header><h1>SoulMap 看板 · 趋势版</h1><div class="meta">'
+    hdr = (f'<header><h1>SoulMap 看板 · 趋势版 · SoulMap Dashboard</h1><div class="meta">'
            f'数据 {meta.get("run_date","?")} · Metabase dashboard {meta.get("dashboard_id","?")} · '
            f'{sum(len(s["cards"]) for s in sections)} 卡' + (f' · 缺 {len(failed)}' if failed else '') +
            '</div></header>')
     doc = f"""<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · 趋势版</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · 趋势版 · SoulMap Dashboard</title>
 <style>{CSS}</style></head><body>{hdr}<div id="root"></div>
 <script>{chartjs}</script>
 <script>const DATA={payload};</script>
@@ -296,13 +362,28 @@ def render(raw_path: Path, out_path: Path):
 
 APP_JS = r"""
 const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
-function fmtV(v,pct){if(v==null)return'';if(pct)return(v*100).toFixed(v<0.1?1:0)+'%';
-  const a=Math.abs(v);return a>=1000?Math.round(v).toLocaleString():(a>=10||a===0?Math.round(v).toString():v.toFixed(1));}
-const valueLabels={id:'vlab',afterDatasetsDraw(chart){const ctx=chart.ctx,pct=!!chart.$pct,bar=chart.config.type==='bar';
+function fmtV(v,fmt){if(v==null)return'';
+  if(fmt==='pct')return(v*100).toFixed(1)+'%';
+  if(fmt==='d1')return(+v).toFixed(1);
+  return Math.round(v).toLocaleString();}
+const STEPMAP={'打开':'打开 Open','Welcome':'Welcome','进入onboarding':'进入 Onboarding',
+ '完成onboarding':'完成 Onboarding','用户首条':'用户首条 First Msg','activated(3+)':'激活 Activated ≥3',
+ 'deep(5+)':'深度 Deep ≥5','冷启动展示':'冷启动展示 Cold Shown','种子星点击':'种子星点击 Seed Tap','转成实心星':'转成实心星 Owned'};
+function drawFunnel(el,card,wk){
+  el.innerHTML='';const steps=card.steps||[],mx=card.matrix||{};
+  const vals=steps.map(s=>+((mx[s]||{})[wk])||0);const top=vals[0]||1;
+  steps.forEach((s,i)=>{const v=vals[i],w=Math.max(2,v/top*100),conv=i===0?100:(vals[i-1]?v/vals[i-1]*100:0);
+    const raw=s.replace(/^[0-9]+_/,''),lab=STEPMAP[raw]||raw;
+    const row=$('div','frow');
+    row.innerHTML='<span class="flab">'+lab+'</span>'+
+      '<div class="fbarwrap"><div class="fbar" style="width:'+w.toFixed(1)+'%">'+v.toLocaleString()+'</div></div>'+
+      '<span class="fpc">'+(i===0?'':conv.toFixed(0)+'%')+'</span>';
+    el.appendChild(row);});}
+const valueLabels={id:'vlab',afterDatasetsDraw(chart){const ctx=chart.ctx,fmt=chart.$fmt||'int',bar=chart.config.type==='bar';
   const ic=ink();ctx.save();ctx.font='600 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';
   chart.data.datasets.forEach((ds,di)=>{const m=chart.getDatasetMeta(di);if(m.hidden)return;
     m.data.forEach((pt,idx)=>{const v=ds.data[idx];if(v==null)return;
-      ctx.fillStyle=bar?ic.ts:(ds.borderColor||ic.ts);ctx.fillText(fmtV(+v,pct),pt.x,pt.y-5);});});
+      ctx.fillStyle=bar?ic.ts:(ds.borderColor||ic.ts);ctx.fillText(fmtV(+v,fmt),pt.x,pt.y-5);});});
   ctx.restore();}};
 function isDark(){const r=document.documentElement.getAttribute('data-theme');
   return r?r==='dark':matchMedia('(prefers-color-scheme:dark)').matches;}
@@ -310,7 +391,7 @@ function ink(){const s=getComputedStyle(document.documentElement);
   return {ts:s.getPropertyValue('--ts').trim(),mut:s.getPropertyValue('--mut').trim(),grid:s.getPropertyValue('--grid').trim()};}
 const charts=[];
 function allDates(data){const s=new Set();for(const k in data)data[k].forEach(p=>s.add(p[0]));return[...s].sort();}
-function lineCfg(dimData,pct){
+function lineCfg(dimData,fmt){
   const labels=allDates(dimData);const names=Object.keys(dimData);const P=DATA.pal;
   const ds=names.map((nm,i)=>{const m=Object.fromEntries(dimData[nm]);
     return{label:nm,data:labels.map(d=>d in m?m[d]:null),borderColor:P[i%P.length],
@@ -318,14 +399,14 @@ function lineCfg(dimData,pct){
       pointRadius:0,pointHoverRadius:4,spanGaps:true};});
   const c=ink();
   return{type:'line',data:{labels,datasets:ds},plugins:[valueLabels],options:{responsive:true,maintainAspectRatio:false,
-    layout:{padding:{top:14}},interaction:{mode:'index',intersect:false},
+    layout:{padding:{top:16,right:52,left:4}},interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:names.length>1,position:'top',align:'start',
       labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'circle',color:c.ts,font:{size:11}}},
-      tooltip:{callbacks:{label:x=>x.dataset.label+': '+(pct?(x.parsed.y*100).toFixed(1)+'%':(+x.parsed.y).toLocaleString())}}},
+      tooltip:{callbacks:{label:x=>x.dataset.label+': '+fmtV(x.parsed.y,fmt)}}},
     scales:{x:{grid:{display:false},ticks:{color:c.mut,font:{size:10},maxRotation:0,autoSkipPadding:16,
         callback:function(v){return this.getLabelForValue(v).slice(5);}},border:{color:c.grid}},
       y:{grid:{color:c.grid},border:{display:false},ticks:{color:c.mut,font:{size:10},
-        callback:v=>pct?(v*100).toFixed(0)+'%':(+v).toLocaleString()}}}}};
+        callback:v=>fmtV(v,fmt)}}}}};
 }
 function funnelCfg(card){const c=ink();const W=DATA.wkpal;
   const ds=card.weeks.map((w,i)=>({label:w,data:card.steps.map(s=>card.matrix[s][w]||0),
@@ -347,21 +428,26 @@ function build(){
     const nb=$('button','nb',sec.title.replace(/^[①-⑳\s]+/,''));
     nb.onclick=()=>wrap.scrollIntoView({behavior:'smooth',block:'start'});nav.appendChild(nb);navbtns.push(nb);
     sec.cards.forEach(card=>{
-      const el=$('div','card');el.appendChild($('h3',null,card.title));
+      const el=$('div','card');el.appendChild($('h3',null,card.title));if(card.note)el.appendChild($('div','cnote',card.note));
       if(card.error){el.appendChild($('div','empty','渲染失败: '+card.error));g.appendChild(el);return;}
       const cw=$('div','cw');const cv=document.createElement('canvas');cw.appendChild(cv);
-      if(card.kind==='funnel'){el.appendChild(cw);g.appendChild(el);
-        const fc=new Chart(cv,funnelCfg(card));fc.$pct=false;charts.push(fc);return;}
+      if(card.kind==='funnel'){
+        const wks=card.weeks||[];const tb=$('div','toolbar');const body=$('div');
+        wks.forEach((w,i)=>{const b=$('button','tbtn'+(i===wks.length-1?' on':''),w);
+          b.onclick=()=>{drawFunnel(body,card,w);tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
+          tb.appendChild(b);});
+        if(wks.length>1)el.appendChild(tb);el.appendChild(body);g.appendChild(el);
+        if(wks.length)drawFunnel(body,card,wks[wks.length-1]);return;}
       const dims=card.dims||[];
       if(dims.length>1){const tb=$('div','toolbar');
         dims.forEach((dm,i)=>{const b=$('button','tbtn'+(i===0?' on':''),dm.label);
-          b.onclick=()=>{const ch=cw._chart;const cfg=lineCfg(dm.data,card.pct);
+          b.onclick=()=>{const ch=cw._chart;const cfg=lineCfg(dm.data,card.fmt);
             ch.data=cfg.data;ch.options=cfg.options;ch.update();
             tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
           tb.appendChild(b);});el.appendChild(tb);}
       el.appendChild(cw);g.appendChild(el);
       const d0=(dims[0]&&dims[0].data)||{};
-      const ch=new Chart(cv,lineCfg(d0,card.pct));ch.$pct=card.pct;cw._chart=ch;charts.push(ch);
+      const ch=new Chart(cv,lineCfg(d0,card.fmt));ch.$fmt=card.fmt;cw._chart=ch;charts.push(ch);
     });
   });
   nav.appendChild($('div','sp'));
