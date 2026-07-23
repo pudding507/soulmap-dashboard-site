@@ -21,9 +21,8 @@ HERE = Path(__file__).resolve().parent
 WEEK_ORDER = ["6/27-7/3", "7/4-10", "7/11-17", "7/18起"]
 
 # 顶部数据可靠性横幅(置空字符串即隐藏;以后有新事件改这里)
-BANNER = ("⚠️ 数据可靠性提醒:本周多项改动叠加 + 7/17–7/20 App 不稳定"
-          "(7/21 12:40pm 已修复,7/22 又修了若干 bug),干净可测窗口很短 —— "
-          "请谨慎从本周数据下结论。")
+BANNER = ("提示:本周多项改动叠加、App 有过短暂不稳定(已陆续修复),"
+          "干净可测窗口较短 —— 本周数据仅供参考,请谨慎下结论。")
 
 # ---------- 聚合 ----------
 def _num(x):
@@ -128,7 +127,7 @@ SECTIONS = [
    ("activation_funnel_by_adgroup", "激活漏斗 · 分 adgroup · by Ad Group", "funnel",
        dict(note="按 source×广告类型分组对比,右上/toolbar 切组;近4版本周·取前8组")),
    ("activation_guardrail_funnel", "护栏漏斗 · 分版本 · Guardrail by Version", "funnel",
-       dict(note="onboarding 漏斗按 app_version 对比(看新 chip 有没有增流失);近30天·选topic=主动选")),
+       dict(gsort="version", note="onboarding 漏斗按 app_version 对比(看新 chip 有没有增流失);近30天·选topic=主动选")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
    ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
@@ -242,8 +241,14 @@ def build_card(metrics, mid, title, kind, p):
                     g = str(r["grp"]); st = r["step"]
                     groups.setdefault(g, {}); groups[g][st] = groups[g].get(st, 0) + _num(r.get("users"))
                 steps = sorted({r["step"] for r in rows}); s1 = steps[0] if steps else None
-                order = sorted(groups, key=lambda g: groups[g].get(s1, 0), reverse=True)[:8]
-                base.update(steps=steps, weeks=order,
+                if p.get("gsort") == "version":   # 按版本号从大到小(如 2.5.1 > 2.5.0 > 2.4.2)
+                    def _vk(g):
+                        try: return tuple(int(x) for x in str(g).split("."))
+                        except ValueError: return (0,)
+                    order = sorted(groups, key=_vk, reverse=True)[:8]
+                else:                              # 默认按 step1 量最大排
+                    order = sorted(groups, key=lambda g: groups[g].get(s1, 0), reverse=True)[:8]
+                base.update(steps=steps, weeks=order, defwk="first",
                             matrix={st: {g: groups[g].get(st, 0) for g in order} for st in steps})
                 return base
             wcol = "wk_start" if "wk_start" in rows[0] else ("wk" if "wk" in rows[0] else None)
@@ -259,7 +264,7 @@ def build_card(metrics, mid, title, kind, p):
                     if w not in wmap: continue
                     st = r["step"]; matrix.setdefault(st, {})
                     matrix[st][wmap[w]] = matrix[st].get(wmap[w], 0) + _num(r.get("users") or r.get("value"))
-                base.update(steps=sorted(matrix.keys()), weeks=[wmap[w] for w in wks], matrix=matrix)
+                base.update(steps=sorted(matrix.keys()), weeks=[wmap[w] for w in wks], matrix=matrix, defwk="last")
             else:     # 旧宽表:step + 各周列(动态读,不依赖 WEEK_ORDER)
                 weeks = [k for k in rows[0].keys() if k != "step"]
                 base.update(steps=[r["step"] for r in rows], weeks=weeks,
@@ -520,9 +525,9 @@ function build(){
       if(card.note)el.appendChild($('div','cnote',card.note));
       if(card.error){el.appendChild($('div','empty','渲染失败: '+card.error));g.appendChild(el);return;}
       if(card.kind==='funnel'){
-        const wks=card.weeks||[];let curw=wks.length?wks[wks.length-1]:null;
+        const wks=card.weeks||[];const defi=(card.defwk==='first')?0:wks.length-1;let curw=wks.length?wks[defi]:null;
         const tb=$('div','toolbar');const body=$('div');
-        wks.forEach((w,i)=>{const b=$('button','tbtn'+(i===wks.length-1?' on':''),w);
+        wks.forEach((w,i)=>{const b=$('button','tbtn'+(i===defi?' on':''),w);
           b.onclick=()=>{curw=w;drawFunnel(body,card,w);lv.textContent='最新 '+w;tb.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
           tb.appendChild(b);});
         if(wks.length>1)el.appendChild(tb);el.appendChild(body);
