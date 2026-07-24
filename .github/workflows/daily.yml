@@ -1,7 +1,8 @@
 name: SoulMap dashboard daily
 on:
   schedule:
-    - cron: "0 20 * * *"
+    - cron: "0 20 * * *"   # 新加坡 04:00
+    - cron: "0 6 * * *"    # 新加坡 14:00(ETL 后)
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -18,6 +19,11 @@ jobs:
           METABASE_USER: ${{ secrets.METABASE_USER }}
           METABASE_PASSWORD: ${{ secrets.METABASE_PASSWORD }}
         run: python3 fetch_metabase.py --out raw_metrics.json
+      - name: guard
+        run: |
+          n=$(python3 -c "import json;print(len(json.load(open('raw_metrics.json')).get('metrics',{})))")
+          echo "本次抓到 $n 张卡"
+          if [ "$n" -lt 25 ]; then echo "太少($n),跳过发布、保留上一版"; exit 1; fi
       - name: render
         run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
       - name: push
@@ -25,5 +31,9 @@ jobs:
           git config user.name  "soulmap-bot"
           git config user.email "bot@users.noreply.github.com"
           git add site/index.html
-          git commit -m "dashboard $(date -u +%F)" || echo "no change"
-          git push
+          git commit -m "dashboard $(date -u +%F_%H%M)" || { echo "no change"; exit 0; }
+          for i in 1 2 3; do
+            git pull --rebase --autostash -X theirs origin main && git push && exit 0
+            echo "push 被拒,重试 $i…"; sleep 5
+          done
+          echo "push 失败"; exit 1
