@@ -133,7 +133,7 @@ SECTIONS = [
    ("activation_onboarding_from_2.5.0", "新版 Onboarding · Anchor 分布 (from 2.5.0)", "line",
        dict(val="users",
             note="2.5.0 新 onboarding 的 anchor 分布 · 投放口径(user.topic_anchor,含默认落到 just_talk≈62%);可切 source/adgroup。下游触发决策据此口径,非主动选择口径(just_talk仅≈11%)",
-            dims=[("anchor","by anchor","anchor"),("overall","Overall",None),
+            dims=[("overall","Overall",None),("anchor","by anchor","anchor"),
                   ("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
    ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
        note="用户看到 AI 首句后多久发出第一条消息",
@@ -158,7 +158,7 @@ SECTIONS = [
             ("Discover","discover_opens"),("Me","me_opens")])),
    ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"),
        note="点击未解锁 Tab 的人 ÷ 当天活跃",
-       dims=[("tab_name","by tab","tab_name")])),
+       dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
  ]),
  ("⑤ Chat", [
    ("chat_msgs_per_user", "人均消息数 · Msgs per User (avg)", "line", dict(val="total_msgs", agg="avg",
@@ -184,11 +184,11 @@ SECTIONS = [
             dims=[("overall","Overall",None),
                   ("user_type","by user type","user_type"),
                   ("source","by source","source"),("adgroup","by source×adgroup",_ADG),
-                  ("purpose","关注点 by purpose(粗)","purpose")])),
+                  ("purpose","by purpose (coarse)","purpose")])),
    ("chat_module_call_success", "模块成功响应率 · Module-Call Success by Content", "rate",
        dict(rate=("success","turns"),
             note="每轮聊天:director出招(fired)或注入内容(injectedBlock非空)=成功调用模块;按聊天内容(purpose)拆。CASUAL等随便聊本就不需模块,低成功率非失败",
-            dims=[("purpose","by 聊天内容","purpose"),("overall","Overall",None)])),
+            dims=[("overall","Overall",None),("purpose","by content","purpose")])),
  ]),
  ("⑥ Star", [
    ("starmap_seed_funnel", "种子星漏斗 Seed-Star Funnel · 4 版本周", "funnel",
@@ -196,28 +196,28 @@ SECTIONS = [
    ("starmap_new_user_stars", "新用户人均星数 · Stars per New User", "line", dict(val="star_count", agg="avg",
        dims=[("overall","Overall",None)])),
    ("starmap_cluster_maturity", "星主题分布 · Star Cluster", "line", dict(val="stars", where=("dim","cluster"),
-       dims=[("value","by cluster","value")], note="每天新增星按主题:core/heart/voice/mind/bond")),
+       dims=[("overall","Overall",None),("value","by cluster","value")], note="每天新增星按主题:core/heart/voice/mind/bond")),
    ("starmap_cluster_maturity", "星成熟度分布 · Star Maturity", "line", dict(val="stars", where=("dim","maturity"),
-       dims=[("value","by maturity","value")], note="每天新增星按成熟度:emerging→confirmed→faded 等")),
+       dims=[("overall","Overall",None),("value","by maturity","value")], note="每天新增星按成熟度:emerging→confirmed→faded 等")),
    ("starmap_card_interaction", "星卡互动 · Star-Card Actions", "line", dict(val="taps",
-       dims=[("action","by action","action")])),
+       dims=[("overall","Overall",None),("action","by action","action")])),
  ]),
  ("⑦ Discover", [
    ("discover_visit_rate", "Discover 访问率 · Visit Rate", "rate", dict(rate=("discover_users","active_users"),
        note="进 Discover 的用户 ÷ 当天活跃",
        dims=[("overall","Overall",None),("user_stage","by stage","user_stage")])),
    ("discover_scroll_depth", "滚动深度分布 · Scroll Depth", "line", dict(val="users", slfmt=(lambda s: str(int(float(s)))+"%"),
-       dims=[("depth_pct","by depth","depth_pct")])),
+       dims=[("overall","Overall",None),("depth_pct","by depth","depth_pct")])),
    ("discover_card_ctr", "卡片 CTR · Card CTR (top-10 pos)", "rate", dict(rate=("taps","impressions"),
        note="仅前 10 个排位;深位曝光少、CTR 噪声大已略去",
        only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
-       dims=[("position","by position","position")])),
+       dims=[("overall","Overall",None),("position","by position","position")])),
    ("discover_empty_state", "空状态表现 · Empty State", "line", dict(val="empty_users",
        slfmt=(lambda s: {"early_turn":"轮次太少","generating":"生成中"}.get(s,s)),
        note="Discover 冷启动填充失败:轮次太少/内容生成中",
-       dims=[("reason","by reason","reason")])),
+       dims=[("overall","Overall",None),("reason","by reason","reason")])),
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(val="taps",
-       dims=[("destination","by destination","destination")])),
+       dims=[("overall","Overall",None),("destination","by destination","destination")])),
  ]),
 ]
 
@@ -232,6 +232,8 @@ def _finish(dims, p):
     """按 order 固定序列顺序 + 按 slfmt 改序列名(如 25→25%、position→位N、reason→中文)。"""
     order, slfmt, only = p.get("order"), p.get("slfmt"), p.get("only")
     for dm in dims:
+        if dm.get("key") == "overall":   # overall(总计)不参与 only/order/slfmt,避免被过滤或改名
+            continue
         data = dm["data"]
         if only:
             data = {k: v for k, v in data.items() if k in only}
@@ -512,7 +514,7 @@ function lineCfg(dimData,fmt){
       tooltip:{callbacks:{label:x=>x.dataset.label+': '+fmtV(x.parsed.y,fmt)}}},
     scales:{x:{grid:{display:false},ticks:{color:c.mut,font:{size:9},maxRotation:55,autoSkip:true,autoSkipPadding:4,
         callback:function(v){return this.getLabelForValue(v).slice(5);}},border:{color:c.grid}},
-      y:{grid:{color:c.grid},border:{display:false},ticks:{color:c.mut,font:{size:10},
+      y:{beginAtZero:true,grid:{color:c.grid},border:{display:false},ticks:{color:c.mut,font:{size:10},
         callback:v=>fmtV(v,fmt)}}}}};
 }
 function funnelCfg(card){const c=ink();const W=DATA.wkpal;
@@ -522,7 +524,7 @@ function funnelCfg(card){const c=ink();const W=DATA.wkpal;
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
       plugins:{legend:{position:'top',align:'start',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'rect',color:c.ts,font:{size:11}}}},
       scales:{x:{grid:{display:false},ticks:{color:c.mut,font:{size:10}},border:{color:c.grid}},
-        y:{grid:{color:c.grid},border:{display:false},ticks:{color:c.mut,font:{size:10},callback:v=>(+v).toLocaleString()}}}}};
+        y:{beginAtZero:true,grid:{color:c.grid},border:{display:false},ticks:{color:c.mut,font:{size:10},callback:v=>(+v).toLocaleString()}}}}};
 }
 function build(){
   charts.forEach(c=>c.destroy());charts.length=0;
