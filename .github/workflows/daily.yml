@@ -1,8 +1,14 @@
 name: SoulMap dashboard daily
 on:
   schedule:
-    - cron: "0 20 * * *"   # 新加坡 04:00
+    # 一天 5 次,时间按新加坡(UTC+8)排;GitHub cron 只认 UTC,所以都减 8 小时。
+    # ⚠️ 计划任务是 best-effort:实测常晚 40min~2.5h,高负载时整次跳过 ——
+    #    抓不满的那次会被下面的 guard 拦下,线上保留上一版,所以不准点也没关系。
+    - cron: "0 20 * * *"   # 新加坡 04:00(低峰,最容易抓全)
+    - cron: "0 2 * * *"    # 新加坡 10:00
     - cron: "0 6 * * *"    # 新加坡 14:00(ETL 后)
+    - cron: "0 8 * * *"    # 新加坡 16:00
+    - cron: "0 14 * * *"   # 新加坡 22:00
   workflow_dispatch: {}
 permissions:
   contents: write
