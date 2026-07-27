@@ -56,7 +56,7 @@ def _agg(rows, val, by=None, how="sum", dc="date"):
     for r in rows:
         d = r.get(dc)
         if d is None: continue
-        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "总计"
+        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "Overall"
         a = acc[(s, _nd(d))]; a[0] += _num(r.get(val)); a[1] += 1
     out = defaultdict(list)
     for (s, d), (t, c) in acc.items():
@@ -69,7 +69,7 @@ def _rate(rows, num, den, by=None, dc="date"):
     for r in rows:
         d = r.get(dc)
         if d is None: continue
-        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "总计"
+        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "Overall"
         a = acc[(s, _nd(d))]; a[0] += _num(r.get(num)); a[1] += _num(r.get(den))
     out = defaultdict(list)
     for (s, d), (n, dd) in acc.items():
@@ -83,7 +83,7 @@ def _share(rows, col, value, by=None, dc="date"):
     for r in rows:
         d = r.get(dc)
         if d is None: continue
-        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "总计"
+        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "Overall"
         a = acc[(s, _nd(d))]; a[1] += 1
         if str(r.get(col)) == value: a[0] += 1
     out = defaultdict(list)
@@ -292,7 +292,7 @@ def build_card(metrics, mid, title, kind, p):
             data = {}
             for cmid, lbl, num, den in p["cards"]:
                 r = metrics.get(cmid)
-                if r: data[lbl] = _rate(r, num, den, dc=_dc(r)).get("总计", [])
+                if r: data[lbl] = _rate(r, num, den, dc=_dc(r)).get("Overall", [])
             if not data: return None
             base.update(kind="line", pct=True, fmt="pct",
                         dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
@@ -323,7 +323,7 @@ def build_card(metrics, mid, title, kind, p):
         pct = p.get("pct", kind in ("rate", "rate_cols", "share", "rate_days", "pct_split"))
         dims = []
         if kind == "pct_split":            # 每类别占当天总量的比例(如 DAU 新老占比)
-            tot = {d: v for d, v in _agg(rows, p["val"], None, "sum", dc=dc).get("总计", [])}
+            tot = {d: v for d, v in _agg(rows, p["val"], None, "sum", dc=dc).get("Overall", [])}
             ser = _agg(rows, p["val"], p["by"], "sum", dc=dc)
             data = {s: [[d, round(v / tot[d], 4) if tot.get(d) else 0] for d, v in pts] for s, pts in ser.items()}
             dims = [{"key": "overall", "label": "", "data": data}]
@@ -331,7 +331,7 @@ def build_card(metrics, mid, title, kind, p):
             data = {}
             den = p["den"]
             for lbl, nc in p["cols"]:
-                data[lbl] = _rate(rows, nc, den, dc=dc).get("总计", [])
+                data[lbl] = _rate(rows, nc, den, dc=dc).get("Overall", [])
             dims = [{"key": "overall", "label": "", "data": data}]
         elif kind == "rate_days":              # 留存:D1/D3/D7 各一个切换,序列 = split 值
             den, split = p["den"], p["split"]
@@ -472,7 +472,7 @@ function drawFunnel(el,card,wk){
       '<span class="fpc">'+tot.toFixed(0)+'%</span>';
     el.appendChild(row);});}
 function latestOf(dd,fmt){const ds=allDates(dd);if(!ds.length)return'';const d=ds[ds.length-1];
-  let v;if(dd['总计']){const p=dd['总计'].find(x=>x[0]===d);v=p?p[1]:0;}
+  let v;if(dd['Overall']){const p=dd['Overall'].find(x=>x[0]===d);v=p?p[1]:0;}
   else{v=0;for(const k in dd){const p=dd[k].find(x=>x[0]===d);if(p)v+=p[1];}}
   return fmtV(v,fmt);}   // 右上角只显示最新值,不带日期
 const modal=$('div','modal');
@@ -568,7 +568,7 @@ function build(){
       function redraw(){const fd=curData(),cfg=lineCfg(fd,card.fmt),c2=cw._chart;c2.data=cfg.data;c2.options=cfg.options;c2.update();lv.textContent=latestOf(fd,card.fmt);}
       function chips(){chipbar.innerHTML='';const names=Object.keys((dims[cur]||{data:{}}).data);
         if(names.length<=1){chipbar.style.display='none';return;}chipbar.style.display='flex';
-        const all=$('button','chip'+(vis.size===names.length?' on':''),'全部');
+        const all=$('button','chip'+(vis.size===names.length?' on':''),'All');
         all.onclick=()=>{vis=new Set(names);chips();redraw();};chipbar.appendChild(all);
         names.forEach(n=>{const b=$('button','chip'+(vis.has(n)?' on':''),n);
           b.onclick=()=>{if(vis.size===names.length){vis=new Set([n]);}      // 全开时点一个=只看它(单选)
