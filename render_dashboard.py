@@ -105,6 +105,17 @@ def _ord(ser, order):
 
 _ADG = lambda r: f"{r.get('source')}_{r.get('adgroup')}"   # source×adgroup 组合序列
 
+# 三张留存卡共用的维度配置(SQL 输出 dimension 列的取值 → 选项卡标签/顺序)
+RETENTION_DIMS = dict(
+    dimorder=["overall", "source", "ad_group", "country", "input_path", "activation"],
+    dimlabels={"overall": "Overall", "source": "by source", "ad_group": "by ad group",
+               "country": "by country", "input_path": "by input path",
+               "activation": "by activation"},
+    slorder={"input_path": ["text", "voice", "unknown"],
+             "activation": ["activated", "not_activated"]},
+    min_vol=30,   # 累计新用户不足 30 的维度取值不画(小样本率没有参考价值)
+)
+
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); rate_cols: cols+den; ret_multi: cards; funnel: 无参
@@ -141,11 +152,14 @@ SECTIONS = [
        dims=[("overall","Overall",None)])),
  ]),
  ("③ 留存 · Retention", [
-   ("retention_d1", "留存 D1 · Retention D1", "retention_day",
-       dict(day="d1", note="注册后第1天回访开App的比例;可切 Overall/来源/adgroup/path/激活")),
-   ("retention_d3", "留存 D3 · Retention D3", "retention_day", dict(day="d3")),
-   ("retention_d7", "留存 D7 · Retention D7", "retention_day",
-       dict(day="d7", note="⚠️ 近7天 cohort 的 D7 未成熟(窗口未到),看趋势排除末尾几天")),
+   ("retention_d1", "留存 D1 · Retention D1", "long_dim",
+       dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
+            note="注册后第1天回访开App的比例;可切 Overall/来源/广告组/国家/输入方式/是否激活")),
+   ("retention_d3", "留存 D3 · Retention D3", "long_dim",
+       dict(rate=("retained_users","new_users"), **RETENTION_DIMS)),
+   ("retention_d7", "留存 D7 · Retention D7", "long_dim",
+       dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
+            note="⚠️ 近7天 cohort 的 D7 未成熟(窗口未到),看趋势排除末尾几天")),
  ]),
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "四 Tab 渗透率 · Tab Penetration", "rate_cols",
@@ -296,22 +310,45 @@ def build_card(metrics, mid, title, kind, p):
             base.update(kind="line", pct=True, fmt="pct",
                         dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
             return base
-        if kind == "retention_day":   # 单张 Dx:overall/source/adgroup(来自 retention_dX)+ path/activation(来自另两卡)
-            num = p["day"] + "_retained"; dims = []
-            main = metrics.get(mid)
-            if main:
-                dc = _dc(main)
-                dims.append({"key":"overall","label":"Overall","data":dict(_rate(main,num,"new_users",None,dc=dc))})
-                dims.append({"key":"source","label":"by source","data":dict(_cap(_rate(main,num,"new_users","source",dc=dc)))})
-                dims.append({"key":"adgroup","label":"by adgroup","data":dict(_cap(_rate(main,num,"new_users",_ADG,dc=dc),12))})
-            pr = metrics.get("retention_by_path")
-            if pr:
-                dims.append({"key":"path","label":"by path","data":_ord(dict(_rate(pr,num,"new_users","path",dc=_dc(pr))),["text","voice","unknown"])})
-            ar = metrics.get("retention_by_activated")
-            if ar:
-                dims.append({"key":"act","label":"by activation","data":_ord(dict(_rate(ar,num,"new_users","is_activated",dc=_dc(ar))),["activated","not_activated"])})
+        if kind == "long_dim":
+            # 长维度形状:一张卡自带全部维度,SQL 输出 date | dimension | dimension_value | 值列…
+            # 每个 dimension 取值 = 一个维度选项卡,dimension_value = 该选项卡里的各条线。
+            rows = metrics.get(mid)
+            if not rows: return None
+            r0 = rows[0]
+            dim_col = "dimension" if "dimension" in r0 else ("dim_name" if "dim_name" in r0 else None)
+            val_col = "dimension_value" if "dimension_value" in r0 else ("dim_value" if "dim_value" in r0 else None)
+            if not dim_col or not val_col:
+                raise ValueError(f"long_dim 需要 dimension/dimension_value 列,实际列: {list(r0)}")
+            dc = _dc(rows)
+            labels = p.get("dimlabels") or {}
+            order  = p.get("dimorder") or []
+            slorder = p.get("slorder") or {}          # 某个维度内部的固定线序
+            buckets = defaultdict(list)
+            for r in rows:
+                buckets[str(r.get(dim_col))].append(r)
+            keys = [k for k in order if k in buckets] + [k for k in buckets if k not in order]
+            dims = []
+            # 率类卡按"量"筛线,不按率:否则只有 1 个用户、恰好回访的小国会以 100% 排在最前
+            vol_col = p["rate"][1] if p.get("rate") else p.get("val")
+            min_vol = p.get("min_vol", 0)
+            for k in keys:
+                sub = buckets[k]
+                volume = defaultdict(float)
+                for r in sub:
+                    volume[str(r.get(val_col))] += _num(r.get(vol_col))
+                ser = _rate(sub, p["rate"][0], p["rate"][1], val_col, dc=dc) if p.get("rate") \
+                      else _agg(sub, p["val"], val_col, p.get("agg", "sum"), dc=dc)
+                if k in slorder:
+                    ser = _ord(ser, slorder[k])
+                else:
+                    keep = [s for s in sorted(ser, key=lambda s: volume.get(s, 0), reverse=True)
+                            if volume.get(s, 0) >= min_vol][: p.get("cap", 8)]
+                    ser = OrderedDict((s, ser[s]) for s in keep)
+                dims.append({"key": k, "label": labels.get(k, "by " + k), "data": dict(ser)})
             if not any(d["data"] for d in dims): return None
-            base.update(kind="line", pct=True, fmt="pct", dims=dims)
+            base.update(kind="line", pct=bool(p.get("rate")),
+                        fmt=p.get("fmt", "pct" if p.get("rate") else "int"), dims=dims)
             return base
         rows = metrics.get(mid)
         if not rows: return None
