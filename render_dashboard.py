@@ -76,21 +76,6 @@ def _rate(rows, num, den, by=None, dc="date"):
     for s in out: out[s].sort()
     return out
 
-def _share(rows, col, value, by=None, dc="date"):
-    """某列取某值的占比(如 modality='voice' 的比例),按 date(×by)。"""
-    acc = defaultdict(lambda: [0, 0])
-    for r in rows:
-        d = r.get(dc)
-        if d is None: continue
-        s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "Overall"
-        a = acc[(s, _nd(d))]; a[1] += 1
-        if str(r.get(col)) == value: a[0] += 1
-    out = defaultdict(list)
-    for (s, d), (n, t) in acc.items():
-        out[s].append((d, round(n / t, 4) if t else 0.0))
-    for s in out: out[s].sort()
-    return out
-
 def _cap(ser, n=6):
     """序列过多只留末值最大的 n 个。"""
     items = sorted(ser.items(), key=lambda kv: kv[1][-1][1] if kv[1] else 0, reverse=True)
@@ -118,13 +103,15 @@ RETENTION_DIMS = dict(
 
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
-# rate 卡: 加 rate=(num,den); rate_cols: cols+den; ret_multi: cards; funnel: 无参
+# rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
 SECTIONS = [
  ("① 增长 · Growth", [
    ("growth_dau", "日活跃用户数 DAU", "line", dict(val="value", cap=12,
        dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
-   ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "pct_split", dict(val="value", by="user_type", fmt="pct0",
-       note="新/老用户各占当天 DAU 的比例")),
+   ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "rate",
+       dict(rate=("users","daily_active_users"), fmt="pct0", order=["new","returning"],
+            note="新/老用户各占当天 DAU 的比例",
+            dims=[("user_type","","user_type")])),
    ("growth_new_user", "新用户数 · New Users", "line", dict(val="value", cap=12,
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
    ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value", cap=12,
@@ -162,13 +149,15 @@ SECTIONS = [
             note="⚠️ 近7天 cohort 的 D7 未成熟(窗口未到),看趋势排除末尾几天")),
  ]),
  ("④ 模块 · Modules", [
-   ("module_tab_penetration", "四 Tab 渗透率 · Tab Penetration", "rate_cols",
-       dict(note="当天开 App 用户中访问过各 Tab 的比例", fmt="pct0",
-            den="active_users", cols=[("Stars","stars_users"),("Chat","chat_users"),
-            ("Discover","discover_users"),("Me","me_users")])),
-   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate_cols",
-       dict(den="active_users", pct=False, cols=[("Stars","stars_opens"),("Chat","chat_opens"),
-            ("Discover","discover_opens"),("Me","me_opens")])),
+   ("module_tab_penetration", "四 Tab 渗透率 · Tab Penetration", "rate",
+       dict(rate=("tab_users","active_users"), fmt="pct0",
+            note="当天开 App 用户中访问过各 Tab 的比例",
+            order=["Stars","Chat","Discover","Me"],
+            dims=[("tab","","tab")])),
+   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate",
+       dict(rate=("tab_opens","active_users"), pct=False, fmt="d1",
+            order=["Stars","Chat","Discover","Me"],
+            dims=[("tab","","tab")])),
    ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"),
        note="点击未解锁 Tab 的人 ÷ 当天活跃",
        dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
@@ -185,8 +174,10 @@ SECTIONS = [
    ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
        note="有进无出:开了会话但没发消息的比例",
        dims=[("overall","Overall",None),("path","by path","path")])),
-   ("chat_voice_text_ratio", "语音消息占比 · Voice Msg Share", "share", dict(col="modality", value="voice",
-       dims=[("overall","Overall",None)])),
+   ("chat_voice_text_ratio", "语音消息占比 · Voice Msg Share", "rate",
+       dict(rate=("voice_msgs","total_msgs"),
+            note="用户消息里以语音发出的占比(modality=消息实际模态,≠用户声明的偏好 path)",
+            dims=[("overall","Overall",None)])),
    ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "line", dict(val="latency_sec", agg="avg",
        dims=[("overall","Overall",None)])),
    ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(val="char_len", agg="avg",
@@ -238,7 +229,7 @@ def _fmt_of(kind, pct, p):
     """每张图统一的小数格式:pct=百分比1位 / d1=1位小数 / int=整数。"""
     if p.get("fmt"): return p["fmt"]
     if pct: return "pct"
-    if kind == "rate_cols" or p.get("agg") == "avg": return "d1"
+    if p.get("agg") == "avg": return "d1"
     return "int"
 
 def _finish(dims, p):
@@ -301,15 +292,6 @@ def build_card(metrics, mid, title, kind, p):
                 base.update(steps=[r["step"] for r in rows], weeks=weeks,
                             matrix={r["step"]: {w: _num(r.get(w)) for w in weeks} for r in rows})
             return base
-        if kind == "ret_multi":
-            data = {}
-            for cmid, lbl, num, den in p["cards"]:
-                r = metrics.get(cmid)
-                if r: data[lbl] = _rate(r, num, den, dc=_dc(r)).get("Overall", [])
-            if not data: return None
-            base.update(kind="line", pct=True, fmt="pct",
-                        dims=[{"key": "overall", "label": "D1/D3/D7", "data": data}])
-            return base
         if kind == "long_dim":
             # 长维度形状:一张卡自带全部维度,SQL 输出 date | dimension | dimension_value | 值列…
             # 每个 dimension 取值 = 一个维度选项卡,dimension_value = 该选项卡里的各条线。
@@ -356,34 +338,13 @@ def build_card(metrics, mid, title, kind, p):
             wc, wv = p["where"]; rows = [r for r in rows if str(r.get(wc)) == wv]
             if not rows: return None
         dc = _dc(rows)
-        pct = p.get("pct", kind in ("rate", "rate_cols", "share", "rate_days", "pct_split"))
+        pct = p.get("pct", kind == "rate")
         dims = []
-        if kind == "pct_split":            # 每类别占当天总量的比例(如 DAU 新老占比)
-            tot = {d: v for d, v in _agg(rows, p["val"], None, "sum", dc=dc).get("Overall", [])}
-            ser = _agg(rows, p["val"], p["by"], "sum", dc=dc)
-            data = {s: [[d, round(v / tot[d], 4) if tot.get(d) else 0] for d, v in pts] for s, pts in ser.items()}
-            dims = [{"key": "overall", "label": "", "data": data}]
-        elif kind == "rate_cols":
-            data = {}
-            den = p["den"]
-            for lbl, nc in p["cols"]:
-                data[lbl] = _rate(rows, nc, den, dc=dc).get("Overall", [])
-            dims = [{"key": "overall", "label": "", "data": data}]
-        elif kind == "rate_days":              # 留存:D1/D3/D7 各一个切换,序列 = split 值
-            den, split = p["den"], p["split"]
-            for dlbl, num in p["days"]:
-                ser = _rate(rows, num, den, split, dc=dc)
-                dims.append({"key": dlbl, "label": dlbl, "data": {s: pts for s, pts in ser.items()}})
-        elif kind == "share":
-            for key, label, by in p["dims"]:
-                ser = _cap(_share(rows, p["col"], p["value"], by, dc=dc))
-                dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
-        else:
-            for key, label, by in p["dims"]:
-                ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc) if kind == "rate" \
-                      else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc)
-                ser = ser if (p.get("only") or p.get("order")) else _cap(ser, p.get("cap", 6))
-                dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
+        for key, label, by in p["dims"]:
+            ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc) if kind == "rate" \
+                  else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc)
+            ser = ser if (p.get("only") or p.get("order")) else _cap(ser, p.get("cap", 6))
+            dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
         dims = _finish(dims, p)
         base.update(kind="line", pct=pct, fmt=_fmt_of(kind, pct, p), dims=dims)
         return base
