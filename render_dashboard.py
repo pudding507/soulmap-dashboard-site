@@ -106,34 +106,34 @@ RETENTION_DIMS = dict(
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
 SECTIONS = [
  ("① 增长 · Growth", [
-   ("growth_dau", "日活跃用户数 DAU", "line", dict(val="value", cap=12,
+   ("growth_dau", "日活跃用户数 · DAU", "line", dict(val="value", cap=12,
        dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
    ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "rate",
        dict(rate=("users","daily_active_users"), fmt="pct0", order=["new","returning"],
-            note="新/老用户各占当天 DAU 的比例",
+            note="新/老用户各占当天 DAU 的比例 ｜ Share of each day's DAU from new vs returning users",
             dims=[("user_type","","user_type")])),
    ("growth_new_user", "新用户数 · New Users", "line", dict(val="value", cap=12,
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
    ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value", cap=12,
-       note="激活新用户 = 新用户中当天对话≥3轮的人(1问1答=1轮)",
+       note="激活新用户 = 新用户中当天对话≥3轮的人(1问1答=1轮) ｜ Activated = new users reaching ≥3 conversation turns that day (1 exchange = 1 turn)",
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
  ]),
  ("② 激活 · Activation", [
-   ("activation_funnel", "激活漏斗 Activation Funnel · 4 版本周", "funnel",
-       dict(note="activated=对话≥3轮 · deep=对话≥5轮(1问1答=1轮)")),
-   ("activation_funnel_by_adgroup", "激活漏斗 · 分 adgroup · by Ad Group", "funnel",
-       dict(note="按 source×广告类型分组对比,右上/toolbar 切组;近4版本周·取前8组")),
-   ("activation_guardrail_funnel", "护栏漏斗 · 分版本 · Guardrail by Version", "funnel",
-       dict(gsort="version", note="onboarding 漏斗按 app_version 对比(看新 chip 有没有增流失);近30天·选topic=主动选")),
+   ("activation_funnel", "激活漏斗 · Activation Funnel", "funnel",
+       dict(note="activated=≥3轮 · deep=≥5轮(1问1答=1轮),近4版本周 ｜ activated = ≥3 turns · deep = ≥5 turns · last 4 release weeks")),
+   ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
+       dict(note="按 source×广告类型对比,近4版本周·取前8组 ｜ By source × ad type; last 4 release weeks, top 8 groups")),
+   ("activation_guardrail_funnel", "护栏漏斗分版本 · Guardrail Funnel by Version", "funnel",
+       dict(gsort="version", note="onboarding 漏斗按 app_version 对比,看新 chip 有没有增流失;近30天 ｜ Onboarding funnel by app version — did the new chip add drop-off? Last 30 days")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
-   ("activation_onboarding_from_2.5.0", "新版 Onboarding · Anchor 分布 (from 2.5.0)", "line",
+   ("activation_onboarding_from_2.5.0", "新版 Onboarding Anchor 分布 · Onboarding Anchor Mix (2.5.0+)", "line",
        dict(val="users",
-            note="2.5.0 新 onboarding 的 anchor 分布 · 投放口径(user.topic_anchor,含默认落到 just_talk≈62%);可切 source/adgroup。下游触发决策据此口径,非主动选择口径(just_talk仅≈11%)",
+            note="投放口径 user.topic_anchor,含默认落到 just_talk 的 ≈62%(主动选择仅 ≈11%) ｜ Delivery definition; ~62% default to just_talk (explicit choice: ~11%)",
             dims=[("overall","Overall",None),("anchor","by anchor","anchor"),
                   ("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
    ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
-       note="用户看到 AI 首句后多久发出第一条消息",
+       note="用户看到 AI 首句后多久发出第一条消息 ｜ How long after the AI's opening line the user sends their first message",
        dims=[("overall","Overall",None)])),
    ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
        dims=[("overall","Overall",None)])),
@@ -141,17 +141,17 @@ SECTIONS = [
  ("③ 留存 · Retention", [
    ("retention_d1", "留存 D1 · Retention D1", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
-            note="注册后第1天回访开App的比例;可切 Overall/来源/广告组/国家/输入方式/是否激活")),
+            note="注册后第1天回访开App的比例 ｜ Share of new users reopening the app on day 1")),
    ("retention_d3", "留存 D3 · Retention D3", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS)),
    ("retention_d7", "留存 D7 · Retention D7", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
-            note="⚠️ 近7天 cohort 的 D7 未成熟(窗口未到),看趋势排除末尾几天")),
+            note="⚠️ 末尾几天 cohort 未满7天,数据未成熟 ｜ ⚠️ Trailing cohorts haven't reached day 7 — data not yet mature")),
  ]),
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "四 Tab 渗透率 · Tab Penetration", "rate",
        dict(rate=("tab_users","active_users"), fmt="pct0",
-            note="当天开 App 用户中访问过各 Tab 的比例",
+            note="当天开 App 用户中访问过各 Tab 的比例 ｜ Share of that day's active users who opened each tab",
             order=["Stars","Chat","Discover","Me"],
             dims=[("tab","","tab")])),
    ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate",
@@ -159,66 +159,66 @@ SECTIONS = [
             order=["Stars","Chat","Discover","Me"],
             dims=[("tab","","tab")])),
    ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"),
-       note="点击未解锁 Tab 的人 ÷ 当天活跃",
+       note="点击未解锁 Tab 的人 ÷ 当天活跃 ｜ Users tapping a locked tab ÷ daily active users",
        dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
  ]),
- ("⑤ Chat", [
+ ("⑤ 对话 · Chat", [
    ("chat_msgs_per_user", "人均消息数 · Msgs per User (avg)", "line", dict(val="total_msgs", agg="avg",
-       note="统计期内每人总消息数(来回都算)取平均;分母=真聊过的用户,非DAU",
+       note="每人总消息数(来回都算)取平均;分母=真聊过的用户,非DAU ｜ Avg messages per person (both directions); denominator = users who chatted, not DAU",
        dims=[("overall","Overall",None)])),
    ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
-       note="1 问 1 答 = 1 轮", dims=[("overall","Overall",None)])),
+       note="1 问 1 答 = 1 轮 ｜ 1 question + 1 answer = 1 turn", dims=[("overall","Overall",None)])),
    ("chat_session_duration", "对话时长 · Session Duration (avg min)", "line", dict(val="duration_min", agg="avg",
-       note="单场会话首末消息时长,取平均(含中途挂机)",
+       note="单场会话首末消息时长,取平均(含中途挂机) ｜ Average time between a session's first and last message (idle time included)",
        dims=[("overall","Overall",None)])),
    ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
-       note="有进无出:开了会话但没发消息的比例",
+       note="有进无出:开了会话但没发消息的比例 ｜ Sessions opened but with no message sent",
        dims=[("overall","Overall",None),("path","by path","path")])),
    ("chat_voice_text_ratio", "语音消息占比 · Voice Msg Share", "rate",
        dict(rate=("voice_msgs","total_msgs"),
-            note="用户消息里以语音发出的占比(modality=消息实际模态,≠用户声明的偏好 path)",
+            note="以语音发出的用户消息占比(实际模态,≠声明偏好 path) ｜ Share of user messages sent as voice (actual mode, not declared preference)",
             dims=[("overall","Overall",None)])),
    ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "line", dict(val="latency_sec", agg="avg",
        dims=[("overall","Overall",None)])),
    ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(val="char_len", agg="avg",
        dims=[("overall","Overall",None)])),
-   ("chat_engaged_user_focus", "投入用户(≥5句/天)· 关注点 · Engaged Users' Focus", "line",
+   ("chat_engaged_user_focus", "投入用户关注点 · Engaged Users' Focus", "line",
        dict(val="users",
-            note="当天发≥5条的投入用户;默认看总量,可切新老/来源/adgroup。关注点(user_purpose)较粗、缺失多,细分关注点看「新版 Onboarding 选择」",
+            note="当天发≥5条的用户。purpose 较粗、缺失多,细分看 Onboarding Anchor ｜ Users sending ≥5 msgs/day. Purpose is coarse and often missing",
             dims=[("overall","Overall",None),
                   ("user_type","by user type","user_type"),
                   ("source","by source","source"),("adgroup","by source×adgroup",_ADG),
                   ("purpose","by purpose (coarse)","purpose")])),
    ("chat_module_call_success", "模块成功响应率 · Module-Call Success by Content", "rate",
        dict(rate=("success","turns"),
-            note="每轮聊天:director出招(fired)或注入内容(injectedBlock非空)=成功调用模块;按聊天内容(purpose)拆。CASUAL等随便聊本就不需模块,低成功率非失败",
+            note="每轮 director fired 或 injectedBlock 非空 = 成功;闲聊本就不需模块,低值非失败 ｜ Per turn: director fired or injectedBlock set = success; casual chat needs none",
             dims=[("overall","Overall",None),("purpose","by content","purpose")])),
  ]),
- ("⑥ Star", [
-   ("starmap_seed_funnel", "种子星漏斗 Seed-Star Funnel · 4 版本周", "funnel",
-       dict(note="冷启动展示 → 点种子星 → 转成实心星")),
+ ("⑥ 星图 · Star Map", [
+   ("starmap_seed_funnel", "种子星漏斗 · Seed-Star Funnel", "funnel",
+       dict(note="冷启动展示 → 点种子星 → 转成实心星 ｜ Cold-start display → tap seed star → converts to a solid star · last 4 release weeks")),
    ("starmap_new_user_stars", "新用户人均星数 · Stars per New User", "line", dict(val="star_count", agg="avg",
        dims=[("overall","Overall",None)])),
    ("starmap_cluster_maturity", "星主题分布 · Star Cluster", "line", dict(val="stars", where=("dim","cluster"),
-       dims=[("overall","Overall",None),("value","by cluster","value")], note="每天新增星按主题:core/heart/voice/mind/bond")),
+       dims=[("overall","Overall",None),("value","by cluster","value")], note="每天新增星按主题:core/heart/voice/mind/bond ｜ Daily new stars by theme: core / heart / voice / mind / bond")),
    ("starmap_cluster_maturity", "星成熟度分布 · Star Maturity", "line", dict(val="stars", where=("dim","maturity"),
-       dims=[("overall","Overall",None),("value","by maturity","value")], note="每天新增星按成熟度:emerging→confirmed→faded 等")),
+       dims=[("overall","Overall",None),("value","by maturity","value")], note="每天新增星按成熟度:emerging→confirmed→faded 等 ｜ Daily new stars by maturity: emerging → confirmed → faded, etc.")),
    ("starmap_card_interaction", "星卡互动 · Star-Card Actions", "line", dict(val="taps",
        dims=[("overall","Overall",None),("action","by action","action")])),
  ]),
- ("⑦ Discover", [
+ ("⑦ 发现 · Discover", [
    ("discover_visit_rate", "Discover 访问率 · Visit Rate", "rate", dict(rate=("discover_users","active_users"),
-       note="进 Discover 的用户 ÷ 当天活跃",
+       note="进 Discover 的用户 ÷ 当天活跃 ｜ Users entering Discover ÷ daily active users",
        dims=[("overall","Overall",None),("user_stage","by stage","user_stage")])),
    ("discover_scroll_depth", "滚动深度分布 · Scroll Depth", "line", dict(val="users", slfmt=(lambda s: str(int(float(s)))+"%"),
        dims=[("overall","Overall",None),("depth_pct","by depth","depth_pct")])),
    ("discover_card_ctr", "卡片 CTR · Card CTR (top-10 pos)", "rate", dict(rate=("taps","impressions"),
-       note="仅前 10 个排位;深位曝光少、CTR 噪声大已略去",
+       note="仅前 10 个排位;深位曝光少、CTR 噪声大已略去 ｜ Top 10 positions only; deeper slots have too few impressions and noisy CTR",
        only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
        dims=[("overall","Overall",None),("position","by position","position")])),
    ("discover_empty_state", "空状态表现 · Empty State", "line", dict(val="empty_users",
        slfmt=(lambda s: {"early_turn":"轮次太少","generating":"生成中"}.get(s,s)),
-       note="Discover 冷启动填充失败:轮次太少/内容生成中",
+       note="Discover 冷启动填充失败:轮次太少/内容生成中 ｜ Discover cold-start fill failed: too few turns / content still generating",
        dims=[("overall","Overall",None),("reason","by reason","reason")])),
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(val="taps",
        dims=[("overall","Overall",None),("destination","by destination","destination")])),
@@ -431,12 +431,12 @@ def render(raw_path: Path, out_path: Path):
     chartjs = (HERE / "lib" / "chart.umd.min.js").read_text(encoding="utf-8")
     payload = json.dumps({"sections": sections, "pal": PAL, "wkpal": WKPAL}, ensure_ascii=False)
     failed = meta.get("failed") or []
-    hdr = (f'<header><h1>SoulMap 看板 · 趋势版 · SoulMap Dashboard</h1><div class="meta">'
+    hdr = (f'<header><h1>SoulMap 看板 · SoulMap Dashboard</h1><div class="meta">'
            f'数据 {meta.get("run_date","?")} · Metabase dashboard {meta.get("dashboard_id","?")} · '
            f'{sum(len(s["cards"]) for s in sections)} 卡' + (f' · 缺 {len(failed)}' if failed else '') +
            '</div></header>' + (f'<div class="banner">{BANNER}</div>' if BANNER else ''))
     doc = f"""<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · 趋势版 · SoulMap Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · SoulMap Dashboard</title>
 <style>{CSS}</style></head><body>{hdr}<div id="root"></div>
 <script>{chartjs}</script>
 <script>const DATA={payload};</script>
@@ -577,7 +577,7 @@ function build(){
     });
   });
   nav.appendChild($('div','sp'));
-  const tg=$('button','nb','◐ 主题');tg.onclick=()=>{document.documentElement.setAttribute('data-theme',isDark()?'light':'dark');build();};
+  const tg=$('button','nb','◐ 主题 Theme');tg.onclick=()=>{document.documentElement.setAttribute('data-theme',isDark()?'light':'dark');build();};
   nav.appendChild(tg);
   if(window.__io)window.__io.disconnect();
   window.__io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){
