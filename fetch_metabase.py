@@ -20,7 +20,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 import urllib.error as E
 import urllib.request as U
 from datetime import date
@@ -99,8 +101,9 @@ def main() -> int:
     ap.add_argument("--out", default=str(HERE / "raw_metrics.json"))
     ap.add_argument("--run-date", default=date.today().isoformat())
     ap.add_argument("--limit", type=int, default=0, help="只抓前 N 张卡(冒烟测试)")
-    ap.add_argument("--rounds", type=int, default=6, help="多轮重试,每轮把没抓到的再试一遍")
+    ap.add_argument("--rounds", type=int, default=3, help="多轮重试,每轮把没抓到的再试一遍")
     ap.add_argument("--gap", type=int, default=15, help="轮间隔秒数")
+    ap.add_argument("--workers", type=int, default=4, help="并发抓取的线程数(卡与卡互相独立)")
     args = ap.parse_args()
 
     tok = login()
@@ -110,20 +113,31 @@ def main() -> int:
         print(f"⚠️ --limit {args.limit}:只抓前 {len(cards)} 张")
 
     # 多轮制:每轮把还没抓到的卡再试一遍,轮间隔一会儿,去碰 RDS 空档(仿 kix"多试几次就成")
+    # ⚡ 轮内并发:卡与卡互相独立,串行时墙上时间 = 所有卡耗时之和,其中几张必超时的卡
+    #    每轮都要各自空等 60 秒(nginx 网关线)。改成线程池后 ≈ 最慢那张的耗时。
     metrics = {}
+    lock = threading.Lock()
     todo = [(c["card_id"], c["card_name"], safe_metric_id(c["card_name"])) for c in cards]
+
+    def fetch_one(item):
+        cid, cname, mid = item
+        t0 = time.time()
+        rows = run_card_with_retry(tok, cid, max_retries=0)   # 每轮 1 次,靠多轮磨
+        if rows is None:
+            print(f"  ✗ {cname}(留待下轮) {time.time()-t0:.0f}s", flush=True)
+            return item
+        with lock:
+            metrics[mid] = rows
+        print(f"  ✓ {cname} -> {mid}  {len(rows)}行 {time.time()-t0:.0f}s", flush=True)
+        return None
+
     for rd in range(1, args.rounds + 1):
-        print(f"\n===== 第 {rd}/{args.rounds} 轮 · 待抓 {len(todo)} 卡 =====")
-        still = []
-        for cid, cname, mid in todo:
-            t0 = time.time()
-            rows = run_card_with_retry(tok, cid, max_retries=0)   # 每轮 1 次,靠多轮磨
-            if rows is None:
-                still.append((cid, cname, mid))
-                print(f"  ✗ {cname}(留待下轮)")
-            else:
-                metrics[mid] = rows
-                print(f"  ✓ {cname} -> {mid}  {len(rows)}行 {time.time()-t0:.0f}s")
+        workers = max(1, min(args.workers, len(todo)))
+        print(f"\n===== 第 {rd}/{args.rounds} 轮 · 待抓 {len(todo)} 卡 · 并发 {workers} =====", flush=True)
+        t_round = time.time()
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            still = [x for x in pool.map(fetch_one, todo) if x is not None]
+        print(f"  本轮用时 {time.time()-t_round:.0f}s", flush=True)
         todo = still
         if not todo:
             print("全部抓到 ✅"); break
