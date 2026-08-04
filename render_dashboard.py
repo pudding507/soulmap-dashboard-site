@@ -126,7 +126,7 @@ SECTIONS = [
    ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
        dict(note="同激活漏斗,按 source×广告类型分组;近4版本周·取前8组 ｜ Same funnel split by source × ad type; last 4 release weeks, top 8 groups")),
    ("activation_guardrail_funnel", "护栏漏斗分版本 · Guardrail Funnel by Version", "funnel",
-       dict(gsort="version", note="onboarding 四步按 app_version 分组,看新 chip 有没有增流失;近30天 ｜ Onboarding steps split by app version — did the new chip add drop-off? Last 30 days")),
+       dict(gsort="version", note="onboarding 六步按 app_version 分组,看新 chip 有没有增流失;近30天,activated=≥3轮 deep=≥5轮 ｜ Onboarding steps split by app version — did the new chip add drop-off? Last 30 days")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
             note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
