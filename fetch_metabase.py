@@ -132,7 +132,9 @@ def main() -> int:
         return None
 
     for rd in range(1, args.rounds + 1):
-        workers = max(1, min(args.workers, len(todo)))
+        # 并发递减:第1轮拼吞吐(4),后面几轮只剩硬骨头,降并发让每张卡拿到完整带宽。
+        # 实测第3轮 7 张卡开 4 并发时互相拖累、6 张全超时;单跑 41–46 秒的卡本来能过。
+        workers = max(1, min(args.workers // (2 ** (rd - 1)), len(todo)))
         print(f"\n===== 第 {rd}/{args.rounds} 轮 · 待抓 {len(todo)} 卡 · 并发 {workers} =====", flush=True)
         t_round = time.time()
         with ThreadPoolExecutor(max_workers=workers) as pool:
