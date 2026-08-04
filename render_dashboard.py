@@ -139,7 +139,7 @@ SECTIONS = [
        note="用户看到 AI 首句后发出第一条消息的秒数,取平均 ｜ Avg seconds from the AI's opening line to the user's first message",
        dims=[("overall","Overall",None)])),
    ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (avg s)", "line", dict(
-            note="每用户首轮 composer 生成回复的耗时,取平均;不含前置组件,是真实等待的下限 ｜ Avg time for composer to generate the first reply; excludes upstream components, so a lower bound",val="avg_secs", agg="avg",
+            note="每会话首次 composer 回复的耗时,每用户取最早一次再平均;不含前置组件,是真实等待的下限 ｜ Avg time for composer to generate the first reply; excludes upstream components, so a lower bound",val="avg_secs", agg="avg",
        dims=[("overall","Overall",None)])),
  ]),
  ("③ 留存 · Retention", [
@@ -217,9 +217,10 @@ SECTIONS = [
        dict(rate=("success","turns"),
             note="成功调用模块的轮次 ÷ 有 director 判断的轮次;闲聊本就不需模块,低值非失败 ｜ Turns where a module fired ÷ turns with a director decision; casual chat needs none, so a low rate isn't a failure",
             dims=[("overall","Overall",None),("purpose","by content","purpose")])),
-   ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "line", dict(
-            note="每一轮 AI 生成回复的耗时,取平均(llm_response 组件) ｜ Avg time for the AI to generate a reply, per turn (llm_response)",val="latency_sec", agg="avg",
-       dims=[("overall","Overall",None)])),
+   ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "rate",
+       dict(rate=("latency_sec_total","turns"), pct=False, fmt="d1",
+            note="每一轮 AI 生成回复的耗时,取平均(llm_response 组件) ｜ Avg time for the AI to generate a reply, per turn (llm_response)",
+            dims=[("overall","Overall",None)])),
  ]),
  ("⑥ 星图 · Star Map", [
    ("starmap_seed_funnel", "种子星漏斗 · Seed-Star Funnel", "funnel",
