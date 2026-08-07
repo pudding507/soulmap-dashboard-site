@@ -406,6 +406,7 @@ CSS = """
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:14px}
 header{padding:22px 26px 8px}h1{margin:0;font-size:19px;font-weight:650}
 .meta{color:var(--mut);font-size:12px;margin-top:4px}
+.meta.lag{margin-top:6px;font-size:11.5px;line-height:1.5;max-width:1000px;opacity:.9}
 h2{font-size:14px;color:var(--ts);font-weight:600;margin:24px 26px 10px;letter-spacing:.02em}
 .grid-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:0 26px}
 @media (max-width:920px){.grid-cards{grid-template-columns:1fr}}
@@ -463,10 +464,15 @@ def render(raw_path: Path, out_path: Path):
     chartjs = (HERE / "lib" / "chart.umd.min.js").read_text(encoding="utf-8")
     payload = json.dumps({"sections": sections, "pal": PAL, "wkpal": WKPAL}, ensure_ascii=False)
     failed = meta.get("failed") or []
+    # 副标题第二行:说明埋点类图表的固有延迟。实测 ETL 每天 SGT 13:00-13:03 入库前一天的数据
+    # (连续 5 天一分不差),所以 13:00 前最新只到前天。服务端库(留存/对话)不走这条链路,实时。
+    lag_note = ('每天 13:00(SGT) 入库前一天的埋点数据,数据有延迟'
+                ' ｜ Event data for the previous day lands at 13:00 SGT — charts lag accordingly')
     hdr = (f'<header><h1>SoulMap 看板 · SoulMap Dashboard</h1><div class="meta">'
            f'数据 {meta.get("run_date","?")} · Metabase dashboard {meta.get("dashboard_id","?")} · '
            f'{sum(len(s["cards"]) for s in sections)} 卡' + (f' · 缺 {len(failed)}' if failed else '') +
-           '</div></header>' + (f'<div class="banner">{BANNER}</div>' if BANNER else ''))
+           f'</div><div class="meta lag">{lag_note}</div></header>'
+           + (f'<div class="banner">{BANNER}</div>' if BANNER else ''))
     doc = f"""<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · SoulMap Dashboard</title>
 <style>{CSS}</style></head><body>{hdr}<div id="root"></div>
