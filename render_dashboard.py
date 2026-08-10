@@ -92,8 +92,8 @@ _ADG = lambda r: f"{r.get('source')}_{r.get('adgroup')}"   # source×adgroup 组
 
 # 三张留存卡共用的维度配置(SQL 输出 dimension 列的取值 → 选项卡标签/顺序)
 RETENTION_DIMS = dict(
-    dimorder=["overall", "source", "ad_group", "country", "input_path", "activation"],
-    dimlabels={"overall": "Overall", "source": "by source", "ad_group": "by ad group",
+    dimorder=["overall", "source", "adgroup", "country", "input_path", "activation"],
+    dimlabels={"overall": "Overall", "source": "by source", "adgroup": "by source×adgroup",
                "country": "by country", "input_path": "by input path",
                "activation": "by activation"},
     slorder={"input_path": ["text", "voice", "unknown"],
