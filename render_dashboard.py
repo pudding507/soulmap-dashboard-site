@@ -146,6 +146,9 @@ SECTIONS = [
    ("retention_d1", "留存 D1 · Retention D1", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note="次日开App的人 ÷ 当天注册的新用户;回访=session_start ｜ Users reopening the app on day 1 ÷ new users registered that day")),
+   ("retention_d1_effective", "有效留存 D1 · Effective Retention D1", "long_dim",
+       dict(rate=("messaged_users","new_users"), **RETENTION_DIMS,
+            note="次日发过消息的人 ÷ 当天注册的新用户;只算用户自己发言,打开App不算 ｜ Users who sent a message on day 1 ÷ new users that day; opening the app alone doesn't count")),
    ("retention_d3", "留存 D3 · Retention D3", "long_dim",
        dict(
             note="第3天开App的人 ÷ 当天注册的新用户 ｜ Users reopening on day 3 ÷ new users registered that day",rate=("retained_users","new_users"), **RETENTION_DIMS)),
