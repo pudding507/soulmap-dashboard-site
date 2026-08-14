@@ -92,12 +92,12 @@ _ADG = lambda r: f"{r.get('source')}_{r.get('adgroup')}"   # source×adgroup 组
 
 # 三张留存卡共用的维度配置(SQL 输出 dimension 列的取值 → 选项卡标签/顺序)
 RETENTION_DIMS = dict(
-    dimorder=["overall", "source", "adgroup", "country", "input_path", "activation"],
+    dimorder=["overall", "source", "adgroup", "country", "input_path", "first_day_depth"],
     dimlabels={"overall": "Overall", "source": "by source", "adgroup": "by source×adgroup",
                "country": "by country", "input_path": "by input path",
-               "activation": "by activation"},
+               "first_day_depth": "by day-0 turns"},
     slorder={"input_path": ["text", "voice", "unknown"],
-             "activation": ["activated", "not_activated"]},
+             "first_day_depth": ["0-4", "5-9", "10+"]},
     min_vol=30,   # 累计新用户不足 30 的维度取值不画(小样本率没有参考价值)
 )
 
@@ -116,7 +116,11 @@ SECTIONS = [
    ("growth_new_user", "新用户数 · New Users", "line", dict(
             note="当天首次安装 App 的用户(first_open) ｜ Users whose first_open happened that day",val="value", cap=12,
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
-   ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value", cap=12,
+   ("growth_version_adoption", "版本覆盖率 · Version Adoption", "rate",
+         dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
+              note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
+              dims=[("app_version","","app_version")])),
+     ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value", cap=12,
        note="新用户中对话≥3轮的人(1问1答=1轮) ｜ New users reaching ≥3 conversation turns (1 exchange = 1 turn)",
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
  ]),
