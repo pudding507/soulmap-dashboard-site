@@ -101,6 +101,17 @@ RETENTION_DIMS = dict(
     min_vol=30,   # 累计新用户不足 30 的维度取值不画(小样本率没有参考价值)
 )
 
+# 主题对照卡的维度配置(SQL 的 dimension 列 → 指标选项卡;dimension_value = 各主题线)
+_THEME_METRICS = ["first_message", "turns_5plus", "turns_10plus", "retention_d1"]
+_THEME_ORDER   = ["relationship", "burnout", "career", "others"]   # 固定线序,新主题自动接在后面
+THEME_DIMS = dict(
+    dimorder=_THEME_METRICS,
+    dimlabels={"first_message": "First message", "turns_5plus": "5+ turns (day 0)",
+               "turns_10plus": "10+ turns (day 0)", "retention_d1": "D1 retention"},
+    slorder={k: _THEME_ORDER for k in _THEME_METRICS},
+    min_vol=30,   # 累计新用户不足 30 的主题不画(刚上线的小主题率值波动极大)
+)
+
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
@@ -120,8 +131,11 @@ SECTIONS = [
          dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
               note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
               dims=[("app_version","","app_version")])),
-     ("growth_new_activated_user", "激活新用户数 · Activated New Users", "line", dict(val="value", cap=12,
-       note="新用户中对话≥3轮的人(1问1答=1轮) ｜ New users reaching ≥3 conversation turns (1 exchange = 1 turn)",
+     ("growth_theme_comparison", "主题对照 · Theme Comparison", "long_dim",
+         dict(rate=("numerator","denominator"), fmt="pct0", **THEME_DIMS,
+              note="各广告主题的新用户首日行为与次日留存,分母为该主题当天新用户数(按账号) ｜ Day-0 behaviour and D1 retention by ad theme; denominator = that theme\u2019s new users that day (accounts)")),
+     ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
+       note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
  ]),
  ("② 激活 · Activation", [
@@ -361,6 +375,8 @@ def build_card(metrics, mid, title, kind, p):
                 ser = _rate(sub, p["rate"][0], p["rate"][1], val_col, dc=dc) if p.get("rate") \
                       else _agg(sub, p["val"], val_col, p.get("agg", "sum"), dc=dc)
                 if k in slorder:
+                    # 固定线序;但同样按量过滤 —— 否则刚上线的小主题(如 1 人 100%)会以噪音线混进来
+                    ser = OrderedDict((s2, v) for s2, v in ser.items() if volume.get(s2, 0) >= min_vol)
                     ser = _ord(ser, slorder[k])
                 else:
                     keep = [s for s in sorted(ser, key=lambda s: volume.get(s, 0), reverse=True)
@@ -399,6 +415,7 @@ WKPAL = ["#bcd3f2", "#8fb4e6", "#6f9de0", "#4a79c9"]   # 4 版本周,由浅到�
 ALIAS = {
     "growth_new_users": "growth_new_user",
     "growth_activated_new_users": "growth_new_activated_user",
+    "growth_deep_new_users": "growth_new_activated_user",   # 2026-08-14 卡名 Activated → Deep(阈值≥3→≥5);旧名保留以便回滚
     "activation_first_msg_latency": "activation_user_first_latency",
 }
 
