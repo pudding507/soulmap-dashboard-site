@@ -101,15 +101,15 @@ RETENTION_DIMS = dict(
     min_vol=30,   # 累计新用户不足 30 的维度取值不画(小样本率没有参考价值)
 )
 
-# 主题对照卡的维度配置(SQL 的 dimension 列 → 指标选项卡;dimension_value = 各主题线)
-_THEME_METRICS = ["first_message", "turns_5plus", "turns_10plus", "retention_d1"]
-_THEME_ORDER   = ["relationship", "burnout", "career", "others"]   # 固定线序,新主题自动接在后面
-THEME_DIMS = dict(
-    dimorder=_THEME_METRICS,
+# 广告组首日对照卡的维度配置(SQL 的 dimension 列 → 指标选项卡;dimension_value = 各广告组线)
+_ADGROUP_METRICS = ["first_message", "turns_5plus", "turns_10plus", "retention_d1"]
+_ADGROUP_ORDER   = ["relationship", "burnout", "career", "others"]   # 固定线序,新广告组自动接在后面
+ADGROUP_DIMS = dict(
+    dimorder=_ADGROUP_METRICS,
     dimlabels={"first_message": "First message", "turns_5plus": "5+ turns (day 0)",
                "turns_10plus": "10+ turns (day 0)", "retention_d1": "D1 retention"},
-    slorder={k: _THEME_ORDER for k in _THEME_METRICS},
-    min_vol=30,   # 累计新用户不足 30 的主题不画(刚上线的小主题率值波动极大)
+    slorder={k: _ADGROUP_ORDER for k in _ADGROUP_METRICS},
+    min_vol=30,   # 累计新用户不足 30 的广告组不画(刚上线的小广告组率值波动极大)
 )
 
 # ---------- 注册表 ----------
@@ -131,9 +131,9 @@ SECTIONS = [
          dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
               note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
               dims=[("app_version","","app_version")])),
-     ("growth_theme_comparison", "主题对照 · Theme Comparison", "long_dim",
-         dict(rate=("numerator","denominator"), fmt="pct0", **THEME_DIMS,
-              note="各广告主题的新用户首日行为与次日留存,分母为该主题当天新用户数(按账号) ｜ Day-0 behaviour and D1 retention by ad theme; denominator = that theme\u2019s new users that day (accounts)")),
+     ("growth_adgroup_d0_comparison", "广告组首日对照 · Ad-Group D0 Comparison", "long_dim",
+         dict(rate=("numerator","denominator"), fmt="pct0", **ADGROUP_DIMS,
+              note="各广告组的新用户首日行为与次日留存,分母为该广告组当天新用户数(按账号) ｜ Day-0 behaviour and D1 retention by ad group; denominator = that group\u2019s new users that day (accounts)")),
      ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
@@ -173,6 +173,8 @@ SECTIONS = [
    ("retention_d7", "留存 D7 · Retention D7", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note="第7天开App的人 ÷ 当天注册的新用户;末尾几天观察窗未满 ｜ Users reopening on day 7 ÷ new users that day; the trailing days' window hasn't closed")),
+   ("retention_push_funnel", "推送链路漏斗 · Push Setup Funnel", "funnel",
+       dict(note="弹出权限窗的设备:授权 → 拿到 token → 服务端注册,按系统分组;数据自 2.7.0(8/15)起 ｜ Devices shown the permission prompt: granted → token obtained → registered on server, grouped by OS; data starts with 2.7.0 (Aug 15)")),
  ]),
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "四 Tab 渗透率 · Four-Tab Penetration", "rate",
@@ -258,20 +260,15 @@ SECTIONS = [
        dims=[("overall","Overall",None),("action","by action","action")])),
  ]),
  ("⑦ 发现 · Discover", [
-   ("discover_visit_rate", "Discover 访问率 · Visit Rate", "rate", dict(rate=("discover_users","active_users"),
-       note="进 Discover 的人 ÷ 当天DAU ｜ Users entering Discover ÷ that day's DAU",
-       dims=[("overall","Overall",None),("user_stage","by stage","user_stage")])),
-   ("discover_scroll_depth", "滚动深度分布 · Scroll Depth Distribution", "line", dict(
-            note="滚到各深度的用户(25 / 50 / 75 / 100%) ｜ Users reaching each scroll depth",val="users", slfmt=(lambda s: str(int(float(s)))+"%"),
-       dims=[("overall","Overall",None),("depth_pct","by depth","depth_pct")])),
-   ("discover_card_ctr", "卡片 CTR · Card CTR (top-10 pos)", "rate", dict(rate=("taps","impressions"),
-       note="卡片点击 ÷ 卡片曝光,仅统计前 10 个排位 ｜ Card taps ÷ impressions, top 10 positions only",
-       only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
-       dims=[("overall","Overall",None),("position","by position","position")])),
-   ("discover_empty_state", "空状态用户数 · Empty-State Users", "line", dict(val="empty_users",
-       slfmt=(lambda s: {"early_turn":"轮次太少","generating":"生成中"}.get(s,s)),
-       note="看到空状态的用户;reason = early_turn(轮次太少)/ generating(内容生成中) ｜ Users hitting an empty state; reason = too few turns / content still generating",
-       dims=[("overall","Overall",None),("reason","by reason","reason")])),
+   ("discover_character_card_ctr", "角色卡 CTR · Character Card CTR (top-10 pos)", "rate",
+       dict(rate=("taps","impressions"),
+            note="角色目录里点击 ÷ 曝光,仅前 10 个排位;数据自 2.7.0(8/15 放量)起 ｜ Taps ÷ impressions in the character catalogue, top 10 positions; data starts with 2.7.0 (rolled out Aug 15)",
+            only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
+            dims=[("overall","Overall",None),("position","by position","position")])),
+   ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
+       dict(val="characters", cap=4,
+            note="每天被曝光 / 被点击过的**角色个数**(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
+            dims=[("metric","","metric")])),
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
             note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
        dims=[("overall","Overall",None),("destination","by destination","destination")])),
@@ -516,7 +513,14 @@ function fmtV(v,fmt){if(v==null)return'';
   return Math.round(v).toLocaleString();}
 const STEPMAP={'打开':'打开 Open','Welcome':'Welcome','进入onboarding':'进入 Onboarding',
  '完成onboarding':'完成 Onboarding','用户首条':'用户首条 First Msg','activated(3+)':'激活 Activated ≥3',
- 'deep(5+)':'深度 Deep ≥5','冷启动展示':'冷启动展示 Cold Shown','种子星点击':'种子星点击 Seed Tap','转成实心星':'转成实心星 Owned'};
+ 'deep(5+)':'深度 Deep ≥5','deep(10+)':'深度 Deep ≥10',
+  '开始onboarding':'开始 Onboarding','选topic':'选 Topic',
+  '看到角色目录':'看到角色目录 Catalog Shown','选择角色':'选择角色 Character Picked',
+  '弹出权限窗':'弹出权限窗 Prompt Shown','授权通过':'授权通过 Granted',
+  '拿到token':'拿到 Token','服务端注册':'服务端注册 Registered',
+  '看到目录':'看到目录 Catalog Shown','看到角色卡':'看到角色卡 Cards Seen',
+  '点击角色':'点击角色 Character Tapped','发出首条':'发出首条 First Msg',
+  '冷启动展示':'冷启动展示 Cold Shown','种子星点击':'种子星点击 Seed Tap','转成实心星':'转成实心星 Owned'};
 function drawFunnel(el,card,wk){
   el.innerHTML='';const steps=card.steps||[],mx=card.matrix||{};
   const vals=steps.map(s=>+((mx[s]||{})[wk])||0);const top=vals[0]||1;
