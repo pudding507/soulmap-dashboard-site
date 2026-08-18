@@ -112,6 +112,15 @@ ADGROUP_DIMS = dict(
     min_vol=30,   # 累计新用户不足 30 的广告组不画(刚上线的小广告组率值波动极大)
 )
 
+# 角色卡漏斗分场景的维度配置(SQL 的 dimension 列 → 指标选项卡;dimension_value = 各 tile 线)
+_TILE_METRICS = ["tap_rate", "chat_rate", "deep_rate"]
+TILE_DIMS = dict(
+    dimorder=_TILE_METRICS,
+    dimlabels={"tap_rate": "Tap rate", "chat_rate": "Tap → chat", "deep_rate": "Impression → deep"},
+    min_vol=200,   # 累计曝光不足 200 的场景类别不画(小类别率值波动极大)
+    cap=13,        # tile 共 13 类,全画
+)
+
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
@@ -175,6 +184,8 @@ SECTIONS = [
             note="第7天开App的人 ÷ 当天注册的新用户;末尾几天观察窗未满 ｜ Users reopening on day 7 ÷ new users that day; the trailing days' window hasn't closed")),
    ("retention_push_funnel", "推送链路漏斗 · Push Setup Funnel", "funnel",
        dict(note="弹出权限窗的设备:授权 → 拿到 token → 服务端注册,按系统分组;数据自 2.7.0(8/15)起 ｜ Devices shown the permission prompt: granted → token obtained → registered on server, grouped by OS; data starts with 2.7.0 (Aug 15)")),
+   ("retention_push_delivery", "推送触达漏斗 · Push Delivery Funnel", "funnel",
+       dict(note="收到通知的设备:有反应(点开或划掉) → 点开 → 点开后 30 分钟内发消息;数据自 2.7.0(8/15)起 ｜ Devices that received a notification: reacted (opened or dismissed) → opened → sent a message within 30 min of opening; data starts with 2.7.0 (Aug 15)")),
  ]),
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "四 Tab 渗透率 · Four-Tab Penetration", "rate",
@@ -193,16 +204,6 @@ SECTIONS = [
  ]),
  ("⑤ 对话 · Chat", [
    # —— 参与广度 · Engagement breadth ——
-   ("chat_new_user_d0_message_mix", "新用户首日消息分档 · New-User Day-0 Message Mix", "rate",
-       dict(rate=("bucket_users","new_users"), fmt="pct0",
-            order=["0 条 · none","1-4 条 · 1-4","5-9 条 · 5-9","≥10 条 · 10+"],
-            note="当天注册的新用户按首日消息数分四档,合计 100% ｜ New users bucketed by messages sent on day 0; the four buckets total 100%",
-            dims=[("message_bucket","","message_bucket")])),
-   ("chat_new_user_d0_msgs_per_user", "新用户首日人均消息数 · New-User Day-0 Msgs per User", "rate",
-       dict(rate=("messages","users"), pct=False, fmt="d1",
-            order=["全部新用户 · all new users","开了口的 · talkers only"],
-            note="首日消息总数 ÷ 人数;两条线 = 含0条的全部新用户 vs 只算开了口的 ｜ Day-0 messages ÷ users; all new users (incl. silent) vs talkers only",
-            dims=[("scope","","scope")])),
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
             note="首日发≥5条的新用户 ÷ 当天注册的新用户 ｜ New users sending ≥5 messages on day 0 ÷ new users registered that day",
@@ -265,10 +266,22 @@ SECTIONS = [
             note="角色目录里点击 ÷ 曝光,仅前 10 个排位;数据自 2.7.0(8/15 放量)起 ｜ Taps ÷ impressions in the character catalogue, top 10 positions; data starts with 2.7.0 (rolled out Aug 15)",
             only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
             dims=[("overall","Overall",None),("position","by position","position")])),
+   ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
+            note="角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
    ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
        dict(val="characters", cap=4,
             note="每天被曝光 / 被点击过的**角色个数**(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
             dims=[("metric","","metric")])),
+   ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
+       dict(top=20, sort="impressions",
+            cols=[("character","角色 Character","text"), ("host_key","host_id","text"),
+                  ("tile","场景 Tile","text"),   ("first_seen","首次曝光","text"),
+                  ("impressions","曝光","int"),  ("taps","点击","int"),
+                  ("ctr","CTR","pct1"),          ("chatted","开聊","int"),
+                  ("chat_rate","点击→开聊","pct0"), ("deep_rate","曝光→深聊","pct1")],
+            bar=["ctr","chat_rate","deep_rate"],
+            note="近30天累计,每个角色一行,仅列曝光≥50 的角色;曝光按(用户×角色×日)去重 ｜ Last 30 days, one row per character, characters with ≥50 impressions only; impressions deduped per user × character × day")),
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
             note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
        dims=[("overall","Overall",None),("destination","by destination","destination")])),
@@ -341,6 +354,24 @@ def build_card(metrics, mid, title, kind, p):
                 weeks = [k for k in rows[0].keys() if k != "step"]
                 base.update(steps=[r["step"] for r in rows], weeks=weeks,
                             matrix={r["step"]: {w: _num(r.get(w)) for w in weeks} for r in rows})
+            return base
+        if kind == "table":
+            # 表格卡:SQL 出什么就铺什么,渲染器不做聚合。用于**排行榜**这类
+            # 折线/漏斗表达不了的形态(行数多、每行是一个实体、多列指标并列)。
+            rows = metrics.get(mid)
+            if not rows: return None
+            cols = p["cols"]                      # [(列名, 表头, 格式)] 顺序即显示顺序
+            miss = [c for c, _l, _f in cols if c not in rows[0]]
+            if miss:
+                raise ValueError(f"table 卡缺列 {miss},SQL 实际列: {list(rows[0])}")
+            srt = p.get("sort") or cols[0][0]     # 默认按第一列降序
+            rows = sorted(rows, key=lambda r: _num(r.get(srt)), reverse=True)
+            # bar=需要画格内条形的列;每列各自按本列最大值归一化
+            bars = {c: max([_num(r.get(c)) for r in rows] + [0]) for c in (p.get("bar") or [])}
+            base.update(kind="table", fmt=None,
+                        cols=[{"k": c, "label": l, "fmt": f, "max": bars.get(c)} for c, l, f in cols],
+                        rows=[{c: r.get(c) for c, _l, _f in cols} for r in rows],
+                        top=p.get("top", 20))
             return base
         if kind == "long_dim":
             # 长维度形状:一张卡自带全部维度,SQL 输出 date | dimension | dimension_value | 值列…
@@ -417,6 +448,21 @@ ALIAS = {
 }
 
 CSS = """
+.tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.tbl th{position:sticky;top:0;background:var(--plane);color:var(--ts);font-weight:600;
+  text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd);white-space:nowrap;z-index:1}
+.tbl td{padding:6px 8px;border-bottom:1px solid var(--grid);color:var(--tp);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--plane)}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .bar{position:relative}
+.tbl .bar>i{position:absolute;left:0;top:3px;bottom:3px;border-radius:2px;
+  background:var(--acc);opacity:.16;pointer-events:none}
+.tblwrap{max-height:380px;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+.tblmore{margin-top:8px;font-size:12px;color:var(--acc);cursor:pointer;user-select:none}
+.tblmore:hover{text-decoration:underline}
+
 :root{--surface:#fcfcfb;--plane:#f7f7f5;--tp:#1f2430;--ts:#5b6270;--mut:#9aa0ac;
 --grid:#edeef1;--bd:#e7e8ec;--acc:#6f9de0}
 :root[data-theme=dark],@media (prefers-color-scheme:dark){}
@@ -516,11 +562,39 @@ const STEPMAP={'打开':'打开 Open','Welcome':'Welcome','进入onboarding':'�
  'deep(5+)':'深度 Deep ≥5','deep(10+)':'深度 Deep ≥10',
   '开始onboarding':'开始 Onboarding','选topic':'选 Topic',
   '看到角色目录':'看到角色目录 Catalog Shown','选择角色':'选择角色 Character Picked',
+  '收到通知':'收到通知 Received','有反应':'有反应 Reacted',
+  '点开通知':'点开通知 Opened','点开后聊天':'点开后聊天 Chatted (30min)',
   '弹出权限窗':'弹出权限窗 Prompt Shown','授权通过':'授权通过 Granted',
   '拿到token':'拿到 Token','服务端注册':'服务端注册 Registered',
   '看到目录':'看到目录 Catalog Shown','看到角色卡':'看到角色卡 Cards Seen',
   '点击角色':'点击角色 Character Tapped','发出首条':'发出首条 First Msg',
   '冷启动展示':'冷启动展示 Cold Shown','种子星点击':'种子星点击 Seed Tap','转成实心星':'转成实心星 Owned'};
+function drawTable(el,card){
+  el.innerHTML='';
+  const cols=card.cols||[],all=card.rows||[];let expanded=false;
+  const wrap=$('div','tblwrap'),t=document.createElement('table');t.className='tbl';
+  wrap.appendChild(t);el.appendChild(wrap);
+  const more=$('div','tblmore');el.appendChild(more);
+  function paint(){
+    const rows=expanded?all:all.slice(0,card.top||20);
+    let h='<thead><tr>'+cols.map(c=>'<th class="'+(c.fmt&&c.fmt!=='text'?'num':'')+'">'+c.label+'</th>').join('')+'</tr></thead><tbody>';
+    rows.forEach(r=>{h+='<tr>'+cols.map(c=>{
+      const v=r[c.k],isNum=c.fmt&&c.fmt!=='text';
+      const txt=isNum?fmtV(+v,c.fmt):(v==null?'':String(v));
+      const safe=String(txt).replace(/"/g,'&quot;');
+      if(c.max){const w=c.max>0?Math.max(0,Math.min(100,(+v)/c.max*100)):0;
+        return '<td class="num bar" title="'+safe+'"><i style="width:'+w.toFixed(1)+'%"></i>'+txt+'</td>';}
+      return '<td class="'+(isNum?'num':'')+'" title="'+safe+'">'+txt+'</td>';
+    }).join('')+'</tr>';});
+    t.innerHTML=h+'</tbody>';
+    if(all.length>(card.top||20)){
+      more.textContent=expanded?('收起 · 只看前 '+(card.top||20)+' 行'):('展开全部 '+all.length+' 行 ↓');
+      more.style.display='block';
+    } else more.style.display='none';
+  }
+  more.onclick=()=>{expanded=!expanded;paint();wrap.scrollTop=0;};
+  paint();
+}
 function drawFunnel(el,card,wk){
   el.innerHTML='';const steps=card.steps||[],mx=card.matrix||{};
   const vals=steps.map(s=>+((mx[s]||{})[wk])||0);const top=vals[0]||1;
@@ -605,6 +679,10 @@ function build(){
       const lv=$('span','latest');hd.appendChild(lv);el.appendChild(hd);
       if(card.note)el.appendChild($('div','cnote',card.note));
       if(card.error){el.appendChild($('div','empty','渲染失败: '+card.error));g.appendChild(el);return;}
+      if(card.kind==='table'){
+        const body=$('div');el.appendChild(body);g.appendChild(el);
+        drawTable(body,card);lv.textContent=(card.rows||[]).length+' 行';
+        return;}
       if(card.kind==='funnel'){
         const wks=card.weeks||[];const defi=(card.defwk==='first')?0:wks.length-1;let curw=wks.length?wks[defi]:null;
         const tb=$('div','toolbar');const body=$('div');
