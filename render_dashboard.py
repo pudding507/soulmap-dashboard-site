@@ -112,12 +112,24 @@ ADGROUP_DIMS = dict(
     min_vol=30,   # 累计新用户不足 30 的广告组不画(刚上线的小广告组率值波动极大)
 )
 
+# 每日角色 CTR 的维度配置(SQL 的 dimension 列 → 选项卡;dimension_value = 各角色线)
+CHAR_DAILY_CTR_DIMS = dict(
+    dimorder=["overall", "character"],
+    dimlabels={"overall": "Overall", "character": "by character"},
+    # 按**点击数**排线,不按曝光:目录按字母序展示,曝光被顶得人人相近
+    # (实测累计曝光 top5 全是 A 开头、都是 ~1960),按曝光取 top10 等于按首字母取。
+    volcol={"character": "numerator"},
+    min_vol={"character": 20},   # 累计点击不足 20 的角色不画(个位数点击的 CTR 是噪音)
+    cap=10,
+)
+
 # 角色卡漏斗分场景的维度配置(SQL 的 dimension 列 → 指标选项卡;dimension_value = 各 tile 线)
 _TILE_METRICS = ["tap_rate", "chat_rate", "deep_rate"]
 TILE_DIMS = dict(
     dimorder=_TILE_METRICS,
     dimlabels={"tap_rate": "Tap rate", "chat_rate": "Tap → chat", "deep_rate": "Impression → deep"},
-    min_vol=200,   # 累计曝光不足 200 的场景类别不画(小类别率值波动极大)
+    # 按选项卡分设:tap/deep 的分母是曝光(累计 470~17379),chat 的分母是点击(19~682),量级差 25 倍
+    min_vol={"tap_rate": 200, "deep_rate": 200, "chat_rate": 50},
     cap=13,        # tile 共 13 类,全画
 )
 
@@ -261,11 +273,16 @@ SECTIONS = [
        dims=[("overall","Overall",None),("action","by action","action")])),
  ]),
  ("⑦ 发现 · Discover", [
-   ("discover_character_card_ctr", "角色卡 CTR · Character Card CTR (top-10 pos)", "rate",
+   ("discover_character_position_ctr", "角色卡 CTR · Character Card CTR (top-10 pos)", "rate",
        dict(rate=("taps","impressions"),
             note="角色目录里点击 ÷ 曝光,仅前 10 个排位;数据自 2.7.0(8/15 放量)起 ｜ Taps ÷ impressions in the character catalogue, top 10 positions; data starts with 2.7.0 (rolled out Aug 15)",
             only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
             dims=[("overall","Overall",None),("position","by position","position")])),
+   ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
+            note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10(<20 不画)。"
+                 "⚠️ 曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
+                 "Daily taps ÷ impressions per character, top 10 by cumulative taps (<20 dropped)")),
    ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
             note="角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
@@ -274,7 +291,7 @@ SECTIONS = [
             note="每天被曝光 / 被点击过的**角色个数**(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
             dims=[("metric","","metric")])),
    ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
-       dict(top=20, sort="impressions",
+       dict(top=20, sort="ctr",
             cols=[("character","角色 Character","text"), ("host_key","host_id","text"),
                   ("tile","场景 Tile","text"),   ("first_seen","首次曝光","text"),
                   ("impressions","曝光","int"),  ("taps","点击","int"),
@@ -393,9 +410,19 @@ def build_card(metrics, mid, title, kind, p):
             keys = [k for k in order if k in buckets] + [k for k in buckets if k not in order]
             dims = []
             # 率类卡按"量"筛线,不按率:否则只有 1 个用户、恰好回访的小国会以 100% 排在最前
-            vol_col = p["rate"][1] if p.get("rate") else p.get("val")
-            min_vol = p.get("min_vol", 0)
+            # 排线/过滤用哪一列的"量":默认率卡用分母、量卡用值列。
+            # volcol 可整卡指定,也可 {维度: 列} 分维度指定 —— 角色卡 CTR 必须按分子(点击)排,
+            # 因为目录按字母序展示,曝光被顶得人人相近(实测 top5 全是 A 开头、都是 ~1960),
+            # 按曝光取 top10 等于按首字母取,真正高 CTR 的角色永远进不来。
+            volcol_cfg = p.get("volcol")
+            # min_vol 可以是数,也可以是 {维度: 数} —— 同一张卡的各选项卡分母量级可能差几十倍
+            # (实测角色卡漏斗:tap_rate 分母=曝光 最大 17379,chat_rate 分母=点击 最大 682,差 25 倍),
+            # 用单一阈值会把小分母那个选项卡的线几乎全滤光。
+            min_vol_cfg = p.get("min_vol", 0)
             for k in keys:
+                min_vol = min_vol_cfg.get(k, 0) if isinstance(min_vol_cfg, dict) else min_vol_cfg
+                vc = volcol_cfg.get(k) if isinstance(volcol_cfg, dict) else volcol_cfg
+                vol_col = vc or (p["rate"][1] if p.get("rate") else p.get("val"))
                 sub = buckets[k]
                 volume = defaultdict(float)
                 for r in sub:
@@ -445,6 +472,8 @@ ALIAS = {
     "growth_activated_new_users": "growth_new_activated_user",
     "growth_deep_new_users": "growth_new_activated_user",   # 2026-08-14 卡名 Activated → Deep(阈值≥3→≥5);旧名保留以便回滚
     "activation_first_msg_latency": "activation_user_first_latency",
+    # 2026-08-18 卡名 card ctr → position ctr;Metabase 若未同步改名,旧名兜底
+    "discover_character_card_ctr": "discover_character_position_ctr",
 }
 
 CSS = """
