@@ -582,9 +582,11 @@ def render(raw_path: Path, out_path: Path):
 APP_JS = r"""
 const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
 function fmtV(v,fmt){if(v==null)return'';
-  if(fmt==='pct')return(v*100).toFixed(1)+'%';
-  if(fmt==='pct0')return(v*100).toFixed(0)+'%';
-  if(fmt==='d1')return(+v).toFixed(1);
+  // 按模式匹配,不再逐个列举 —— 2026-08-18 踩过:注册表用了 pct1,这里没实现,
+  // 于是掉到末尾的 Math.round,0.2027 显示成 0、0.5137 显示成 1,三张卡静默显示错值。
+  // pct/pct0/pct1/pct2… 与 d1/d2… 现在一律走通用分支,加新格式不必改这里。
+  const mp=/^pct(\d*)$/.exec(fmt); if(mp)return(v*100).toFixed(mp[1]===''?1:+mp[1])+'%';
+  const md=/^d(\d+)$/.exec(fmt);   if(md)return(+v).toFixed(+md[1]);
   return Math.round(v).toLocaleString();}
 const STEPMAP={'打开':'打开 Open','Welcome':'Welcome','进入onboarding':'进入 Onboarding',
  '完成onboarding':'完成 Onboarding','用户首条':'用户首条 First Msg','activated(3+)':'激活 Activated ≥3',
