@@ -12,7 +12,7 @@
 加卡只需在 SECTIONS 里加一行。
 """
 from __future__ import annotations
-import argparse, json
+import argparse, json, re
 from collections import OrderedDict, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -493,11 +493,11 @@ CSS = """
 .tblmore:hover{text-decoration:underline}
 
 :root{--surface:#fcfcfb;--plane:#f7f7f5;--tp:#1f2430;--ts:#5b6270;--mut:#9aa0ac;
---grid:#edeef1;--bd:#e7e8ec;--acc:#6f9de0}
+--grid:#edeef1;--bd:#e7e8ec;--acc:#6f9de0;--stalefg:#9a6b2f;--stalebg:#f7efe1;--stalebd:#e3cfa8}
 :root[data-theme=dark],@media (prefers-color-scheme:dark){}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--surface:#1b1c1f;--plane:#141517;--tp:#f2f3f5;
---ts:#b7bcc7;--mut:#7f8794;--grid:#2a2c30;--bd:#2f3237;--acc:#8fb4e6}}
-:root[data-theme=dark]{--surface:#1b1c1f;--plane:#141517;--tp:#f2f3f5;--ts:#b7bcc7;--mut:#7f8794;--grid:#2a2c30;--bd:#2f3237;--acc:#8fb4e6}
+--ts:#b7bcc7;--mut:#7f8794;--grid:#2a2c30;--bd:#2f3237;--acc:#8fb4e6;--stalefg:#d9b076;--stalebg:#2b2519;--stalebd:#4a3f28}}
+:root[data-theme=dark]{--surface:#1b1c1f;--plane:#141517;--tp:#f2f3f5;--ts:#b7bcc7;--mut:#7f8794;--grid:#2a2c30;--bd:#2f3237;--acc:#8fb4e6;--stalefg:#d9b076;--stalebg:#2b2519;--stalebd:#4a3f28}
 *{box-sizing:border-box}body{margin:0;background:var(--plane);color:var(--tp);
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:14px}
 header{padding:22px 26px 8px}h1{margin:0;font-size:19px;font-weight:650}
@@ -520,6 +520,13 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
 .chead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .chead h3{margin:0 0 2px}
 .latest{font-size:12px;color:var(--acc);font-weight:600;white-space:nowrap}
+/* 沿用上一次数据的卡:虚线边 + 斜纹底 + 角标。只加文字容易被忽略,所以整卡降级 —— */
+/* 一张画得好好的图在展示旧数据,是这套看板最容易骗到人的状态。 */
+.card.stale{border-style:dashed;border-color:var(--stalebd);
+  background:repeating-linear-gradient(135deg,transparent 0 9px,var(--stalebg) 9px 18px),var(--surface)}
+.card.stale h3{color:var(--ts)}
+.stalebadge{font-size:10.5px;font-weight:600;white-space:nowrap;padding:1px 7px;border-radius:99px;
+  color:var(--stalefg);background:var(--stalebg);border:1px solid var(--stalebd)}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 5px}
 .chip{font-size:11px;color:var(--ts);background:transparent;border:1px solid var(--bd);border-radius:999px;padding:2px 9px;cursor:pointer}
 .chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -548,17 +555,65 @@ section{scroll-margin-top:56px}
 border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--ts)}
 """
 
+STALE_MAX_DAYS = 3    # 抓失败时沿用上一次的值,但最多 3 天 —— 再久就让卡消失。
+                     # 不设上限的话,长期超时的卡(AI 响应时延等)会永久显示冻结数据,
+                     # 比"图不见了"更危险:看的人不会怀疑一张画得好好的图。
+
+
+def _load_prev(out_path: Path) -> tuple[dict, str | None]:
+    """从上一次写出的 index.html 里取回 DATA —— 这个文件是入库的,所以 checkout 就有。
+    不用 actions/cache、也不必把几十 MB 的 raw_metrics.json 提交进仓库。
+    返回 ({metric_id: 卡对象}, 上一版的数据日期)。任何解析失败都退化成"没有上一版"。"""
+    try:
+        html = out_path.read_text(encoding="utf-8")
+        i = html.index("{", html.index("const DATA"))
+        data, _ = json.JSONDecoder().raw_decode(html[i:])
+        cards = {c["id"]: c for sec in data.get("sections", []) for c in sec.get("cards", [])
+                 if c.get("id")}
+        run_date = data.get("run_date")
+        if not run_date:              # 老版本页面没往 DATA 里写 run_date,退回解析页头
+            m = re.search(r"数据 (\d{4}-\d{2}-\d{2})", html)
+            run_date = m.group(1) if m else None
+        return cards, run_date
+    except Exception:
+        return {}, None
+
+
+def _carry(prev_cards: dict, mid: str, prev_date: str | None):
+    """这次没抓到 → 沿用上一次的卡。stale 记的是**数据真正的日期**,沿用链上不刷新,
+    否则一张永久超时的卡会天天显示"昨天",永远不过期。"""
+    card = prev_cards.get(mid)
+    if not card: return None
+    stale = card.get("stale") or prev_date
+    if not stale: return None
+    try:
+        age = (datetime.now().date() - datetime.strptime(stale, "%Y-%m-%d").date()).days
+    except ValueError:
+        return None
+    if age > STALE_MAX_DAYS: return None
+    out = dict(card); out["stale"] = stale
+    return out
+
+
 def render(raw_path: Path, out_path: Path):
     D = json.loads(raw_path.read_text(encoding="utf-8"))
     meta = D.get("_meta", {}); metrics = D.get("metrics", D)
     for a, c in ALIAS.items():          # 现卡名 → 权威 metric_id,两种都能认
         if a in metrics and c not in metrics: metrics[c] = metrics[a]
-    sections = []
+    prev_cards, prev_date = _load_prev(out_path)   # 必须在覆盖 out_path 之前读
+    sections, carried = [], []
     for sec, cards in SECTIONS:
-        built = [c for c in (build_card(metrics, *spec) for spec in cards) if c]
+        built = []
+        for spec in cards:
+            card = build_card(metrics, *spec)
+            if card is None:                       # 抓失败 / 无数据 → 沿用上一次
+                card = _carry(prev_cards, spec[0], prev_date)
+                if card: carried.append(card["title"])
+            if card: built.append(card)
         if built: sections.append({"title": sec, "cards": built})
     chartjs = (HERE / "lib" / "chart.umd.min.js").read_text(encoding="utf-8")
-    payload = json.dumps({"sections": sections, "pal": PAL, "wkpal": WKPAL}, ensure_ascii=False)
+    payload = json.dumps({"sections": sections, "pal": PAL, "wkpal": WKPAL,
+                          "run_date": meta.get("run_date")}, ensure_ascii=False)
     failed = meta.get("failed") or []
     # 副标题第二行:说明埋点类图表的固有延迟。实测 ETL 每天 SGT 13:00-13:03 入库前一天的数据
     # (连续 5 天一分不差),所以 13:00 前最新只到前天。服务端库(留存/对话)不走这条链路,实时。
@@ -566,7 +621,9 @@ def render(raw_path: Path, out_path: Path):
                 ' ｜ Event data for the previous day lands at 13:00 SGT — charts lag accordingly')
     hdr = (f'<header><h1>SoulMap 看板 · SoulMap Dashboard</h1><div class="meta">'
            f'数据 {meta.get("run_date","?")} · Metabase dashboard {meta.get("dashboard_id","?")} · '
-           f'{sum(len(s["cards"]) for s in sections)} 卡' + (f' · 缺 {len(failed)}' if failed else '') +
+           f'{sum(len(s["cards"]) for s in sections)} 卡'
+           + (f' · 缺 {len(failed)}' if failed else '')
+           + (f' · 沿用旧值 {len(carried)}' if carried else '') +
            f'</div><div class="meta lag">{lag_note}</div></header>'
            + (f'<div class="banner">{BANNER}</div>' if BANNER else ''))
     doc = f"""<!doctype html><html><head><meta charset="utf-8">
@@ -575,9 +632,16 @@ def render(raw_path: Path, out_path: Path):
 <script>{chartjs}</script>
 <script>const DATA={payload};</script>
 <script>{APP_JS}</script></body></html>"""
+    # 一张卡都没有就不要写 —— 写出去等于把上一版好页面覆盖成空白,而且下次连沿用的来源都没了。
+    # workflow 的 guard 正常会先拦住(抓不满 25 张就不 render),这里是第二道,防手工误跑。
+    if not sections:
+        raise SystemExit("✗ 一张卡都没建出来,拒绝写出 —— 保留上一版页面。"
+                         "检查 raw_metrics.json 是否为空,或上一版数据是否已超过 "
+                         f"STALE_MAX_DAYS={STALE_MAX_DAYS} 天。")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(doc, encoding="utf-8")
-    print(f"✅ 写出 {out_path} ({len(sections)} 板块, {sum(len(s['cards']) for s in sections)} 卡)")
+    print(f"✅ 写出 {out_path} ({len(sections)} 板块, {sum(len(s['cards']) for s in sections)} 卡"
+          + (f", 沿用旧值 {len(carried)}: {carried}" if carried else "") + ")")
 
 APP_JS = r"""
 const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
@@ -705,8 +769,11 @@ function build(){
     const nb=$('button','nb',sec.title.replace(/^[①-⑳\s]+/,''));
     nb.onclick=()=>wrap.scrollIntoView({behavior:'smooth',block:'start'});nav.appendChild(nb);navbtns.push(nb);
     sec.cards.forEach(card=>{
-      const el=$('div','card');
+      const el=$('div','card'+(card.stale?' stale':''));
       const hd=$('div','chead');hd.appendChild($('h3',null,card.title));
+      if(card.stale){                       // 这次没抓到,显示的是 card.stale 那天的数据
+        const d=card.stale.slice(5).replace('-','/');
+        hd.appendChild($('span','stalebadge','沿用 '+d+' ｜ stale'));}
       const lv=$('span','latest');hd.appendChild(lv);el.appendChild(hd);
       if(card.note)el.appendChild($('div','cnote',card.note));
       if(card.error){el.appendChild($('div','empty','渲染失败: '+card.error));g.appendChild(el);return;}
