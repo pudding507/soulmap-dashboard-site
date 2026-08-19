@@ -292,11 +292,12 @@ SECTIONS = [
             dims=[("metric","","metric")])),
    ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
        dict(top=20, sort="ctr",
-            cols=[("character","角色 Character","text"), ("host_key","host_id","text"),
-                  ("tile","场景 Tile","text"),   ("first_seen","首次曝光","text"),
-                  ("impressions","曝光","int"),  ("taps","点击","int"),
-                  ("ctr","CTR","pct1"),          ("chatted","开聊","int"),
-                  ("chat_rate","点击→开聊","pct0"), ("deep_rate","曝光→深聊","pct1")],
+            # host_id 排最后:它最长、也最不常看,放前面会把关键列挤出可视区
+            cols=[("character","角色 Character","text"),      ("tile","场景 Tile","text"),
+                  ("first_seen","首次曝光 First Seen","text"), ("impressions","曝光 Impressions","int"),
+                  ("taps","点击 Taps","int"),                 ("ctr","CTR","pct1"),
+                  ("chatted","开聊 Chatted","int"),           ("chat_rate","点击→开聊 Tap→Chat","pct0"),
+                  ("deep_rate","曝光→深聊 Impr→Deep","pct1"), ("host_key","host_id","text")],
             bar=["ctr","chat_rate","deep_rate"],
             note="近30天累计,每个角色一行,仅列曝光≥50 的角色;曝光按(用户×角色×日)去重 ｜ Last 30 days, one row per character, characters with ≥50 impressions only; impressions deduped per user × character × day")),
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
@@ -477,11 +478,12 @@ ALIAS = {
 }
 
 CSS = """
-.tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+/* 不用 table-layout:fixed —— 固定布局会按列数均分宽度,长角色名和 host_id 必被截断。
+   改成按内容撑开(min-width:100% 保证不足一屏时仍铺满),放不下由 .tblwrap 横向滚动。 */
+.tbl{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px}
 .tbl th{position:sticky;top:0;background:var(--plane);color:var(--ts);font-weight:600;
   text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd);white-space:nowrap;z-index:1}
-.tbl td{padding:6px 8px;border-bottom:1px solid var(--grid);color:var(--tp);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl td{padding:6px 8px;border-bottom:1px solid var(--grid);color:var(--tp);white-space:nowrap}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tr:hover td{background:var(--plane)}
 .tbl .num{text-align:right;font-variant-numeric:tabular-nums}
@@ -522,11 +524,8 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
 .latest{font-size:12px;color:var(--acc);font-weight:600;white-space:nowrap}
 /* 沿用上一次数据的卡:虚线边 + 斜纹底 + 角标。只加文字容易被忽略,所以整卡降级 —— */
 /* 一张画得好好的图在展示旧数据,是这套看板最容易骗到人的状态。 */
-.card.stale{border-style:dashed;border-color:var(--stalebd);
-  background:repeating-linear-gradient(135deg,transparent 0 9px,var(--stalebg) 9px 18px),var(--surface)}
-.card.stale h3{color:var(--ts)}
-.stalebadge{font-size:10.5px;font-weight:600;white-space:nowrap;padding:1px 7px;border-radius:99px;
-  color:var(--stalefg);background:var(--stalebg);border:1px solid var(--stalebd)}
+.stalefoot{margin-top:6px;font-size:10.5px;font-weight:600;color:var(--stalefg);text-align:left}
+.stalefoot::before{content:'⟳ ';opacity:.8}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 5px}
 .chip{font-size:11px;color:var(--ts);background:transparent;border:1px solid var(--bd);border-radius:999px;padding:2px 9px;cursor:pointer}
 .chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -769,17 +768,21 @@ function build(){
     const nb=$('button','nb',sec.title.replace(/^[①-⑳\s]+/,''));
     nb.onclick=()=>wrap.scrollIntoView({behavior:'smooth',block:'start'});nav.appendChild(nb);navbtns.push(nb);
     sec.cards.forEach(card=>{
-      const el=$('div','card'+(card.stale?' stale':''));
+      const el=$('div','card');
       const hd=$('div','chead');hd.appendChild($('h3',null,card.title));
-      if(card.stale){                       // 这次没抓到,显示的是 card.stale 那天的数据
-        const d=card.stale.slice(5).replace('-','/');
-        hd.appendChild($('span','stalebadge','沿用 '+d+' ｜ stale'));}
       const lv=$('span','latest');hd.appendChild(lv);el.appendChild(hd);
+      // 这次没抓到 → 沿用旧值,标在卡片左下角(挂在 el 末尾,三种卡型都落在图下方)
+      const staleFoot=card.stale
+        ? $('div','stalefoot','沿用 '+card.stale.slice(5).replace('-','/')+' 数据 ｜ stale')
+        : null;
+      const markStale=()=>{if(staleFoot)el.appendChild(staleFoot);};
       if(card.note)el.appendChild($('div','cnote',card.note));
       if(card.error){el.appendChild($('div','empty','渲染失败: '+card.error));g.appendChild(el);return;}
+
       if(card.kind==='table'){
         const body=$('div');el.appendChild(body);g.appendChild(el);
         drawTable(body,card);lv.textContent=(card.rows||[]).length+' 行';
+        markStale();
         return;}
       if(card.kind==='funnel'){
         const wks=card.weeks||[];const defi=(card.defwk==='first')?0:wks.length-1;let curw=wks.length?wks[defi]:null;
@@ -791,6 +794,7 @@ function build(){
         const vd=$('div','vlink','View details ↗');vd.onclick=()=>openFunnelDetail(card,curw);el.appendChild(vd);
         g.appendChild(el);
         if(curw){drawFunnel(body,card,curw);lv.textContent='最新 '+curw;}
+        markStale();
         return;}
       const dims=card.dims||[];let cur=0,vis=new Set();
       const cw=$('div','cw');const cv=document.createElement('canvas');cw.appendChild(cv);
@@ -816,6 +820,7 @@ function build(){
             chips();redraw();};chipbar.appendChild(b);});}
       function applyDim(i){cur=i;vis=new Set(Object.keys((dims[i]||{data:{}}).data));chips();redraw();}
       applyDim(0);
+      markStale();
     });
   });
   nav.appendChild($('div','sp'));
