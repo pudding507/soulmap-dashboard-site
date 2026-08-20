@@ -699,7 +699,11 @@ def render(raw_path: Path, out_path: Path):
 
 APP_JS = r"""
 const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
-function fmtV(v,fmt){if(v==null)return'';
+// ⚠️ Metabase query/json 把 >=1000 的数返回成带千分位逗号的**字符串**("1,184"),
+// 直接 +v 会得到 NaN。Python 侧 _num() 早就处理了,JS 侧 2026-08-20 之前一直没处理 ——
+// 后果是所有 table 卡里 >=1000 的整数列全显示 NaN(<1000 的正常,所以很容易漏掉)。
+function toNum(v){return typeof v==='string'?+v.replace(/,/g,''):+v;}
+function fmtV(v,fmt){if(v==null)return'';v=toNum(v);if(!isFinite(v))return'';
   // 按模式匹配,不再逐个列举 —— 2026-08-18 踩过:注册表用了 pct1,这里没实现,
   // 于是掉到末尾的 Math.round,0.2027 显示成 0、0.5137 显示成 1,三张卡静默显示错值。
   // pct/pct0/pct1/pct2… 与 d1/d2… 现在一律走通用分支,加新格式不必改这里。
@@ -729,9 +733,10 @@ function drawTable(el,card){
     let h='<thead><tr>'+cols.map(c=>'<th class="'+(c.fmt&&c.fmt!=='text'?'num':'')+'">'+c.label+'</th>').join('')+'</tr></thead><tbody>';
     rows.forEach(r=>{h+='<tr>'+cols.map(c=>{
       const v=r[c.k],isNum=c.fmt&&c.fmt!=='text';
-      const txt=isNum?fmtV(+v,c.fmt):(v==null?'':String(v));
+      const nv=isNum?toNum(v):null;
+      const txt=isNum?fmtV(nv,c.fmt):(v==null?'':String(v));
       const safe=String(txt).replace(/"/g,'&quot;');
-      if(c.max){const w=c.max>0?Math.max(0,Math.min(100,(+v)/c.max*100)):0;
+      if(c.max){const w=(c.max>0&&isFinite(nv))?Math.max(0,Math.min(100,nv/c.max*100)):0;
         return '<td class="num bar" title="'+safe+'"><i style="width:'+w.toFixed(1)+'%"></i>'+txt+'</td>';}
       return '<td class="'+(isNum?'num':'')+'" title="'+safe+'">'+txt+'</td>';
     }).join('')+'</tr>';});
