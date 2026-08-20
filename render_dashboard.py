@@ -347,7 +347,8 @@ SECTIONS = [
  ]),
  ("⑧ 商业化 · Monetization", [
    ("monetize_usage_distribution_30d", "用量分位 · Usage Percentiles (30d)", "table",
-       dict(top=6, sort="observations",
+       # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 计量口径的自然阅读序)
+       dict(top=6,
             cols=[("cohort","人群 Cohort","text"),
                   ("metric","计量口径 Metric","text"),
                   ("observations","样本 Observations","int"),
@@ -437,8 +438,13 @@ def build_card(metrics, mid, title, kind, p):
             miss = [c for c, _l, _f in cols if c not in rows[0]]
             if miss:
                 raise ValueError(f"table 卡缺列 {miss},SQL 实际列: {list(rows[0])}")
-            srt = p.get("sort") or cols[0][0]     # 默认按第一列降序
-            rows = sorted(rows, key=lambda r: _num(r.get(srt)), reverse=True)
+            # sort 不填 = **保持 SQL 的 ORDER BY**(2026-08-20 改)。
+            # 改前是「不填就按 cols 第一列降序」,结果「行序本身有含义」的表(如用量分位的
+            # 人群×计量口径)在 DataGrip 里对、上了看板就乱 —— 渲染器不该替 SQL 决定行序。
+            # ⚠️ 代价:SQL 忘写 ORDER BY 的话行序就是数据库返回的顺序。写表格卡记得加 ORDER BY。
+            srt = p.get("sort")
+            if srt:
+                rows = sorted(rows, key=lambda r: _num(r.get(srt)), reverse=True)
             # bar=需要画格内条形的列;每列各自按本列最大值归一化
             bars = {c: max([_num(r.get(c)) for r in rows] + [0]) for c in (p.get("bar") or [])}
             base.update(kind="table", fmt=None,
