@@ -50,26 +50,49 @@ def _dc(rows):
         if str(k).startswith("date"): return k
     return "date"
 
-def _agg(rows, val, by=None, how="sum", dc="date"):
+def _rollup(acc, cap, other="其他"):
+    """把尾部序列并进「其他」,而不是丢掉。
+
+    ⚠️ 必须在聚合层(acc)做,不能在算完之后做:
+       rate 卡的正确归并是「分子和 ÷ 分母和」,把各自的率相加是错的。
+       acc 的值是 [分子/总量, 分母/条数] 这种可加的对,所以直接相加即可。
+    排名沿用 _cap 的口径(按末值),保持既有卡的命名序列不变;
+    唯一的行为变化是:原先被静默丢掉的序列,现在汇总成一条「其他」。
+    """
+    if not cap: return acc
+    last = {}
+    for (s, d), v in acc.items():
+        if s not in last or d > last[s][0]: last[s] = (d, v[0])
+    keep = {s for s, _ in sorted(last.items(), key=lambda kv: kv[1][1], reverse=True)[:cap]}
+    if len(last) <= cap: return acc
+    merged = defaultdict(lambda: [0.0, 0.0])
+    for (s, d), v in acc.items():
+        key = (s if s in keep else other, d)
+        m = merged[key]; m[0] += v[0]; m[1] += v[1]
+    return merged
+
+def _agg(rows, val, by=None, how="sum", dc="date", cap=None):
     acc = defaultdict(lambda: [0.0, 0])
     for r in rows:
         d = r.get(dc)
         if d is None: continue
         s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "Overall"
         a = acc[(s, _nd(d))]; a[0] += _num(r.get(val)); a[1] += 1
+    acc = _rollup(acc, cap)
     out = defaultdict(list)
     for (s, d), (t, c) in acc.items():
         out[s].append((d, round(t / c, 3) if (how == "avg" and c) else round(t, 3)))
     for s in out: out[s].sort()
     return out
 
-def _rate(rows, num, den, by=None, dc="date"):
+def _rate(rows, num, den, by=None, dc="date", cap=None):
     acc = defaultdict(lambda: [0.0, 0.0])
     for r in rows:
         d = r.get(dc)
         if d is None: continue
         s = (str(by(r)) if callable(by) else str(r.get(by))) if by else "Overall"
         a = acc[(s, _nd(d))]; a[0] += _num(r.get(num)); a[1] += _num(r.get(den))
+    acc = _rollup(acc, cap)
     out = defaultdict(list)
     for (s, d), (n, dd) in acc.items():
         out[s].append((d, round(n / dd, 4) if dd else 0.0))
@@ -140,14 +163,16 @@ SECTIONS = [
  ("① 增长 · Growth", [
    ("growth_dau", "日活跃用户数 · DAU", "line", dict(
             note="当天打开过 App 的用户(session_start) ｜ Users who opened the app that day (session_start)",val="value", cap=12,
-       dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
+       rollup={"country": 12},
+       dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "rate",
        dict(rate=("users","daily_active_users"), fmt="pct0", order=["new","returning"],
             note="新/老用户 ÷ 当天DAU;新=当天安装 ｜ New vs returning share of daily DAU; “new” = installed that day",
             dims=[("user_type","","user_type")])),
    ("growth_new_user", "新用户数 · New Users", "line", dict(
             note="当天首次安装 App 的用户(first_open) ｜ Users whose first_open happened that day",val="value", cap=12,
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
+       rollup={"country": 12},
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("growth_version_adoption", "版本覆盖率 · Version Adoption", "rate",
          dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
               note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
@@ -157,7 +182,8 @@ SECTIONS = [
               note="各广告组的新用户首日行为与次日留存,分母为该广告组当天新用户数(按账号) ｜ Day-0 behaviour and D1 retention by ad group; denominator = that group\u2019s new users that day (accounts)")),
      ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
+       rollup={"country": 12},
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("growth_meta_qcd_trend_by_creative", "Meta 素材 QCD 趋势 · Meta QCD by Creative", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", cap=8, min_vol=50,
             dimlabels={"creative":"by creative"},
@@ -239,8 +265,16 @@ SECTIONS = [
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
-            note="首日发≥5条的新用户 ÷ 当天注册的新用户 ｜ New users sending ≥5 messages on day 0 ÷ new users registered that day",
-            dims=[("overall","Overall",None)])),
+            note="首日发≥5条的新用户 ÷ 当天注册的新用户。⚠️ 分母是**服务端建号数**(94.5% 是自动建的游客号)，"
+                 "比「新用户数」卡的**装机数**多约 15%，两张卡的「新用户」不是同一批人。"
+                 "by country 里的 unknown 是账号接不回埋点设备(约 23%)，不是不知道国家 ｜ "
+                 "New users sending \u22655 messages on day 0 \u00f7 accounts created that day. "
+                 "Note: the denominator counts server-side account creations (94.5% auto-created guests), "
+                 "~15% above the install count used by the New Users card \u2014 the two cards do not "
+                 "count the same people. In the by-country view, unknown means the account cannot be "
+                 "linked back to an instrumented device (~23%), not that the country is unknown.",
+            rollup={"country": 12},
+            dims=[("overall","Overall",None),("country","by country","country")])),
    ("chat_engaged_user_focus", "投入用户数 · Engaged Users", "line",
        dict(val="users",
             note="当天发≥5条消息的用户(含老用户);purpose 来自旧版 onboarding 表单,新版用 anchor ｜ Users sending ≥5 messages that day; purpose comes from the old onboarding form, the new one uses anchors",
@@ -250,7 +284,8 @@ SECTIONS = [
                   ("purpose","by purpose (old form)","purpose")])),
    ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
        note="开了会话但一条没发的会话 ÷ 全部会话 ｜ Sessions opened with no message sent ÷ all sessions",
-       dims=[("overall","Overall",None),("path","by path","path")])),
+       rollup={"country": 12},
+       dims=[("overall","Overall",None),("path","by path","path"),("country","by country","country")])),
    # —— 参与深度 · Engagement depth ——
    ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
        note="当天开始的每场会话的轮数,取平均(1问1答=1轮) ｜ Avg turns per session started that day (1 exchange = 1 turn)", dims=[("overall","Overall",None)])),
@@ -512,10 +547,16 @@ def build_card(metrics, mid, title, kind, p):
         dc = _dc(rows)
         pct = p.get("pct", kind == "rate")
         dims = []
+        rollup = p.get("rollup") or {}
         for key, label, by in p["dims"]:
-            ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc) if kind == "rate" \
-                  else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc)
-            ser = ser if (p.get("only") or p.get("order")) else _cap(ser, p.get("cap", 6))
+            # 该维度配了 rollup:把 cap 交给聚合函数,尾部并成「其他」而不是丢掉
+            rcap = rollup.get(key)
+            ser = _rate(rows, p["rate"][0], p["rate"][1], by, dc=dc, cap=rcap) if kind == "rate" \
+                  else _agg(rows, p["val"], by, p.get("agg", "sum"), dc=dc, cap=rcap)
+            if rcap:
+                pass                                   # 已在聚合层截断+归并,不再走 _cap
+            elif not (p.get("only") or p.get("order")):
+                ser = _cap(ser, p.get("cap", 6))
             dims.append({"key": key, "label": label, "data": {s: pts for s, pts in ser.items()}})
         dims = _finish(dims, p)
         base.update(kind="line", pct=pct, fmt=_fmt_of(kind, pct, p), dims=dims)
