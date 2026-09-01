@@ -156,6 +156,19 @@ TILE_DIMS = dict(
     cap=13,        # tile 共 13 类,全画
 )
 
+# 点击位次分布的维度配置(SQL 的 dimension 列 = 子 tab → 选项卡;dimension_value = 位次档 = 线)
+# ⚠️ 本卡只用 card_tap,分子分母同盘,与曝光无关 —— 不要给它加回 CTR 语义,原因见 SQL 头部。
+_POSITION_BUCKETS = ["位0-4", "位5-9", "位10-29", "位30-59", "位60+"]
+_POSITION_TABS = ["foryou", "all", "new_this_week", "try_different", "(pre-2.8.0)"]
+POSITION_DIMS = dict(
+    dimorder=_POSITION_TABS,
+    dimlabels={"foryou": "For you", "all": "All", "new_this_week": "New this week",
+               "try_different": "Try something", "(pre-2.8.0)": "2.8.0 之前"},
+    slorder={k: _POSITION_BUCKETS for k in _POSITION_TABS},   # 固定档位顺序,别按量排
+    min_vol=30,    # 当天该 tab 总点击不足 30 不画(占比在小分母上跳得没有意义)
+    cap=5,         # 五档全画
+)
+
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
@@ -336,11 +349,9 @@ SECTIONS = [
        dims=[("overall","Overall",None),("action","by action","action")])),
  ]),
  ("⑦ 发现 · Discover", [
-   ("discover_character_position_ctr", "角色卡 CTR · Character Card CTR (top-10 pos)", "rate",
-       dict(rate=("taps","impressions"),
-            note="角色目录里点击 ÷ 曝光,仅前 10 个排位;数据自 2.7.0(8/15 放量)起 ｜ Taps ÷ impressions in the character catalogue, top 10 positions; data starts with 2.7.0 (rolled out Aug 15)",
-            only=[str(i) for i in range(10)], order=[str(i) for i in range(10)], slfmt=(lambda s:"位"+str(s)),
-            dims=[("overall","Overall",None),("position","by position","position")])),
+   ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
+            note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
    ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
             note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10(<20 不画)。"
@@ -576,7 +587,8 @@ ALIAS = {
     "growth_deep_new_users": "growth_new_activated_user",   # 2026-08-14 卡名 Activated → Deep(阈值≥3→≥5);旧名保留以便回滚
     "activation_first_msg_latency": "activation_user_first_latency",
     # 2026-08-18 卡名 card ctr → position ctr;Metabase 若未同步改名,旧名兜底
-    "discover_character_card_ctr": "discover_character_position_ctr",
+    "discover_character_card_ctr": "discover_click_position_distribution",
+    "discover_character_position_ctr": "discover_click_position_distribution",
 }
 
 CSS = """
