@@ -334,21 +334,7 @@ SECTIONS = [
             slorder={"host_type":["角色卡","reception","SoulMap系统行"]},
             note="QCD = 同一天里对同一个 Host 发了 ≥6 条非空消息的用户,占当天 DAU 的比例。三档分开看:角色卡才是 North Star,reception 是打开就在的默认接待(用户没做过选择)。⚠️ 口径暂定,A/B 闭环定义正在重新对齐 ｜ QCD = users who sent ≥6 non-empty messages to the same host in one day, over DAU. Split by host type: only character cards count toward the North Star; reception is the default greeter (no user choice involved). ⚠️ Definition provisional")),
  ]),
- ("⑥ 星图 · Star Map", [
-   ("starmap_seed_funnel", "种子星漏斗 · Seed-Star Funnel", "funnel",
-       dict(note="冷启动展示 → 点种子星 → 转成实心星,按首次展示归入版本周 ｜ Cold-start display → tap seed star → converts to a solid star, grouped by release week")),
-   ("starmap_new_user_stars", "新用户人均星数 · Stars per New User", "line", dict(
-            note="每个新用户账上的累计星数,取平均 ｜ Avg cumulative stars per new user",val="star_count", agg="avg",
-       dims=[("overall","Overall",None)])),
-   ("starmap_cluster_maturity", "星主题分布 · Star Cluster Distribution", "line", dict(val="stars", where=("dim","cluster"),
-       dims=[("overall","Overall",None),("value","by cluster","value")], note="当天新建的星按主题:core / heart / voice / mind / bond ｜ Stars created that day, by theme")),
-   ("starmap_cluster_maturity", "星成熟度分布 · Star Maturity Distribution", "line", dict(val="stars", where=("dim","maturity"),
-       dims=[("overall","Overall",None),("value","by maturity","value")], note="当天新建的星按成熟度:emerging → confirmed → faded ｜ Stars created that day, by maturity")),
-   ("starmap_card_interaction", "星卡互动 · Star-Card Actions", "line", dict(
-            note="展开星卡后的动作次数:explore_deeper / dismiss / vote / mute ｜ Actions taken after expanding a star card",val="taps",
-       dims=[("overall","Overall",None),("action","by action","action")])),
- ]),
- ("⑦ 发现 · Discover", [
+ ("⑥ 发现 · Discover", [
    ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
             note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
@@ -391,7 +377,7 @@ SECTIONS = [
             bar=["chatted_users","qcd_rate"],
             note="和「角色表现榜」互补:那张看曝光→点击,这张看开聊→QCD→回访。仅列被 ≥20 人聊过的角色。⚠️「D7窗 回同一角色」现在必然是 0 —— 角色卡 8/14 才上线,大部分 cohort 的第 5 天还在未来,约 8/24 才能读第一批,**不是没有留存** ｜ Complements the Character Leaderboard: that one covers impression→tap, this one covers chat→QCD→return. Characters chatted by ≥20 users only. ⚠️ The D7-window column is necessarily 0 right now — character cards only launched Aug 14, so day 5 is still in the future for most cohorts; readable around Aug 24. Not a retention finding")),
  ]),
- ("⑧ 商业化 · Monetization", [
+ ("⑦ 商业化 · Monetization", [
    ("monetize_usage_distribution_30d", "用量分位 · Usage Percentiles (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 计量口径的自然阅读序)
        dict(top=6,
