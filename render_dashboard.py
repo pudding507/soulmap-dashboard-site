@@ -125,16 +125,6 @@ RETENTION_DIMS = dict(
 )
 
 # 广告组首日对照卡的维度配置(SQL 的 dimension 列 → 指标选项卡;dimension_value = 各广告组线)
-_ADGROUP_METRICS = ["first_message", "turns_5plus", "turns_10plus", "retention_d1"]
-_ADGROUP_ORDER   = ["relationship", "burnout", "career", "others"]   # 固定线序,新广告组自动接在后面
-ADGROUP_DIMS = dict(
-    dimorder=_ADGROUP_METRICS,
-    dimlabels={"first_message": "First message", "turns_5plus": "5+ turns (day 0)",
-               "turns_10plus": "10+ turns (day 0)", "retention_d1": "D1 retention"},
-    slorder={k: _ADGROUP_ORDER for k in _ADGROUP_METRICS},
-    min_vol=30,   # 累计新用户不足 30 的广告组不画(刚上线的小广告组率值波动极大)
-)
-
 # 每日角色 CTR 的维度配置(SQL 的 dimension 列 → 选项卡;dimension_value = 各角色线)
 CHAR_DAILY_CTR_DIMS = dict(
     dimorder=["overall", "character"],
@@ -190,17 +180,34 @@ SECTIONS = [
          dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
               note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
               dims=[("app_version","","app_version")])),
-     ("growth_adgroup_d0_comparison", "广告组首日对照 · Ad-Group D0 Comparison", "long_dim",
-         dict(rate=("numerator","denominator"), fmt="pct0", **ADGROUP_DIMS,
-              note="各广告组的新用户首日行为与次日留存,分母为该广告组当天新用户数(按账号) ｜ Day-0 behaviour and D1 retention by ad group; denominator = that group\u2019s new users that day (accounts)")),
+     ("growth_adgroup_d0_comparison", "广告组首日对照 · Ad-Group D0 Comparison", "table",
+         dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY date DESC, new_users DESC
+              cols=[("date","日期 Date","text"),
+                    ("adgroup","广告组 Ad Group","text"),
+                    ("new_users","新用户 New Users","int"),
+                    ("first_message","首条消息 First Msg","int"),
+                    ("first_message_rate","首条率 Rate","pct0"),
+                    ("turns_5plus","5+轮 5+ Turns","int"),
+                    ("turns_5plus_rate","5+轮率 Rate","pct0"),
+                    ("turns_10plus","10+轮 10+ Turns","int"),
+                    ("turns_10plus_rate","10+轮率 Rate","pct0"),
+                    ("retained_d1","D1 回访 D1","int"),
+                    ("retention_d1_rate","D1 留存率 Rate","pct0")],
+              bar=["new_users","first_message_rate"],
+              note="各广告组的新用户首日行为与次日留存,按日倒序;分母为该广告组当天新用户数(按账号)。\u26a0\ufe0f 最新一天的 D1 必然为 0 \u2014\u2014 需隔日才成熟 \uff5c Day-0 behaviour and D1 retention by ad group, newest first. D1 for the latest day is always 0 \u2014 it needs another day to mature")),
      ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
        rollup={"country": 12},
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
-   ("growth_meta_qcd_trend_by_creative", "Meta 素材 QCD 趋势 · Meta QCD by Creative", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct1", cap=8, min_vol=50,
-            dimlabels={"creative":"by creative"},
-            note="按**装机日**看每条素材带来的用户里有多少达成 QCD(同日同角色≥6条用户消息);排除 reception ｜ QCD rate by install date for each Meta creative (≥6 user messages with the same host in a day); reception excluded")),
+   ("growth_meta_qcd_by_creative", "Meta 素材 QCD · Meta QCD by Creative", "table",
+       dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY date DESC, installs DESC
+            cols=[("date","装机日 Install Date","text"),
+                  ("creative","素材 Creative","text"),
+                  ("installs","装机 Installs","int"),
+                  ("qcd_users","达成 QCD","int"),
+                  ("qcd_rate","QCD 率 Rate","pct1")],
+            bar=["installs","qcd_rate"],
+            note="按**装机日**看每条素材带来的用户里有多少达成 QCD(同日同角色\u22656条用户消息),按日倒序;排除 reception,装机<10 的素材-日不列 \uff5c QCD rate by install date for each Meta creative, newest first; reception excluded, creative-days with <10 installs omitted")),
    ("growth_meta_funnel_by_creative", "Meta 素材全链路 · Meta Full Funnel by Creative", "table",
        dict(top=15, sort="installs",
             cols=[("creative","素材 Creative","text"),
@@ -574,6 +581,7 @@ ALIAS = {
     "activation_first_msg_latency": "activation_user_first_latency",
     # 2026-08-18 卡名 card ctr → position ctr;Metabase 若未同步改名,旧名兜底
     "discover_character_card_ctr": "discover_click_position_distribution",
+    "growth_meta_qcd_trend_by_creative": "growth_meta_qcd_by_creative",
     "discover_character_position_ctr": "discover_click_position_distribution",
 }
 
