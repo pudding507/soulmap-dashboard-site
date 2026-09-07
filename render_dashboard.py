@@ -209,22 +209,25 @@ SECTIONS = [
             bar=["installs","qcd_rate"],
             note="按**装机日**看每条素材带来的用户里有多少达成 QCD(同日同角色\u22656条用户消息),按日倒序;排除 reception,装机<10 的素材-日不列 \uff5c QCD rate by install date for each Meta creative, newest first; reception excluded, creative-days with <10 installs omitted")),
    ("growth_meta_funnel_by_creative", "Meta 素材全链路 · Meta Full Funnel by Creative", "table",
+       # 2026-09-07 随 SQL 重构:删掉「看过角色卡」与两个相关率列 —— 曝光埋点只覆盖部分 tab
+       #   (foryou/new_this_week/try_different 曝光恒为 0,而这三个占点击 79.5%),拿它当漏斗
+       #   第一级会出现「点击比看卡多 2.7 倍」。漏斗只留严格嵌套三级,目录那条路降为并列列。
        dict(top=15, sort="installs",
             cols=[("creative","素材 Creative","text"),
                   ("installs","装机 Installs","int"),
-                  ("reached_card_shown","看过角色卡 Saw Card","int"),
-                  ("reached_card_tap","点击 Tapped","int"),
-                  ("reached_chat","点后开聊 Tap→Chat","int"),
                   ("reached_first_message","发过消息 Any Msg","int"),
+                  ("first_message_rate","装机→发消息","pct0"),
                   ("reached_qcd","达成 QCD","int"),
-                  ("retained_d1","D1 回访","int"),
-                  ("retained_d7_window","D7窗 回访 (5–9d)","int"),
-                  ("card_shown_rate","装机→看卡","pct0"),
-                  ("tap_rate","看卡→点击","pct0"),
                   ("qcd_rate","装机→QCD","pct1"),
+                  ("retained_d1","D1 回访","int"),
+                  ("retained_d7_window","D7窗 回访 (5\u20139d)","int"),
+                  ("reached_card_tap","点击角色卡 Tapped","int"),
+                  ("card_tap_rate","装机→点卡","pct0"),
+                  ("reached_chat","点后开聊 Tap→Chat","int"),
+                  ("chat_closure_rate","点卡→开聊","pct0"),
                   ("first_install_date","首个装机日 First Install","text")],
             bar=["installs","qcd_rate"],
-            note="⚠️「看过角色卡」「点击」两列**只对 2026-08-15(2.7.0 放量)之后的装机有意义** —— 之前装机的用户没有角色目录界面,那些行接近 0 不是素材差,看「首个装机日」列判断 ｜ ⚠️ The Saw-Card and Tapped columns only apply to installs on/after Aug 15 (2.7.0 rollout); earlier installs had no catalogue UI, so near-zero values there are not a creative problem — check the First-Install column")),
+            note="漏斗三级是 装机 → 发过消息 → 达成QCD,严格嵌套、可直接读转化率(实测 25 行全单调)。⚠️ 后面「点击角色卡」「点后开聊」是**并列诊断列,不是漏斗的级** —— 走目录那条路与「发消息」没有包含关系(deeplink / 会话列表 / onboarding 指定角色都能直接开聊),不要和前三级比大小。⚠️ 曝光列已于 2026-09-07 删除:card_impression 只在 all/everyday/fantasy 三个 tab 上发,而 foryou(占点击 69%)恒为 0 \uff5c The funnel is Installs → Any Msg → QCD (strictly nested). ⚠️ The Tapped / Tap→Chat columns are parallel diagnostics, not funnel stages — the catalogue path is not a superset of sending a message. ⚠️ The impression column was dropped on 2026-09-07: card_impression fires on only 3 of the tabs while foryou (69% of taps) never reports it")),
  ]),
  ("② 激活 · Activation", [
    ("activation_funnel", "激活漏斗 · Activation Funnel", "funnel",
@@ -232,7 +235,10 @@ SECTIONS = [
    ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
        dict(note="同激活漏斗,按 source×广告类型分组;近4版本周·取前8组 ｜ Same funnel split by source × ad type; last 4 release weeks, top 8 groups")),
    ("activation_guardrail_funnel", "护栏漏斗分版本 · Guardrail Funnel by Version", "funnel",
-       dict(gsort="version", note="onboarding 六步按 app_version 分组,看新 chip 有没有增流失;近30天,activated=≥3轮 deep=≥5轮 ｜ Onboarding steps split by app version — did the new chip add drop-off? Last 30 days")),
+       # 2026-09-07 随 SQL 改:9 级→8 级(删掉「看到角色目录」),版本来源改用顶层 version,
+        #   选版本规则改为「人数前 6 + 强制含最新版」——原按版本号取最新 7 个,把人数最多的
+        #   2.6.1(5,147 人)排除在外了。
+        dict(gsort="version", note="onboarding 八步按版本分组,看新流程有没有增流失;近30天,activated=≥3轮 deep=≥5轮。⚠️「选择角色」这一级在 2.7.0 之前的版本(如 2.6.1)必然接近 0 —— 那些版本没有角色目录界面,不是流失,看该列第一行人数判断 ｜ Onboarding steps split by app version. Last 30 days. ⚠️ The Pick-Character step is near zero on pre-2.7.0 versions — those builds had no catalogue screen; that is not drop-off")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
             note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
@@ -385,19 +391,24 @@ SECTIONS = [
             note="和「角色表现榜」互补:那张看曝光→点击,这张看开聊→QCD→回访。仅列被 ≥20 人聊过的角色。⚠️「D7窗 回同一角色」现在必然是 0 —— 角色卡 8/14 才上线,大部分 cohort 的第 5 天还在未来,约 8/24 才能读第一批,**不是没有留存** ｜ Complements the Character Leaderboard: that one covers impression→tap, this one covers chat→QCD→return. Characters chatted by ≥20 users only. ⚠️ The D7-window column is necessarily 0 right now — character cards only launched Aug 14, so day 5 is still in the future for most cohorts; readable around Aug 24. Not a retention finding")),
  ]),
  ("⑦ 商业化 · Monetization", [
-   ("monetize_usage_distribution_30d", "用量分位 · Usage Percentiles (30d)", "table",
-       # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 计量口径的自然阅读序)
-       dict(top=6,
+   ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
+       # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
+       # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
+       #   原表把问题问反了:要定的是「额度 30 行不行」,给的是「P80 是 41 条」,而分位刻度里没有 30。
+       dict(top=30,
             cols=[("cohort","人群 Cohort","text"),
-                  ("metric","计量口径 Metric","text"),
-                  ("observations","样本 Observations","int"),
-                  ("avg_messages","人均 Avg","d1"),
-                  ("p50","P50","int"), ("p70","P70","int"),
-                  ("p80","P80","int"), ("p90","P90","int"),
-                  ("p95","P95","int"), ("p99","P99","int"),
-                  ("max_value","最大 Max","int")],
-            bar=["p80","p90"],
-            note="定免费额度用的输入表。额度设在 P80 = 八成用户碰不到墙,设在 P90 = 只有一成碰到。⚠️ 三个人群的 P80 差 10 倍(全体 12 / 活跃≥3天 116 / 达成过QCD 27),**必须先选参照系再读数**,不要跨行比较 ｜ Input table for setting the free quota. A cap at P80 means 80% of users never hit the wall; at P90, only 10% do. ⚠️ P80 differs 10× across the three cohorts — pick a reference cohort before reading, never compare rows")),
+                  ("daily_cap","每日额度 Cap","int"),
+                  ("users_total","总人数 Users","int"),
+                  ("users_hitting_cap","撞墙人数 Hit","int"),
+                  ("users_hitting_cap_rate","撞墙人占比 Hit %","pct1"),
+                  ("person_days_total","总人日 P-Days","int"),
+                  ("person_days_hitting_cap","撞墙人日 Hit","int"),
+                  ("person_days_hitting_cap_rate","撞墙人日占比 Hit %","pct1"),
+                  ("messages_blocked","被挡消息 Blocked","int"),
+                  ("messages_blocked_rate","被挡占比 Blocked %","pct1"),
+                  ("current_tier","","text")],
+            bar=["users_hitting_cap_rate","messages_blocked_rate"],
+            note="定免费额度用的决策表:一行一个候选额度,直接读「多少人会撞墙」,现行 30/天 已标出。⚠️ 三列撞墙口径不同 —— 撞墙人数=影响多少人的体验,撞墙人日=这道墙被撞的频次,被挡消息=对推理成本的影响;30/天 时全体口径下三者分别是 5.6% / 6.6% / 33.8%,**少数重度用户贡献了三分之一的消息量**。⚠️ 必须先选人群再读数:同样 30/天,全体只有 5.6% 撞墙,「活跃≥3天」是 48.8%、「达成过QCD」是 25.2% ｜ Decision table for the free quota: one row per candidate cap, read off how many users hit it. Current 30/day is flagged. ⚠️ The three hit-columns answer different questions (users affected / how often / inference cost). ⚠️ Pick a cohort first — at 30/day it is 5.6% of all users but 48.8% of users with 3+ active days")),
  ]),
 ]
 
@@ -662,9 +673,18 @@ section{scroll-margin-top:56px}
 border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--ts)}
 """
 
-STALE_MAX_DAYS = 3    # 抓失败时沿用上一次的值,但最多 3 天 —— 再久就让卡消失。
+STALE_MAX_DAYS = 14   # 抓失败时沿用上一次的值,超过这个天数就让卡消失。
                      # 不设上限的话,长期超时的卡(AI 响应时延等)会永久显示冻结数据,
                      # 比"图不见了"更危险:看的人不会怀疑一张画得好好的图。
+                     #
+                     # 2026-09-07 临时 3 → 14:Metabase 主机 502(nginx 活着、后面的
+                     # Java 进程连不上,/api/health 也 502),抓数在 login() 就失败,
+                     # 流水线每次都死在第一步 —— 好处是 index.html 没被覆盖,页面冻在
+                     # 最后一版;风险在恢复那一刻:沿用来源是上一版 index.html 本身,
+                     # 只要有一次跑够 25 张卡过了 guard 就会渲染+push,此时超过上限的卡
+                     # 被删掉,而卡一旦从 index.html 消失,下次连沿用的来源都没有了。
+                     # 当时已有 1 张卡沿用到 2026-09-03(4 天,已过原来的 3 天线)。
+                     # ⚠️ Metabase 稳定后调回 3 —— 14 天的冻结数据本身也是误导。
 
 
 def _load_prev(out_path: Path) -> tuple[dict, str | None]:
@@ -722,10 +742,17 @@ def render(raw_path: Path, out_path: Path):
     payload = json.dumps({"sections": sections, "pal": PAL, "wkpal": WKPAL,
                           "run_date": meta.get("run_date")}, ensure_ascii=False)
     failed = meta.get("failed") or []
-    # 副标题第二行:说明埋点类图表的固有延迟。实测 ETL 每天 SGT 13:00-13:03 入库前一天的数据
-    # (连续 5 天一分不差),所以 13:00 前最新只到前天。服务端库(留存/对话)不走这条链路,实时。
-    lag_note = ('每天 13:00(SGT) 入库前一天的埋点数据,数据有延迟'
-                ' ｜ Event data for the previous day lands at 13:00 SGT — charts lag accordingly')
+    # 副标题第二行:说明埋点类图表的固有延迟。服务端库(留存/对话)不走这条链路,实时。
+    #
+    # 2026-09-07 重测(host.firebase_event.created_date,近 8 天):ETL 已提前到 SGT
+    # 10:02 前后,不再是原先连续 5 天一分不差的 13:00。实测每个 event_date 的落库时点:
+    #   20260906→09-07 09:02   20260905→09-06 10:02   20260904→09-05 10:01
+    #   20260903→09-04 10:03   20260902→09-03 11:03   20260901→09-02 10:01
+    #   20260831→09-01 10:02   20260830→08-31 10:03
+    # 灌数本身只花 ~20 秒,但时点在 09:02~11:03 之间浮动 ⇒ 对外只能说"11:00 之后",
+    # 说 10:00 会在 ETL 迟到那天(如 09-03 的 11:03)变成谎话。
+    lag_note = ('每天 11:00(SGT) 前入库前一天的埋点数据,数据有延迟'
+                ' ｜ Event data for the previous day lands by 11:00 SGT — charts lag accordingly')
     hdr = (f'<header><h1>SoulMap 看板 · SoulMap Dashboard</h1><div class="meta">'
            f'数据 {meta.get("run_date","?")} · Metabase dashboard {meta.get("dashboard_id","?")} · '
            f'{sum(len(s["cards"]) for s in sections)} 卡'
