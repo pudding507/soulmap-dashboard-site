@@ -194,7 +194,7 @@ SECTIONS = [
                     ("retained_d1","D1 回访 D1","int"),
                     ("retention_d1_rate","D1 留存率 Rate","pct0")],
               bar=["new_users","first_message_rate"],
-              note="各广告组的新用户首日行为与次日留存,按日倒序;分母为该广告组当天新用户数(按账号)。\u26a0\ufe0f 最新一天的 D1 必然为 0 \u2014\u2014 需隔日才成熟 \uff5c Day-0 behaviour and D1 retention by ad group, newest first. D1 for the latest day is always 0 \u2014 it needs another day to mature")),
+              note="各广告组新增设备的首日行为与次日留存,按日倒序;分母 = 该广告组当天新设备数 \uff5c Day-0 behaviour and D1 retention by ad group, newest first; denominator = that group\u2019s new devices that day")),
      ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
        rollup={"country": 12},
@@ -207,7 +207,7 @@ SECTIONS = [
                   ("qcd_users","达成 QCD","int"),
                   ("qcd_rate","QCD 率 Rate","pct1")],
             bar=["installs","qcd_rate"],
-            note="按**装机日**看每条素材带来的用户里有多少达成 QCD(同日同角色\u22656条用户消息),按日倒序;排除 reception,装机<10 的素材-日不列 \uff5c QCD rate by install date for each Meta creative, newest first; reception excluded, creative-days with <10 installs omitted")),
+            note="按装机日看每条素材的用户里有多少达成 QCD;装机<10 的素材-日不列 ｜ QCD rate by install date for each Meta creative; creative-days with fewer than 10 installs omitted")),
    ("growth_meta_funnel_by_creative", "Meta 素材全链路 · Meta Full Funnel by Creative", "table",
        # 2026-09-07 随 SQL 重构:删掉「看过角色卡」与两个相关率列 —— 曝光埋点只覆盖部分 tab
        #   (foryou/new_this_week/try_different 曝光恒为 0,而这三个占点击 79.5%),拿它当漏斗
@@ -227,7 +227,7 @@ SECTIONS = [
                   ("chat_closure_rate","点卡→开聊","pct0"),
                   ("first_install_date","首个装机日 First Install","text")],
             bar=["installs","qcd_rate"],
-            note="漏斗三级是 装机 → 发过消息 → 达成QCD,严格嵌套、可直接读转化率(实测 25 行全单调)。⚠️ 后面「点击角色卡」「点后开聊」是**并列诊断列,不是漏斗的级** —— 走目录那条路与「发消息」没有包含关系(deeplink / 会话列表 / onboarding 指定角色都能直接开聊),不要和前三级比大小。⚠️ 曝光列已于 2026-09-07 删除:card_impression 只在 all/everyday/fantasy 三个 tab 上发,而 foryou(占点击 69%)恒为 0 \uff5c The funnel is Installs → Any Msg → QCD (strictly nested). ⚠️ The Tapped / Tap→Chat columns are parallel diagnostics, not funnel stages — the catalogue path is not a superset of sending a message. ⚠️ The impression column was dropped on 2026-09-07: card_impression fires on only 3 of the tabs while foryou (69% of taps) never reports it")),
+            note="三级漏斗:装机 → 发过消息 → 达成 QCD;其余列是并列诊断列,不是漏斗的级 ｜ Three-step funnel: installs → any message → QCD; the remaining columns are side diagnostics, not funnel steps")),
  ]),
  ("② 激活 · Activation", [
    ("activation_funnel", "激活漏斗 · Activation Funnel", "funnel",
@@ -238,7 +238,7 @@ SECTIONS = [
        # 2026-09-07 随 SQL 改:9 级→8 级(删掉「看到角色目录」),版本来源改用顶层 version,
         #   选版本规则改为「人数前 6 + 强制含最新版」——原按版本号取最新 7 个,把人数最多的
         #   2.6.1(5,147 人)排除在外了。
-        dict(gsort="version", note="onboarding 八步按版本分组,看新流程有没有增流失;近30天,activated=≥3轮 deep=≥5轮。⚠️「选择角色」这一级在 2.7.0 之前的版本(如 2.6.1)必然接近 0 —— 那些版本没有角色目录界面,不是流失,看该列第一行人数判断 ｜ Onboarding steps split by app version. Last 30 days. ⚠️ The Pick-Character step is near zero on pre-2.7.0 versions — those builds had no catalogue screen; that is not drop-off")),
+        dict(gsort="version", note="onboarding 八步按版本分组(按设备);近30天,activated=≥3轮 deep=≥5轮 ｜ Onboarding steps split by app version, by device; last 30 days, activated = 3+ turns, deep = 5+ turns")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
             note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
@@ -254,31 +254,31 @@ SECTIONS = [
  ("③ 留存 · Retention", [
    ("retention_d1", "留存 D1 · Retention D1", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
-            note="次日开App的人 ÷ 当天注册的新用户;回访=session_start ｜ Users reopening the app on day 1 ÷ new users registered that day")),
+            note="次日开App的设备 ÷ 装机当天的新设备;回访=session_start ｜ Devices reopening on day 1 \u00f7 new devices that installed that day; return = session_start")),
    ("retention_d1_effective", "有效留存 D1 · Effective Retention D1", "long_dim",
        dict(rate=("messaged_users","new_users"), **RETENTION_DIMS,
-            note="次日发过消息的人 ÷ 当天注册的新用户;只算用户自己发言,打开App不算 ｜ Users who sent a message on day 1 ÷ new users that day; opening the app alone doesn't count")),
+            note="次日发过消息的账号 ÷ 当天注册的账号;只算用户自己发言,打开App不算 \uff5c Accounts that sent a message on day 1 \u00f7 accounts registered that day; user messages only, reopening alone doesn\u2019t count")),
    ("retention_d3", "留存 D3 · Retention D3", "long_dim",
        dict(
-            note="第3天开App的人 ÷ 当天注册的新用户 ｜ Users reopening on day 3 ÷ new users registered that day",rate=("retained_users","new_users"), **RETENTION_DIMS)),
+            note="第3天开App的设备 ÷ 装机当天的新设备 \uff5c Devices reopening on day 3 \u00f7 new devices that installed that day",rate=("retained_users","new_users"), **RETENTION_DIMS)),
    ("retention_d7", "留存 D7 · Retention D7", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
-            note="第7天开App的人 ÷ 当天注册的新用户;末尾几天观察窗未满 ｜ Users reopening on day 7 ÷ new users that day; the trailing days' window hasn't closed")),
+            note="第7天开App的设备 ÷ 装机当天的新设备;末尾几天观察窗未满 \uff5c Devices reopening on day 7 \u00f7 new devices that installed that day; the trailing days\u2019 window hasn\u2019t closed")),
    ("retention_push_funnel", "推送链路漏斗 · Push Setup Funnel", "funnel",
        dict(note="弹出权限窗的设备:授权 → 拿到 token → 服务端注册,按系统分组;数据自 2.7.0(8/15)起 ｜ Devices shown the permission prompt: granted → token obtained → registered on server, grouped by OS; data starts with 2.7.0 (Aug 15)")),
    ("retention_push_delivery", "推送触达漏斗 · Push Delivery Funnel", "funnel",
        dict(note="收到通知的设备:有反应(点开或划掉) → 点开 → 点开后 30 分钟内发消息;数据自 2.7.0(8/15)起 ｜ Devices that received a notification: reacted (opened or dismissed) → opened → sent a message within 30 min of opening; data starts with 2.7.0 (Aug 15)")),
  ]),
  ("④ 模块 · Modules", [
-   ("module_tab_penetration", "四 Tab 渗透率 · Four-Tab Penetration", "rate",
+   ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
        dict(rate=("tab_users","active_users"), fmt="pct0",
             note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU",
-            order=["Stars","Chat","Discover","Me"],
+            order=["Chat","Discover","Me"],
             dims=[("tab","","tab")])),
    ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate",
        dict(
             note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1",
-            order=["Stars","Chat","Discover","Me"],
+            order=["Chat","Discover","Me"],
             dims=[("tab","","tab")])),
    ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"),
        note="点击未解锁 Tab 的用户 ÷ 当天DAU ｜ Users tapping a locked tab ÷ that day's DAU",
@@ -288,7 +288,7 @@ SECTIONS = [
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
-            note="首日发≥5条的新用户 ÷ 当天注册的新用户。⚠️ 分母是**服务端建号数**(94.5% 是自动建的游客号)，"
+            note="首日发≥5条的新用户 ÷ 当天注册的账号数 ｜ New users sending 5+ messages on day 0 ÷ accounts registered that day"
                  "比「新用户数」卡的**装机数**多约 15%，两张卡的「新用户」不是同一批人。"
                  "by country 里的 unknown 是账号接不回埋点设备(约 23%)，不是不知道国家 ｜ "
                  "New users sending \u22655 messages on day 0 \u00f7 accounts created that day. "
@@ -340,7 +340,7 @@ SECTIONS = [
             dimlabels={"overall":"Overall","host_type":"by host type"},
             # slorder 固定线序:角色卡在前(它才是 North Star),系统行垫底
             slorder={"host_type":["角色卡","reception","SoulMap系统行"]},
-            note="QCD = 同一天里对同一个 Host 发了 ≥6 条非空消息的用户,占当天 DAU 的比例。三档分开看:角色卡才是 North Star,reception 是打开就在的默认接待(用户没做过选择)。⚠️ 口径暂定,A/B 闭环定义正在重新对齐 ｜ QCD = users who sent ≥6 non-empty messages to the same host in one day, over DAU. Split by host type: only character cards count toward the North Star; reception is the default greeter (no user choice involved). ⚠️ Definition provisional")),
+            note="QCD = 同一天对同一个 Host 发≥6条非空消息的账号,占当天启动过 App 的账号数;按 host 类型分三档 ｜ QCD = accounts sending 6+ non-empty messages to the same host in a day, over accounts that launched the app that day; split by host type")),
  ]),
  ("⑥ 发现 · Discover", [
    ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
@@ -348,7 +348,7 @@ SECTIONS = [
             note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
    ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
-            note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10(<20 不画)。"
+            note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10 ｜ Daily taps ÷ impressions per character in the catalogue, top 10 by cumulative taps"
                  "⚠️ 曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
                  "Daily taps ÷ impressions per character, top 10 by cumulative taps (<20 dropped)")),
    ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
@@ -383,7 +383,7 @@ SECTIONS = [
                   ("first_chat_date","首次对话日 First Chat","text"),
                   ("host_key","host_id","text")],
             bar=["chatted_users","qcd_rate"],
-            note="和「角色表现榜」互补:那张看曝光→点击,这张看开聊→QCD→回访。仅列被 ≥20 人聊过的角色。⚠️「D7窗 回同一角色」现在必然是 0 —— 角色卡 8/14 才上线,大部分 cohort 的第 5 天还在未来,约 8/24 才能读第一批,**不是没有留存** ｜ Complements the Character Leaderboard: that one covers impression→tap, this one covers chat→QCD→return. Characters chatted by ≥20 users only. ⚠️ The D7-window column is necessarily 0 right now — character cards only launched Aug 14, so day 5 is still in the future for most cohorts; readable around Aug 24. Not a retention finding")),
+            note="各角色的开聊 → QCD → 回访;仅列被 ≥20 人聊过的角色 ｜ Chat → QCD → return per character; only characters chatted by 20+ people")),
  ]),
  ("⑦ 商业化 · Monetization", [
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
@@ -403,7 +403,7 @@ SECTIONS = [
                   ("messages_blocked_rate","被挡占比 Blocked %","pct1"),
                   ("current_tier","","text")],
             bar=["users_hitting_cap_rate","messages_blocked_rate"],
-            note="定免费额度用的决策表:一行一个候选额度,直接读「多少人会撞墙」,现行 30/天 已标出。⚠️ 三列撞墙口径不同 —— 撞墙人数=影响多少人的体验,撞墙人日=这道墙被撞的频次,被挡消息=对推理成本的影响;30/天 时全体口径下三者分别是 5.6% / 6.6% / 33.8%,**少数重度用户贡献了三分之一的消息量**。⚠️ 必须先选人群再读数:同样 30/天,全体只有 5.6% 撞墙,「活跃≥3天」是 48.8%、「达成过QCD」是 25.2% ｜ Decision table for the free quota: one row per candidate cap, read off how many users hit it. Current 30/day is flagged. ⚠️ The three hit-columns answer different questions (users affected / how often / inference cost). ⚠️ Pick a cohort first — at 30/day it is 5.6% of all users but 48.8% of users with 3+ active days")),
+            note="免费额度决策表:一行一个候选额度,读「多少人会撞墙」;现行 30/天 已标出 ｜ Free-quota decision table: one row per candidate cap showing how many users would hit it; the current 30/day is marked")),
  ]),
 ]
 
