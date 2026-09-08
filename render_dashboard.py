@@ -199,7 +199,7 @@ SECTIONS = [
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
        rollup={"country": 12},
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
-   ("growth_meta_qcd_by_creative", "Meta 素材 QCD · Meta QCD by Creative", "table",
+   ("growth_meta_daily_qcd_by_creative", "Meta 素材每日 QCD · Meta Daily QCD by Creative", "table",
        dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY date DESC, installs DESC
             cols=[("date","装机日 Install Date","text"),
                   ("creative","素材 Creative","text"),
@@ -242,11 +242,8 @@ SECTIONS = [
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
             note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
-   ("activation_onboarding_from_2.5.0", "新版 Onboarding Anchor 分布 · New-Onboarding Anchor Distribution", "line",
-       dict(val="users",
-            note="投放口径 user.topic_anchor,含默认落到 just_talk 的 ≈62%(主动选择仅 ≈11%) ｜ Delivery definition; ~62% default to just_talk (explicit choice: ~11%)",
-            dims=[("overall","Overall",None),("anchor","by anchor","anchor"),
-                  ("source","by source","source"),("adgroup","by source×adgroup",_ADG)])),
+   # 2026-09-08 下线「新版 Onboarding Anchor 分布」(activation_onboarding_from_2.5.0)。
+   #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_onboarding from 2.5.0.sql
    ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
        note="用户看到 AI 首句后发出第一条消息的秒数,取平均 ｜ Avg seconds from the AI's opening line to the user's first message",
        dims=[("overall","Overall",None)])),
@@ -331,10 +328,8 @@ SECTIONS = [
             note="语音消息 ÷ 全部用户消息,按消息实际模态统计 ｜ Voice messages ÷ all user messages, by the message's actual mode",
             dims=[("overall","Overall",None)])),
    # —— 系统质量 · System quality ——
-   ("chat_module_call_success", "模块成功响应率 · Module-Call Success by Content", "rate",
-       dict(rate=("success","turns"),
-            note="成功调用模块的轮次 ÷ 有 director 判断的轮次;闲聊本就不需模块,低值非失败 ｜ Turns where a module fired ÷ turns with a director decision; casual chat needs none, so a low rate isn't a failure",
-            dims=[("overall","Overall",None),("purpose","by content","purpose")])),
+   # 2026-09-08 下线「模块成功响应率」(chat_module_call_success)。
+   #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Chat_module call success.sql
    ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "rate",
        dict(rate=("latency_sec_total","turns"), pct=False, fmt="d1",
             note="每一轮 AI 生成回复的耗时,取平均(llm_response 组件) ｜ Avg time for the AI to generate a reply, per turn (llm_response)",
@@ -592,7 +587,8 @@ ALIAS = {
     "activation_first_msg_latency": "activation_user_first_latency",
     # 2026-08-18 卡名 card ctr → position ctr;Metabase 若未同步改名,旧名兜底
     "discover_character_card_ctr": "discover_click_position_distribution",
-    "growth_meta_qcd_trend_by_creative": "growth_meta_qcd_by_creative",
+    "growth_meta_qcd_trend_by_creative": "growth_meta_daily_qcd_by_creative",
+    "growth_meta_qcd_by_creative":       "growth_meta_daily_qcd_by_creative",
     "discover_character_position_ctr": "discover_click_position_distribution",
 }
 
