@@ -190,7 +190,12 @@ SECTIONS = [
    ("growth_new_user", "新用户数 · New Users", "line", dict(
             note="当天首次安装 App 的用户(first_open) ｜ Users whose first_open happened that day",val="value", cap=12,
        rollup={"country": 12},
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
+       # 2026-09-09 加 by placement:source 是平台归并(Meta 三版位合成 Facebook),placement 是
+       #   pf 原值。实测三个版位的地区结构差别大(Facebook Installs 英语一线 9.0% vs
+       #   Off-Facebook 3.5%),合并会抹掉。两个切页都留:汇报看 source,投放看 placement。
+       dims=[("overall","Overall",None),("source","by source","source"),
+             ("placement","by placement","placement"),
+             ("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("growth_version_adoption", "版本覆盖率 · Version Adoption", "rate",
          dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
               note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
