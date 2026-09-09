@@ -159,6 +159,21 @@ POSITION_DIMS = dict(
     cap=5,         # 五档全画
 )
 
+# 用户偏好分布的维度配置(SQL 的 dimension 列 → 选项卡;dimension_value = 各取值线)
+# ⚠️ theme 选项卡是**多选**(每人 1~4 个),各线之和约 219% —— 不是构成比,不可堆叠。
+#    gender_preference / theme_count 是单选,各线之和 = 100%,可读构成。
+_PREF_THEMES = ["romance","friendship","relationship_issues","drama","adventure",
+                "fantasy","life_advice","venting","cheer_up","career_school"]
+PREFERENCE_DIMS = dict(
+    dimorder=["theme", "gender_preference", "theme_count"],
+    dimlabels={"theme": "by theme (multi-select)", "gender_preference": "by who to meet",
+               "theme_count": "by how many themes"},
+    slorder={"theme": _PREF_THEMES,
+             "gender_preference": ["female", "male", "mixed", "none", "unknown"],
+             "theme_count": ["1个", "2个", "3个", "4个", "0个"]},
+    cap=10,        # theme 共 10 项,全画
+)
+
 # ---------- 注册表 ----------
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
@@ -343,6 +358,27 @@ SECTIONS = [
             note="QCD = 同一天对同一个 Host 发≥6条非空消息的账号,占当天启动过 App 的账号数;按 host 类型分三档 ｜ QCD = accounts sending 6+ non-empty messages to the same host in a day, over accounts that launched the app that day; split by host type")),
  ]),
  ("⑥ 发现 · Discover", [
+   ("discover_search_usage", "搜索使用与结果质量 · Search Usage & Result Quality", "table",
+       # 2026-09-09 新建。选表格不选折线:13 个指标折线放不下,而零结果率需要精确读数
+       #   (40.0% 与 52.0% 的差别要看得出);且日均仅 33–467 次搜索、6–70 用户,折线噪声大。
+       #   表格按 date 倒序 —— 纵向扫一列看趋势,横向扫一行看当天横截面,两种读法都在。
+       # 不写 sort = 保持 SQL 的 ORDER BY date DESC(行序有含义)。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("discover_users","发现页用户 Discover","int"),
+                  ("search_users","搜索用户 Searchers","int"),
+                  ("search_penetration_rate","搜索渗透率 Penetration","pct1"),
+                  ("search_count","搜索次数 Searches","int"),
+                  ("searches_per_user","人均次数 per User","d1"),
+                  ("distinct_query_count","不同 query Distinct","int"),
+                  ("repeat_search_rate","重复搜索率 Repeat","pct1"),
+                  ("zero_result_count","零结果 Zero","int"),
+                  ("zero_result_rate","零结果率 Zero %","pct1"),
+                  ("narrow_result_count","1-20 结果","int"),
+                  ("broad_result_count","21-399 结果","int"),
+                  ("near_full_result_count","400+ 结果","int")],
+            bar=["search_penetration_rate","zero_result_rate"],
+            note="搜索框只在发现页里,所以渗透率的分母是**当天打开过发现页的人**(catalogue_slate_rendered 去重),不是 DAU。⚠️ 零结果率四成以上 —— 分子是 resultCount=0 的搜索次数,分母是当天全部搜索次数。⚠️ 「400+ 结果」不等于全量(角色库实测 865),只是筛得很宽。🛑 本卡**不提供搜索→点击转化**:catalogue_search 没有 slate_id,且点击事件的 source 恒为 discover、与浏览来的点击无法区分,同 session 内的时序邻近不是归因。🛑 这条通道批量上传,**最后 1–2 天必然偏低**,不要拿来做对比;数据下限 2026-09-02(更早的批次在服务端 events_v1=server_disabled 期间被丢,无法回补) ｜ Penetration denominator is users who opened Discover that day, not DAU. ⚠️ Zero-result rate is above 40%. 🛑 No search-to-tap conversion: taps cannot be attributed to search. 🛑 The last 1-2 days are always low (batched upload); data starts 2026-09-02")),
    ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
             note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
@@ -371,6 +407,9 @@ SECTIONS = [
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
             note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
        dims=[("overall","Overall",None),("destination","by destination","destination")])),
+   ("discover_preference_distribution", "用户偏好分布 · Preference Distribution", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct0", **PREFERENCE_DIMS,
+            note="用户在 Preferences 面板设置的偏好占比,分母 = 当天成功写入 profile 的用户数;主题为多选,各线之和大于 100% ｜ Preferences set in the Preferences panel, over users whose profile was written that day; themes are multi-select so the lines sum to over 100%")),
    ("discover_character_qcd_and_retention", "角色 QCD 与回访 · Character QCD & Return", "table",
        dict(top=20, sort="chatted_users",
             cols=[("character","角色 Character","text"),
@@ -404,6 +443,37 @@ SECTIONS = [
                   ("current_tier","","text")],
             bar=["users_hitting_cap_rate","messages_blocked_rate"],
             note="免费额度决策表:一行一个候选额度,读「多少人会撞墙」;现行 30/天 已标出 ｜ Free-quota decision table: one row per candidate cap showing how many users would hit it; the current 30/day is marked")),
+ ]),
+ ("⑧ 能力链路 · Capability Chain", [
+   ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
+       dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY surfaced_7d DESC
+            cols=[("capability","能力 Capability","text"),
+                  ("readability","可读性 Readability","text"),
+                  ("surfaced_7d","近7天出现 Surfaced 7d","int"),
+                  ("delivered_7d","近7天送达 Delivered 7d","int"),
+                  ("unknown_7d","近7天未知 Unknown 7d","int"),
+                  ("delivery_rate_before_0819","08-19前送达率 % Pre-0819 Delivery","d1"),
+                  ("reply_rate_before_0819","08-19前回复率 % Pre-0819 Reply","d1"),
+                  ("surfaced_before_0819","08-19前出现 Pre-0819 Surfaced","int"),
+                  ("delivered_before_0819","08-19前送达 Pre-0819 Delivered","int"),
+                  ("unknown_top_reason","最大未知原因 Top Unknown Reason","text")],
+            bar=["surfaced_7d"],
+            note="每个能力一行,用于在日度健康卡报警后定位是哪些能力;送达率分近7天与 08-19 前两段,后者是历史基线 ｜ One row per capability, used to pinpoint which ones after the daily-health card flags a problem; delivery is split into last 7 days and pre-08-19, the latter being the historical baseline")),
+   ("capability_funnel_daily_health", "能力链路日度健康 · Capability Chain Daily Health", "table",
+       dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY log_date DESC
+            cols=[("log_date","日期 Date","text"),
+                  ("status","状态 Status","text"),
+                  ("caps_reporting_delivered","报 delivered 的能力数 Caps Reporting","int"),
+                  ("caps_active","活跃能力数 Caps Active","int"),
+                  ("surfaced","出现 Surfaced","int"),
+                  ("delivered","送达 Delivered","int"),
+                  ("unknown_events","未知 Unknown","int"),
+                  ("replied","回复 Replied","int"),
+                  ("delivery_rate_pct","送达率 % Delivery","d1"),
+                  ("unknown_share_pct","未知占比 % Unknown","d1"),
+                  ("top_unknown_reason","最大未知原因 Top Unknown Reason","text")],
+            bar=["surfaced"],
+            note="一天一行,看能力链路当天是否正常;status 由「报 delivered 的能力数」判定,该列正常时送达率才有意义 ｜ One row per day showing whether the capability chain is healthy; status comes from the count of capabilities reporting delivered — the delivery rate is only meaningful when that count is normal")),
  ]),
 ]
 
@@ -648,6 +718,12 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
 .vlink:hover{text-decoration:underline}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;align-items:center;justify-content:center}
 .modalbox{background:var(--surface);border:1px solid var(--bd);border-radius:12px;width:min(1000px,92vw);max-height:88vh;overflow:auto;padding:18px 20px;position:relative}
+/* 2026-09-09 表格详情用更宽的弹窗。卡片本身是两列网格里的半屏格子,13 列的表在那里必须
+   横向滚才能读全;点 View details 后用这个尺寸,常见屏幕一屏放得下。
+   ⚠️ 只给表格加,折线/漏斗仍用 1000px —— 那两种图放大到 1800px 反而稀疏。 */
+.modalbox.wide{width:min(1800px,96vw)}
+/* 详情里的表格给到 70vh,而不是卡片里的 380px */
+.tbldetail .tblwrap{max-height:70vh}
 .mtitle{font-size:15px;font-weight:600;margin-bottom:10px;color:var(--tp);padding-right:24px}
 .mbody{min-height:320px;height:64vh}
 .mclose{position:absolute;top:10px;right:14px;border:none;background:transparent;font-size:17px;cursor:pointer;color:var(--ts)}
@@ -845,7 +921,8 @@ function latestOf(dd,fmt){const ds=allDates(dd);if(!ds.length)return'';const d=d
 const modal=$('div','modal');
 modal.innerHTML='<div class="modalbox"><button class="mclose">✕</button><div class="mtitle"></div><div class="mbody"></div></div>';
 document.body.appendChild(modal);
-modal.addEventListener('click',e=>{if(e.target===modal||e.target.className==='mclose')modal.style.display='none';});
+modal.addEventListener('click',e=>{if(e.target===modal||e.target.className==='mclose'){
+  modal.style.display='none';modal.querySelector('.modalbox').classList.remove('wide');}});
 let modalChart=null;
 function openLineDetail(card,data){modal.querySelector('.mtitle').textContent=card.title;
   const mb=modal.querySelector('.mbody');mb.style.height='64vh';mb.innerHTML='';
@@ -855,6 +932,13 @@ function openLineDetail(card,data){modal.querySelector('.mtitle').textContent=ca
 function openFunnelDetail(card,wk){modal.querySelector('.mtitle').textContent=card.title+(wk?'  ·  '+wk:'');
   const mb=modal.querySelector('.mbody');mb.style.height='auto';mb.innerHTML='';
   const box=$('div');mb.appendChild(box);drawFunnel(box,card,wk);modal.style.display='flex';}
+function openTableDetail(card){modal.querySelector('.mtitle').textContent=card.title;
+  modal.querySelector('.modalbox').classList.add('wide');
+  const mb=modal.querySelector('.mbody');mb.style.height='auto';mb.innerHTML='';
+  const box=$('div','tbldetail');mb.appendChild(box);
+  // 详情里默认铺开全部行:把 top 抬到行数,drawTable 的「展开全部」链接自然不出现
+  drawTable(box,Object.assign({},card,{top:(card.rows||[]).length}));
+  modal.style.display='flex';}
 const valueLabels={id:'vlab',afterDatasetsDraw(chart){const ctx=chart.ctx,fmt=chart.$fmt||'int',bar=chart.config.type==='bar';
   const ic=ink();ctx.save();ctx.font='600 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';
   chart.data.datasets.forEach((ds,di)=>{const m=chart.getDatasetMeta(di);if(m.hidden)return;
@@ -918,6 +1002,8 @@ function build(){
       if(card.kind==='table'){
         const body=$('div');el.appendChild(body);g.appendChild(el);
         drawTable(body,card);lv.textContent=(card.rows||[]).length+' 行';
+        // 卡片是半屏宽,列多的表在这里要横向滚;点这里用宽弹窗一屏读全
+        const vd=$('div','vlink','View details ↗');vd.onclick=()=>openTableDetail(card);el.appendChild(vd);
         markStale();
         return;}
       if(card.kind==='funnel'){
