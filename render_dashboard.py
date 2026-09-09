@@ -449,6 +449,27 @@ SECTIONS = [
             bar=["users_hitting_cap_rate","messages_blocked_rate"],
             note="免费额度决策表:一行一个候选额度,读「多少人会撞墙」;现行 30/天 已标出 ｜ Free-quota decision table: one row per candidate cap showing how many users would hit it; the current 30/day is marked")),
  ]),
+ ("⑧ 模型 · Model", [
+   ("model_provider_daily", "模型调用与供应商 · Model & Provider Daily", "table",
+       # 2026-09-09 新建,为日报「模型与成本」一节供数。
+       #   模型维度当前退化(近7天只有 qwen/qwen3-235b-a22b-2507 一个),故按**供应商**拆。
+       #   不写 sort = 保持 SQL 的 ORDER BY date DESC。
+       dict(top=14,
+            cols=[("date","日期 Date","text"),
+                  ("llm_calls","调用数 Calls","int"),
+                  ("sessions","会话数 Sessions","int"),
+                  ("avg_duration_ms","均耗时 ms","int"),
+                  ("slow_call_rate",">10s 占比 Slow","pct1"),
+                  ("share_novita","Novita","pct1"),
+                  ("share_gmicloud","GMICloud","pct1"),
+                  ("share_other","其他 Other","pct1"),
+                  ("share_no_provider","无标记 None","pct1"),
+                  ("tier_rows","降级率分母 Tier","int"),
+                  ("degraded_calls","降级数 Degraded","int"),
+                  ("degraded_rate","降级率 Deg %","pct1")],
+            bar=["llm_calls","degraded_rate"],
+            note="🛑 **降级率的分母是「有 replyTier 的行」(tier_rows),不是调用数** —— model 那组键只覆盖约 66% 的 llm_response,缓冲路径、B-RP 驾驶、即时首句与 Haiku/Gemini 降级层都不在白名单,缺 model 的行是混合桶、降级恰恰藏在里面,拿它当分母等于先把降级筛掉。🛑 replyTier **2026-09-03 13:26 SGT 才上线**,之前 tier_rows=0 是字段没上线、不是没有降级。⚠️ 模型维度当前退化(只有一个模型),故按供应商拆;新供应商落进「其他」不会消失。🛑 **Token 与成本全库都没有**(push_attempt_log.tokens_* 是推送设备 token,与 LLM 无关) ｜ Degraded-rate denominator is rows having replyTier, NOT total calls. replyTier only went live 2026-09-03 13:26 SGT. No token or cost data exists anywhere in the DB")),
+ ]),
  ("⑧ 能力链路 · Capability Chain", [
    ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
        dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY surfaced_7d DESC
