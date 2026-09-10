@@ -181,7 +181,7 @@ SECTIONS = [
  ("① 增长 · Growth", [
    ("growth_dau", "日活跃用户数 · DAU", "line", dict(
             note="当天打开过 App 的用户(session_start) ｜ Users who opened the app that day (session_start)",val="value", cap=12,
-       rollup={"country": 12},
+       rollup={"country": 20},
        dims=[("overall","Overall",None),("user_type","by user type","user_type"),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("growth_dau_new_returning", "DAU 新老占比 · New vs Returning", "rate",
        dict(rate=("users","daily_active_users"), fmt="pct0", order=["new","returning"],
@@ -189,7 +189,7 @@ SECTIONS = [
             dims=[("user_type","","user_type")])),
    ("growth_new_user", "新用户数 · New Users", "line", dict(
             note="当天首次安装 App 的用户(first_open) ｜ Users whose first_open happened that day",val="value", cap=12,
-       rollup={"country": 12},
+       rollup={"country": 20},
        # 2026-09-09 加 by placement:source 是平台归并(Meta 三版位合成 Facebook),placement 是
        #   pf 原值。实测三个版位的地区结构差别大(Facebook Installs 英语一线 9.0% vs
        #   Off-Facebook 3.5%),合并会抹掉。两个切页都留:汇报看 source,投放看 placement。
@@ -217,7 +217,7 @@ SECTIONS = [
               note="各广告组新增设备的首日行为与次日留存,按日倒序;分母 = 该广告组当天新设备数 \uff5c Day-0 behaviour and D1 retention by ad group, newest first; denominator = that group\u2019s new devices that day")),
      ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
-       rollup={"country": 12},
+       rollup={"country": 20},
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("growth_meta_daily_qcd_by_creative", "Meta 素材每日 QCD · Meta Daily QCD by Creative", "table",
        dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY date DESC, installs DESC
@@ -316,7 +316,7 @@ SECTIONS = [
                  "~15% above the install count used by the New Users card \u2014 the two cards do not "
                  "count the same people. In the by-country view, unknown means the account cannot be "
                  "linked back to an instrumented device (~23%), not that the country is unknown.",
-            rollup={"country": 12},
+            rollup={"country": 20},
             dims=[("overall","Overall",None),("country","by country","country")])),
    ("chat_engaged_user_focus", "投入用户数 · Engaged Users", "line",
        dict(val="users",
@@ -327,7 +327,7 @@ SECTIONS = [
                   ("purpose","by purpose (old form)","purpose")])),
    ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
        note="开了会话但一条没发的会话 ÷ 全部会话 ｜ Sessions opened with no message sent ÷ all sessions",
-       rollup={"country": 12},
+       rollup={"country": 20},
        dims=[("overall","Overall",None),("path","by path","path"),("country","by country","country")])),
    # —— 参与深度 · Engagement depth ——
    ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
@@ -430,6 +430,45 @@ SECTIONS = [
             note="各角色的开聊 → QCD → 回访;仅列被 ≥20 人聊过的角色 ｜ Chat → QCD → return per character; only characters chatted by 20+ people")),
  ]),
  ("⑦ 商业化 · Monetization", [
+   ("monetize_free_quota_wall_daily", "免费额度撞墙 · Free-Quota Wall Daily", "table",
+       # 2026-09-09 新建。付费墙模型:累计免费 20 句,用完后每天 2 句。
+       #   选表格:① 一行里同时有存量(已撞墙)与增量(新撞墙),折线会被误读成同一类;
+       #   ② 撞墙人数要精确引用;③ 与另两张表格卡一致,按 date 倒序。
+       #   ⚠️ 与 monetize_usage_distribution_30d 分工:那张答「额度定多少」(旧模型),
+       #      本卡答「多少人已撞墙、每天新增多少」(现行模型)。
+       dict(top=14,
+            cols=[("date","日期 Date","text"),
+                  ("active_users","活跃账号 Active","int"),
+                  ("newly_capped_users","新撞墙 Newly Capped","int"),
+                  ("newly_capped_rate","新撞墙率","pct1"),
+                  ("active_under_20_users","累计<20 句","int"),
+                  ("active_20_plus_users","累计≥20 句","int"),
+                  ("active_20_plus_rate","≥20 占比","pct1"),
+                  ("avg_cumulative_messages","人均累计句数","d1"),
+                  ("capped_saw_paywall_users","撞墙后看到付费墙","int"),
+                  ("capped_saw_paywall_rate","撞墙后看到付费墙率","pct1"),
+                  ("capped_paid_users","撞墙后付费","int")],
+            bar=["newly_capped_users","capped_saw_paywall_rate"],
+            note="付费墙模型是**累计免费 20 句，用完后每天 2 句**；本卡答「多少人已撞墙、每天新增多少」。🛑 **句数口径是「全部用户消息」，与 QCD_v1 的「仅角色卡」不同，两者不可互换** —— 依据是服务端配额表 `total_accepted` 与「全部消息」一致率 88.3%、与「仅角色卡」只有 72.4%。🛑 **累计从 chat_history 重建，不直接读配额表** —— 配额表 2026-09-09 才开始写、无历史；两种算法对「累计≥20」的判定一致率 98.77%（配额表 2,673 人 / 本卡 3,005 人）。**要权威值以配额表为准，要趋势用本卡**。🛑 **每日 2 句那一层尚未启用**（`period_count` 26,958 行里仅 1 行有值），故本卡不含相关列。🛑 **额度墙目前尚未接到付费墙上** —— 近 14 天撞墙 546 人，撞墙日或之后看过付费墙的只有 72 人（13.2%）、付费 1 人；反向看，近 14 天看过付费墙的 416 人里 **329 人（79.1%）从没撞过墙**、105 人一条消息都没发过。🛑 **根因已定位：额度触发的付费墙已上线，但它的「曝光」事件没埋** —— 近 30 天实测：`paywall_viewed` 532 次/445 人，`source` 99.4% 是 `expert_activation`、`trigger` 只有 P1/P3，**没有一条是额度触发**；但 `purchase_started/completed/failed` 上确实有 `trigger='message_quota'`（**2026-09-08 首次出现**），且近 30 天**两笔成功购买 2/2 全部来自 message_quota**（P1 6 人发起 0 成功、P3 4 人发起 0 成功、message_quota 3 人发起 **2 成功**）。⇒ 额度墙→付费墙这条路**是通的、且是目前唯一成交过的入口**，缺的是该路径上的曝光埋点。⇒ **「撞墙后看到付费墙」两列因此系统性低估**，只数得到从专家入口进付费墙的人，**现在只能当下限读**；客户端补发 `paywall_viewed(trigger=message_quota)` 后才准。`capped_paid_users` 走服务端 subscription，不受影响。🛑 **最后三列里 paywall 两列走客户端埋点 ETL（每天灌前一日）、付费列走服务端实时** ⇒ 最新一天「撞墙后看到付费墙」必然是 0，那是 ETL 没到，不是没人看。🛑 `subscription.user_id` 是 **int**，join 到 `chat_history` 要 `CAST(... AS CHAR) COLLATE utf8mb4_unicode_ci`；且约四成行是 `admin_test` 内部测试，已排除。⚠️ 「撞墙后」用日粒度比较，同日先看墙后撞墙的会算进来。⚠️ 累计是**全历史**的，不是窗口内 ｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. Cumulative counts are rebuilt from chat_history because the quota table has no history (98.77% agreement on the ≥20 threshold)")),
+   ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
+       # 2026-09-09 新建。付费链路 09-08~09 刚打通。
+       #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
+       #   叠在一张图上会诱导跨源比较;③ 日报要精确读数,表格直读。
+       #   与 Discover_search usage / Model_provider daily 一致,按 date 倒序。
+       dict(top=14,
+            cols=[("date","日期 Date","text"),
+                  ("paywall_users","付费墙曝光 Paywall","int"),
+                  ("purchase_started_users","发起购买 Started","int"),
+                  ("purchase_started_rate","曝光→发起","pct1"),
+                  ("purchase_completed_users","购买成功 Completed","int"),
+                  ("purchase_completed_rate","发起→成功","pct1"),
+                  ("purchase_canceled_users","用户取消 Canceled","int"),
+                  ("restore_users","恢复购买 Restored","int"),
+                  ("new_subscription_users","新增订阅 New Subs","int"),
+                  ("new_subscription_apple","Apple","int"),
+                  ("new_subscription_google","Google","int")],
+            bar=["paywall_users","new_subscription_users"],
+            note="🛑 **左右两半是两个源，不可相加、不可互验**：左半（付费墙曝光~恢复购买）来自客户端埋点，右半（新增订阅）来自服务端 store webhook。🛑 **两侧时效不同** —— 埋点走 ETL 每天灌前一日（SGT 09:02~11:03 浮动），服务端实时；**最新一天必然「左半全 0、右半有数」，那是 ETL 没到，不是付费墙没曝光**。🛑 **两个率的分母不同**：曝光→发起的分母是付费墙曝光人数，发起→成功的分母是发起购买人数，**两者不可相乘当整体转化率**；且样本是个位数（09-08 为 3 人发起、2 人成功），率仅作趋势参考，**引用请报绝对人数**。⚠️「用户取消」是用户在应用商店弹窗自己取消（`is_user_cancel=true`），不是技术故障。⚠️ 新增订阅已排除内部测试（`admin_test` 约占该表四成）｜ Left half is client telemetry (ETL-lagged one day); right half is server-side store webhook (realtime). Never add or cross-validate them. The two rates have different denominators and must not be multiplied. Sample sizes are single-digit — quote absolute counts, not rates")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
@@ -470,7 +509,7 @@ SECTIONS = [
             bar=["llm_calls","degraded_rate"],
             note="🛑 **降级率的分母是「有 replyTier 的行」(tier_rows),不是调用数** —— model 那组键只覆盖约 66% 的 llm_response,缓冲路径、B-RP 驾驶、即时首句与 Haiku/Gemini 降级层都不在白名单,缺 model 的行是混合桶、降级恰恰藏在里面,拿它当分母等于先把降级筛掉。🛑 replyTier **2026-09-03 13:26 SGT 才上线**,之前 tier_rows=0 是字段没上线、不是没有降级。⚠️ 模型维度当前退化(只有一个模型),故按供应商拆;新供应商落进「其他」不会消失。🛑 **Token 与成本全库都没有**(push_attempt_log.tokens_* 是推送设备 token,与 LLM 无关) ｜ Degraded-rate denominator is rows having replyTier, NOT total calls. replyTier only went live 2026-09-03 13:26 SGT. No token or cost data exists anywhere in the DB")),
  ]),
- ("⑧ 能力链路 · Capability Chain", [
+ ("⑨ 能力链路 · Capability Chain", [
    ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
        dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY surfaced_7d DESC
             cols=[("capability","能力 Capability","text"),
@@ -672,7 +711,15 @@ def build_card(metrics, mid, title, kind, p):
         return base
 
 # ---------- 柔和统一配色 ----------
-PAL = ["#6f9de0", "#5cbfa6", "#e0b366", "#9a8cd9", "#e0899f", "#7cc490", "#8b98ac", "#d69a72"]
+# 2026-09-10 由 8 色扩到 20 色。
+#   改了什么:前 8 个保持原值不变(既有卡的配色不动),后面补 12 个。
+#   为什么:by country 的 rollup 从 12 调到 20(见下),而前端取色是 P[i%P.length] ——
+#          8 色下 20 条序列每色要重复 2~3 次,图例无法辨认。
+#   后 12 个的构成:4 个原调色板没占用的色相(黄绿/青/品红/珊瑚)+ 原 8 色的深色版。
+#   影响:第 9 条及以后的序列换色;前 8 条不变。深浅两档在明暗两种主题下都测过可读。
+PAL = ["#6f9de0", "#5cbfa6", "#e0b366", "#9a8cd9", "#e0899f", "#7cc490", "#8b98ac", "#d69a72",
+       "#8fb84a", "#4aa8c4", "#c46fb8", "#d4665c",
+       "#3f6fb0", "#2f8f78", "#b0873a", "#6f5fa8", "#b05f78", "#4f9460", "#5b6878", "#a86f48"]
 WKPAL = ["#bcd3f2", "#8fb4e6", "#6f9de0", "#4a79c9"]   # 4 版本周,由浅到深(旧→新)
 
 # 卡名别名:现 Metabase 卡名 → 权威清单 metric_id(两种名字都能认)
