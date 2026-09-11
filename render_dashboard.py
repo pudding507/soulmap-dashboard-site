@@ -436,6 +436,9 @@ SECTIONS = [
        #   ② 撞墙人数要精确引用;③ 与另两张表格卡一致,按 date 倒序。
        #   ⚠️ 与 monetize_usage_distribution_30d 分工:那张答「额度定多少」(旧模型),
        #      本卡答「多少人已撞墙、每天新增多少」(现行模型)。
+       # 2026-09-11 随 SQL 改:「撞墙后看到付费墙」两列收窄为只认额度墙
+       #   (source='plus_sheet' AND trigger='message_quota')。原口径数的是专家墙曝光,
+       #   与撞墙漏斗无关。额度墙曝光埋点客户端已写完未上线 ⇒ **两列在上线前恒为 0**。
        dict(top=14,
             cols=[("date","日期 Date","text"),
                   ("active_users","活跃账号 Active","int"),
@@ -445,19 +448,24 @@ SECTIONS = [
                   ("active_20_plus_users","累计≥20 句","int"),
                   ("active_20_plus_rate","≥20 占比","pct1"),
                   ("avg_cumulative_messages","人均累计句数","d1"),
-                  ("capped_saw_paywall_users","撞墙后看到付费墙","int"),
-                  ("capped_saw_paywall_rate","撞墙后看到付费墙率","pct1"),
+                  ("capped_saw_paywall_users","撞墙后看到额度墙","int"),
+                  ("capped_saw_paywall_rate","撞墙后看到额度墙率","pct1"),
                   ("capped_paid_users","撞墙后付费","int")],
             bar=["newly_capped_users","capped_saw_paywall_rate"],
-            note="付费墙模型是**累计免费 20 句，用完后每天 2 句**；本卡答「多少人已撞墙、每天新增多少」。🛑 **句数口径是「全部用户消息」，与 QCD_v1 的「仅角色卡」不同，两者不可互换** —— 依据是服务端配额表 `total_accepted` 与「全部消息」一致率 88.3%、与「仅角色卡」只有 72.4%。🛑 **累计从 chat_history 重建，不直接读配额表** —— 配额表 2026-09-09 才开始写、无历史；两种算法对「累计≥20」的判定一致率 98.77%（配额表 2,673 人 / 本卡 3,005 人）。**要权威值以配额表为准，要趋势用本卡**。🛑 **每日 2 句那一层尚未启用**（`period_count` 26,958 行里仅 1 行有值），故本卡不含相关列。🛑 **额度墙目前尚未接到付费墙上** —— 近 14 天撞墙 546 人，撞墙日或之后看过付费墙的只有 72 人（13.2%）、付费 1 人；反向看，近 14 天看过付费墙的 416 人里 **329 人（79.1%）从没撞过墙**、105 人一条消息都没发过。🛑 **根因已定位：额度触发的付费墙已上线，但它的「曝光」事件没埋** —— 近 30 天实测：`paywall_viewed` 532 次/445 人，`source` 99.4% 是 `expert_activation`、`trigger` 只有 P1/P3，**没有一条是额度触发**；但 `purchase_started/completed/failed` 上确实有 `trigger='message_quota'`（**2026-09-08 首次出现**），且近 30 天**两笔成功购买 2/2 全部来自 message_quota**（P1 6 人发起 0 成功、P3 4 人发起 0 成功、message_quota 3 人发起 **2 成功**）。⇒ 额度墙→付费墙这条路**是通的、且是目前唯一成交过的入口**，缺的是该路径上的曝光埋点。⇒ **「撞墙后看到付费墙」两列因此系统性低估**，只数得到从专家入口进付费墙的人，**现在只能当下限读**；客户端补发 `paywall_viewed(trigger=message_quota)` 后才准。`capped_paid_users` 走服务端 subscription，不受影响。🛑 **最后三列里 paywall 两列走客户端埋点 ETL（每天灌前一日）、付费列走服务端实时** ⇒ 最新一天「撞墙后看到付费墙」必然是 0，那是 ETL 没到，不是没人看。🛑 `subscription.user_id` 是 **int**，join 到 `chat_history` 要 `CAST(... AS CHAR) COLLATE utf8mb4_unicode_ci`；且约四成行是 `admin_test` 内部测试，已排除。⚠️ 「撞墙后」用日粒度比较，同日先看墙后撞墙的会算进来。⚠️ 累计是**全历史**的，不是窗口内 ｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. Cumulative counts are rebuilt from chat_history because the quota table has no history (98.77% agreement on the ≥20 threshold)")),
+            note="付费墙模型是**累计免费 20 句，用完后每天 2 句**；本卡答「多少人已撞墙、每天新增多少」。🛑 **句数口径是「全部用户消息」，与 QCD_v1 的「仅角色卡」不同，两者不可互换** —— 依据是服务端配额表 `total_accepted` 与「全部消息」一致率 88.3%、与「仅角色卡」只有 72.4%。🛑 **累计从 chat_history 重建，不直接读配额表** —— 配额表每行只存最新状态、覆盖式更新，没有历史；两种算法对「累计≥20」的判定一致率 98.77%（配额表 2,673 人 / 本卡 3,005 人）。**要权威值以配额表为准，要趋势用本卡**。🛑 **每日 2 句那一层尚未启用**（`period_count` 26,958 行里仅 1 行有值），故本卡不含相关列。🛑 **「撞墙后看到额度墙」两列当前恒为 0，那是埋点没上线，不是撞墙的人没看到墙。** 额度墙（SoulmapPlusPaywallSheet）在跑、拦过人、也带来过购买，但它此前整个组件没有 import analytics、一条曝光事件都不发；客户端 2026-09-11 已写完曝光埋点（复用 `paywall_viewed`，带 `source='plus_sheet'`、撞墙入口 `trigger='message_quota'`），**未 commit、等真机验证**。2026-09-11 实测：`paywall_viewed` 558 条/463 账号，`trigger` 只有 P1 469 / P3 83 / unknown 3，**没有一条 message_quota**；撞墙端有信号（`message_send_result.result='paywall'` 20 条/1 人）、购买端有信号（`trigger='message_quota'` 的购买 55 条/10 账号，账号数比专家墙 P1 6 + P3 4 加起来还多），**唯独中间「看到墙」是空的**。⇒ 上线后本列自动有数、无需再改 SQL，**上线当天是口径分界线，序列跨该日不可比**。⚠️ 另一个将要发生的收窄：购买事件的 `trigger` 现在把撞墙与 Me 页主动升级都硬编码成 `message_quota`，上线时 Me 入口改发 `me_upgrade` ⇒ 那 55 条里混着主动升级的人，上线后会降，**是口径收窄不是撞墙购买变少**。`capped_paid_users` 走服务端 subscription，不受埋点影响。🛑 **最后三列里 paywall 两列走客户端埋点 ETL（每天灌前一日）、付费列走服务端实时** ⇒ 即便埋点上线后，最新一天也必然是 0，那是 ETL 没到。🛑 `subscription.user_id` 是 **int**，join 到 `chat_history` 要 `CAST(... AS CHAR) COLLATE utf8mb4_unicode_ci`；且约四成行是 `admin_test` 内部测试，已排除。⚠️ 「撞墙后」用日粒度比较，同日先看墙后撞墙的会算进来。⚠️ 累计是**全历史**的，不是窗口内 ｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. Cumulative counts are rebuilt from chat_history because the quota table has no history (98.77% agreement on the ≥20 threshold)")),
    ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
        # 2026-09-09 新建。付费链路 09-08~09 刚打通。
        #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
        #   叠在一张图上会诱导跨源比较;③ 日报要精确读数,表格直读。
        #   与 Discover_search usage / Model_provider daily 一致,按 date 倒序。
+       # 2026-09-11 随 SQL 改:付费墙曝光拆出专家墙 / 额度墙两列。
+       #   客户端给额度墙补了曝光埋点(复用 paywall_viewed、带 source='plus_sheet'),上线后
+       #   总数会从「只有专家墙」变成两墙混合,拆开才看得见那个口径断点、两墙也能各读各的。
        dict(top=14,
             cols=[("date","日期 Date","text"),
                   ("paywall_users","付费墙曝光 Paywall","int"),
+                  ("expert_paywall_users","其中·专家墙 Expert","int"),
+                  ("plus_paywall_users","其中·额度墙 Plus","int"),
                   ("purchase_started_users","发起购买 Started","int"),
                   ("purchase_started_rate","曝光→发起","pct1"),
                   ("purchase_completed_users","购买成功 Completed","int"),
@@ -468,7 +476,7 @@ SECTIONS = [
                   ("new_subscription_apple","Apple","int"),
                   ("new_subscription_google","Google","int")],
             bar=["paywall_users","new_subscription_users"],
-            note="🛑 **左右两半是两个源，不可相加、不可互验**：左半（付费墙曝光~恢复购买）来自客户端埋点，右半（新增订阅）来自服务端 store webhook。🛑 **两侧时效不同** —— 埋点走 ETL 每天灌前一日（SGT 09:02~11:03 浮动），服务端实时；**最新一天必然「左半全 0、右半有数」，那是 ETL 没到，不是付费墙没曝光**。🛑 **两个率的分母不同**：曝光→发起的分母是付费墙曝光人数，发起→成功的分母是发起购买人数，**两者不可相乘当整体转化率**；且样本是个位数（09-08 为 3 人发起、2 人成功），率仅作趋势参考，**引用请报绝对人数**。⚠️「用户取消」是用户在应用商店弹窗自己取消（`is_user_cancel=true`），不是技术故障。⚠️ 新增订阅已排除内部测试（`admin_test` 约占该表四成）｜ Left half is client telemetry (ETL-lagged one day); right half is server-side store webhook (realtime). Never add or cross-validate them. The two rates have different denominators and must not be multiplied. Sample sizes are single-digit — quote absolute counts, not rates")),
+            note="🛑 **付费墙曝光从 2026-09-11 起拆两列**：专家墙（Discover 专家卡，`source=expert_activation`）与额度墙（SoulMap Plus，`source=plus_sheet`）。**两墙的漏斗不同，转化率不要混着读** —— 专家墙是主动进入，额度墙是聊到一半被拦；额度墙自己那条完整漏斗（撞墙 → 看到墙 → 购买）见「免费额度撞墙」卡。⚠️ 额度墙曝光埋点客户端刚补上，**上线前该列恒为 0**；两列相加不一定等于总数（`source` 为空时有差额，实测约 0.4%）。🛑 **左右两半是两个源，不可相加、不可互验**：左半（付费墙曝光~恢复购买）来自客户端埋点，右半（新增订阅）来自服务端 store webhook。🛑 **两侧时效不同** —— 埋点走 ETL 每天灌前一日（SGT 09:02~11:03 浮动），服务端实时；**最新一天必然「左半全 0、右半有数」，那是 ETL 没到，不是付费墙没曝光**。🛑 **两个率的分母不同**：曝光→发起的分母是付费墙曝光人数，发起→成功的分母是发起购买人数，**两者不可相乘当整体转化率**；且样本是个位数（09-08 为 3 人发起、2 人成功），率仅作趋势参考，**引用请报绝对人数**。⚠️「用户取消」是用户在应用商店弹窗自己取消（`is_user_cancel=true`），不是技术故障。⚠️ 新增订阅已排除内部测试（`admin_test` 约占该表四成）｜ Left half is client telemetry (ETL-lagged one day); right half is server-side store webhook (realtime). Never add or cross-validate them. The two rates have different denominators and must not be multiplied. Sample sizes are single-digit — quote absolute counts, not rates")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
