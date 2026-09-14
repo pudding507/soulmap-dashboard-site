@@ -25,7 +25,7 @@ BANNER = ""
 
 # ---------- 聚合 ----------
 def _num(x):
-    # ⚠️ Metabase query/json 把大数返回成带千分位逗号的字符串("3,065"),必须先去逗号再转
+    # Metabase query/json 把大数返回成带千分位逗号的字符串("3,065"),必须先去逗号再转
     try: return float(str(x).replace(",", "").strip())
     except (TypeError, ValueError): return 0.0
 
@@ -53,7 +53,7 @@ def _dc(rows):
 def _rollup(acc, cap, other="其他"):
     """把尾部序列并进「其他」,而不是丢掉。
 
-    ⚠️ 必须在聚合层(acc)做,不能在算完之后做:
+    必须在聚合层(acc)做,不能在算完之后做:
        rate 卡的正确归并是「分子和 ÷ 分母和」,把各自的率相加是错的。
        acc 的值是 [分子/总量, 分母/条数] 这种可加的对,所以直接相加即可。
     排名沿用 _cap 的口径(按末值),保持既有卡的命名序列不变;
@@ -129,7 +129,7 @@ RETENTION_DIMS = dict(
 CHAR_DAILY_CTR_DIMS = dict(
     dimorder=["overall", "character"],
     dimlabels={"overall": "Overall", "character": "by character"},
-    # 按**点击数**排线,不按曝光:目录按字母序展示,曝光被顶得人人相近
+    # 按点击数排线,不按曝光:目录按字母序展示,曝光被顶得人人相近
     # (实测累计曝光 top5 全是 A 开头、都是 ~1960),按曝光取 top10 等于按首字母取。
     volcol={"character": "numerator"},
     min_vol={"character": 20},   # 累计点击不足 20 的角色不画(个位数点击的 CTR 是噪音)
@@ -147,7 +147,7 @@ TILE_DIMS = dict(
 )
 
 # 点击位次分布的维度配置(SQL 的 dimension 列 = 子 tab → 选项卡;dimension_value = 位次档 = 线)
-# ⚠️ 本卡只用 card_tap,分子分母同盘,与曝光无关 —— 不要给它加回 CTR 语义,原因见 SQL 头部。
+# 本卡只用 card_tap,分子分母同盘,与曝光无关 —— 不要给它加回 CTR 语义,原因见 SQL 头部。
 _POSITION_BUCKETS = ["位0-4", "位5-9", "位10-29", "位30-59", "位60+"]
 _POSITION_TABS = ["foryou", "all", "new_this_week", "try_different", "(pre-2.8.0)"]
 POSITION_DIMS = dict(
@@ -160,7 +160,7 @@ POSITION_DIMS = dict(
 )
 
 # 用户偏好分布的维度配置(SQL 的 dimension 列 → 选项卡;dimension_value = 各取值线)
-# ⚠️ theme 选项卡是**多选**(每人 1~4 个),各线之和约 219% —— 不是构成比,不可堆叠。
+# theme 选项卡是多选(每人 1~4 个),各线之和约 219% —— 不是构成比,不可堆叠。
 #    gender_preference / theme_count 是单选,各线之和 = 100%,可读构成。
 _PREF_THEMES = ["romance","friendship","relationship_issues","drama","adventure",
                 "fantasy","life_advice","venting","cheer_up","career_school"]
@@ -219,35 +219,65 @@ SECTIONS = [
        note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
        rollup={"country": 20},
        dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
-   ("growth_meta_daily_qcd_by_creative", "Meta 素材每日 QCD · Meta Daily QCD by Creative", "table",
+   ("growth_meta_daily_qcd_by_creative", "Meta 素材全链路 · 按装机日 · Meta Full Funnel by Install Date", "table",
+       # 2026-09-14 随 SQL 改版:列结构与 growth_meta_funnel_by_creative 对齐,只是多一个 date 维度。
+       #   两张卡变成「明细 / 汇总」的关系:本卡按装机日拆,那张按素材汇总,口径完全一致。
+       #   唯一例外是本卡有 HAVING installs >= 10,所以按 date 求和会略小于汇总表。
        dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY date DESC, installs DESC
             cols=[("date","装机日 Install Date","text"),
                   ("creative","素材 Creative","text"),
                   ("installs","装机 Installs","int"),
-                  ("qcd_users","达成 QCD","int"),
-                  ("qcd_rate","QCD 率 Rate","pct1")],
+                  ("reached_first_message","发过消息 Any Msg","int"),
+                  ("first_message_rate","装机→发消息","pct0"),
+                  ("reached_qcd","达成 QCD (6句)","int"),
+                  ("qcd_rate","装机→QCD","pct1"),
+                  ("reached_20msg","累计 20 句","int"),
+                  ("msg20_rate","装机→20句","pct1"),
+                  ("trial_clicked_users","点击试用 Trial Tap","int"),
+                  ("trial_effective_users","试用生效 Trial OK","int"),
+                  ("paid_users","付费 Paid","int"),
+                  ("retained_d1_rate","D1 回访率","pct1"),
+                  ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1")],
             bar=["installs","qcd_rate"],
-            note="按装机日看每条素材的用户里有多少达成 QCD;装机<10 的素材-日不列 ｜ QCD rate by install date for each Meta creative; creative-days with fewer than 10 installs omitted")),
+            note="「Meta 素材全链路」的按装机日明细 —— 列与口径和那张汇总卡完全一致，只多拆了一层装机日。同一素材按日期求和 = 汇总卡的一行，唯一例外是本卡滤掉了装机<10 的素材-日。按天拆之后分母比汇总卡小一个量级，留存比率噪声更大，读之前先看装机列。当天那一行必然偏低，那批人只过了不完整的一天。 ｜ Per-install-date detail of the Meta creative funnel; same definitions as the summary card.")),
    ("growth_meta_funnel_by_creative", "Meta 素材全链路 · Meta Full Funnel by Creative", "table",
        # 2026-09-07 随 SQL 重构:删掉「看过角色卡」与两个相关率列 —— 曝光埋点只覆盖部分 tab
        #   (foryou/new_this_week/try_different 曝光恒为 0,而这三个占点击 79.5%),拿它当漏斗
        #   第一级会出现「点击比看卡多 2.7 倍」。漏斗只留严格嵌套三级,目录那条路降为并列列。
+       # 2026-09-14 随 SQL 改版,三件事:
+       #   ① 漏斗加到四级:装机 → 发消息 → QCD(6句) → 累计20句。「20 句」用全历史累计口径
+       #      (同 Monetize_free quota wall daily 的额度上限那条线);实测 950 个达标用户里
+       #      只有 1 个不是 QCD,故仍可当严格漏斗读。
+       #   ② 变现做成三级「点击试用 → 试用生效 → 最终付费」。产品是点 7 天试用、到期才扣费、
+       #      期间可随时取消,所以必须分开:点击试用取 subscription_user_state、
+       #      试用生效取 subscription 里 in_trial=1 的行、付费取 in_trial=0(到期扣费后才转 0)。
+       #      只统计付费功能 2026-09-11 正式上线后才建立订阅关系的用户 —— 上线前那批是测试数据,
+       #      product_id NOT LIKE '%admin_test%' 过滤不掉(按分钟级续订周期才识别得出)。
+       #      三列量级都是个位数,只标人数不配率,不用于素材间比较。
+       #   ③ D1 / D7 由人数改为比率,分母同为装机(与本卡其余比率一致);人数不再单列,
+       #      装机就在同一行、乘回去即可。装机量小的素材比率噪声很大(实测有素材
+       #      installs=14、D1=7 → 50%),读比率前先看装机列。
+       #   ④ 瘦身:删掉目录那条路的四列(点击角色卡 / 装机→点卡 / 点后开聊 / 点卡→开聊)。
+       #      它们不是漏斗的级,而「曝光→点击→开聊」已有 9 张 Discover 专卡;留着只会把表撑宽
+       #      并持续制造误读。连带本卡不再读 host.firebase_event,跑时从 40~46s 降到 5 秒级。
        dict(top=15, sort="installs",
             cols=[("creative","素材 Creative","text"),
                   ("installs","装机 Installs","int"),
                   ("reached_first_message","发过消息 Any Msg","int"),
                   ("first_message_rate","装机→发消息","pct0"),
-                  ("reached_qcd","达成 QCD","int"),
+                  ("reached_qcd","达成 QCD (6句)","int"),
                   ("qcd_rate","装机→QCD","pct1"),
-                  ("retained_d1","D1 回访","int"),
-                  ("retained_d7_window","D7窗 回访 (5\u20139d)","int"),
-                  ("reached_card_tap","点击角色卡 Tapped","int"),
-                  ("card_tap_rate","装机→点卡","pct0"),
-                  ("reached_chat","点后开聊 Tap→Chat","int"),
-                  ("chat_closure_rate","点卡→开聊","pct0"),
-                  ("first_install_date","首个装机日 First Install","text")],
+                  ("reached_20msg","累计 20 句","int"),
+                  ("msg20_rate","装机→20句","pct1"),
+                  ("trial_clicked_users","点击试用 Trial Tap","int"),
+                  ("trial_effective_users","试用生效 Trial OK","int"),
+                  ("paid_users","付费 Paid","int"),
+                  ("retained_d1_rate","D1 回访率","pct1"),
+                  ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1"),
+                  ("first_install_date","首个装机日 First Install","text"),
+                  ("last_install_date","末个装机日 Last Install","text")],
             bar=["installs","qcd_rate"],
-            note="三级漏斗:装机 → 发过消息 → 达成 QCD;其余列是并列诊断列,不是漏斗的级 ｜ Three-step funnel: installs → any message → QCD; the remaining columns are side diagnostics, not funnel steps")),
+            note="四级漏斗（严格嵌套，可直接读转化率）：装机 → 发过消息 → 达成 QCD（同日同角色 ≥6 句）→ 累计 20 句。变现三级：点击试用 → 试用生效（商店确认）→ 最终付费（试用到期扣费后才算）。目前最大的一道坎在「点击试用 → 试用生效」，约四成点了试用没走通。付费为 0 是预期内的 —— 最早的试用 09-11 开始，7 天后 09-18 才到期扣费；变现三列只统计付费功能 2026-09-11 上线后的用户。留存是比率、分母是装机：装机量小的素材噪声很大，读之前先看装机列。最后两天的 D1、最后九天的 D7 窗必然偏低（成熟期未到），看首个装机日判断，别拿留存给首投日很晚的素材排序。 ｜ Four-step nested funnel, then trial-tap → trial-active → paid. Paid is zero as expected: the first trials started 09-11 and only convert after 7 days.")),
  ]),
  ("② 激活 · Activation", [
    ("activation_funnel", "激活漏斗 · Activation Funnel", "funnel",
@@ -309,7 +339,7 @@ SECTIONS = [
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
             note="首日发≥5条的新用户 ÷ 当天注册的账号数 ｜ New users sending 5+ messages on day 0 ÷ accounts registered that day"
-                 "比「新用户数」卡的**装机数**多约 15%，两张卡的「新用户」不是同一批人。"
+                 "比「新用户数」卡的装机数多约 15%，两张卡的「新用户」不是同一批人。"
                  "by country 里的 unknown 是账号接不回埋点设备(约 23%)，不是不知道国家 ｜ "
                  "New users sending \u22655 messages on day 0 \u00f7 accounts created that day. "
                  "Note: the denominator counts server-side account creations (94.5% auto-created guests), "
@@ -383,21 +413,21 @@ SECTIONS = [
                   ("broad_result_count","21-399 结果","int"),
                   ("near_full_result_count","400+ 结果","int")],
             bar=["search_penetration_rate","zero_result_rate"],
-            note="搜索框只在发现页里,所以渗透率的分母是**当天打开过发现页的人**(catalogue_slate_rendered 去重),不是 DAU。⚠️ 零结果率四成以上 —— 分子是 resultCount=0 的搜索次数,分母是当天全部搜索次数。⚠️ 「400+ 结果」不等于全量(角色库实测 865),只是筛得很宽。🛑 本卡**不提供搜索→点击转化**:catalogue_search 没有 slate_id,且点击事件的 source 恒为 discover、与浏览来的点击无法区分,同 session 内的时序邻近不是归因。🛑 这条通道批量上传,**最后 1–2 天必然偏低**,不要拿来做对比;数据下限 2026-09-02(更早的批次在服务端 events_v1=server_disabled 期间被丢,无法回补) ｜ Penetration denominator is users who opened Discover that day, not DAU. ⚠️ Zero-result rate is above 40%. 🛑 No search-to-tap conversion: taps cannot be attributed to search. 🛑 The last 1-2 days are always low (batched upload); data starts 2026-09-02")),
+            note="搜索框只在发现页里，所以渗透率的分母是当天打开过发现页的人，不是 DAU。零结果率四成以上：分子是 resultCount=0 的搜索次数，分母是当天全部搜索次数。「400+ 结果」不等于全量（角色库 865），只是筛得很宽。本卡不提供搜索→点击转化：catalogue_search 没有 slate_id，点击事件也区分不出是搜来的还是逛来的。这条通道批量上传，最后 1–2 天必然偏低，不要拿来做对比；数据下限 2026-09-02。 ｜ Penetration denominator is users who opened Discover that day, not DAU. Zero-result rate is above 40%. No search-to-tap conversion available. The last 1-2 days are always low (batched upload).")),
    ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
             note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
    ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
             note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10 ｜ Daily taps ÷ impressions per character in the catalogue, top 10 by cumulative taps"
-                 "⚠️ 曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
+                 "曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
                  "Daily taps ÷ impressions per character, top 10 by cumulative taps (<20 dropped)")),
    ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
             note="角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
    ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
        dict(val="characters", cap=4,
-            note="每天被曝光 / 被点击过的**角色个数**(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
+            note="每天被曝光 / 被点击过的角色个数(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
             dims=[("metric","","metric")])),
    ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
        dict(top=20, sort="ctr",
@@ -434,11 +464,13 @@ SECTIONS = [
        # 2026-09-09 新建。付费墙模型:累计免费 20 句,用完后每天 2 句。
        #   选表格:① 一行里同时有存量(已撞墙)与增量(新撞墙),折线会被误读成同一类;
        #   ② 撞墙人数要精确引用;③ 与另两张表格卡一致,按 date 倒序。
-       #   ⚠️ 与 monetize_usage_distribution_30d 分工:那张答「额度定多少」(旧模型),
+       #   与 monetize_usage_distribution_30d 分工:那张答「额度定多少」(旧模型),
        #      本卡答「多少人已撞墙、每天新增多少」(现行模型)。
        # 2026-09-11 随 SQL 改:「撞墙后看到付费墙」两列收窄为只认额度墙
        #   (source='plus_sheet' AND trigger='message_quota')。原口径数的是专家墙曝光,
-       #   与撞墙漏斗无关。额度墙曝光埋点客户端已写完未上线 ⇒ **两列在上线前恒为 0**。
+       #   与撞墙漏斗无关。额度墙曝光埋点 2026-09-11 上线,该日之前恒为 0。
+       # 2026-09-14 随 SQL 改:撞墙后付费一列拆成 点试用 / 试用生效 / 付费 三级,
+       #   只统计付费功能 2026-09-11 上线后才建立订阅关系的用户。
        dict(top=14,
             cols=[("date","日期 Date","text"),
                   ("active_users","活跃账号 Active","int"),
@@ -450,9 +482,11 @@ SECTIONS = [
                   ("avg_cumulative_messages","人均累计句数","d1"),
                   ("capped_saw_paywall_users","撞墙后看到额度墙","int"),
                   ("capped_saw_paywall_rate","撞墙后看到额度墙率","pct1"),
+                  ("capped_trial_clicked_users","撞墙后点试用","int"),
+                  ("capped_trial_effective_users","撞墙后试用生效","int"),
                   ("capped_paid_users","撞墙后付费","int")],
             bar=["newly_capped_users","capped_saw_paywall_rate"],
-            note="付费墙模型是**累计免费 20 句，用完后每天 2 句**；本卡答「多少人已撞墙、每天新增多少」。🛑 **句数口径是「全部用户消息」，与 QCD_v1 的「仅角色卡」不同，两者不可互换** —— 依据是服务端配额表 `total_accepted` 与「全部消息」一致率 88.3%、与「仅角色卡」只有 72.4%。🛑 **累计从 chat_history 重建，不直接读配额表** —— 配额表每行只存最新状态、覆盖式更新，没有历史；两种算法对「累计≥20」的判定一致率 98.77%（配额表 2,673 人 / 本卡 3,005 人）。**要权威值以配额表为准，要趋势用本卡**。🛑 **每日 2 句那一层尚未启用**（`period_count` 26,958 行里仅 1 行有值），故本卡不含相关列。🛑 **「撞墙后看到额度墙」两列当前恒为 0，那是埋点没上线，不是撞墙的人没看到墙。** 额度墙（SoulmapPlusPaywallSheet）在跑、拦过人、也带来过购买，但它此前整个组件没有 import analytics、一条曝光事件都不发；客户端 2026-09-11 已写完曝光埋点（复用 `paywall_viewed`，带 `source='plus_sheet'`、撞墙入口 `trigger='message_quota'`），**未 commit、等真机验证**。2026-09-11 实测：`paywall_viewed` 558 条/463 账号，`trigger` 只有 P1 469 / P3 83 / unknown 3，**没有一条 message_quota**；撞墙端有信号（`message_send_result.result='paywall'` 20 条/1 人）、购买端有信号（`trigger='message_quota'` 的购买 55 条/10 账号，账号数比专家墙 P1 6 + P3 4 加起来还多），**唯独中间「看到墙」是空的**。⇒ 上线后本列自动有数、无需再改 SQL，**上线当天是口径分界线，序列跨该日不可比**。⚠️ 另一个将要发生的收窄：购买事件的 `trigger` 现在把撞墙与 Me 页主动升级都硬编码成 `message_quota`，上线时 Me 入口改发 `me_upgrade` ⇒ 那 55 条里混着主动升级的人，上线后会降，**是口径收窄不是撞墙购买变少**。`capped_paid_users` 走服务端 subscription，不受埋点影响。🛑 **最后三列里 paywall 两列走客户端埋点 ETL（每天灌前一日）、付费列走服务端实时** ⇒ 即便埋点上线后，最新一天也必然是 0，那是 ETL 没到。🛑 `subscription.user_id` 是 **int**，join 到 `chat_history` 要 `CAST(... AS CHAR) COLLATE utf8mb4_unicode_ci`；且约四成行是 `admin_test` 内部测试，已排除。⚠️ 「撞墙后」用日粒度比较，同日先看墙后撞墙的会算进来。⚠️ 累计是**全历史**的，不是窗口内 ｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. Cumulative counts are rebuilt from chat_history because the quota table has no history (98.77% agreement on the ≥20 threshold)")),
+            note="付费墙模型：累计免费 20 句，用完后每天 2 句；本卡答「多少人已撞墙、每天新增多少」。句数口径是全部用户消息，与 QCD_v1 的「仅角色卡」不同，两者不可互换。累计值从 chat_history 重建（配额表只存最新状态、无历史），两种算法对「累计≥20」的判定一致率 98.77%。「撞墙后看到额度墙」的曝光埋点 2026-09-11 才上线，该日之前恒为 0，那是没埋点不是没人看到墙。最新一天该列也必然是 0，那是埋点 ETL 还没到。末尾三列「点试用 → 试用生效 → 付费」走服务端，不受埋点影响，且只统计付费功能上线后才建立订阅关系的用户。 ｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. The quota-wall exposure event shipped on 2026-09-11; earlier days are zero for that reason.")),
    ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
        # 2026-09-09 新建。付费链路 09-08~09 刚打通。
        #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
@@ -469,14 +503,15 @@ SECTIONS = [
                   ("purchase_started_users","发起购买 Started","int"),
                   ("purchase_started_rate","曝光→发起","pct1"),
                   ("purchase_completed_users","购买成功 Completed","int"),
-                  ("purchase_completed_rate","发起→成功","pct1"),
                   ("purchase_canceled_users","用户取消 Canceled","int"),
-                  ("restore_users","恢复购买 Restored","int"),
-                  ("new_subscription_users","新增订阅 New Subs","int"),
+                  ("trial_clicked_users","点击试用 Trial Tap","int"),
+                  ("trial_effective_users","试用生效 Trial OK","int"),
+                  ("paid_users","付费 Paid","int"),
                   ("new_subscription_apple","Apple","int"),
-                  ("new_subscription_google","Google","int")],
+                  ("new_subscription_google","Google","int"),
+                  ("restore_success_users","恢复成功 Restored","int")],
             bar=["paywall_users","new_subscription_users"],
-            note="🛑 **付费墙曝光从 2026-09-11 起拆两列**：专家墙（Discover 专家卡，`source=expert_activation`）与额度墙（SoulMap Plus，`source=plus_sheet`）。**两墙的漏斗不同，转化率不要混着读** —— 专家墙是主动进入，额度墙是聊到一半被拦；额度墙自己那条完整漏斗（撞墙 → 看到墙 → 购买）见「免费额度撞墙」卡。⚠️ 额度墙曝光埋点客户端刚补上，**上线前该列恒为 0**；两列相加不一定等于总数（`source` 为空时有差额，实测约 0.4%）。🛑 **左右两半是两个源，不可相加、不可互验**：左半（付费墙曝光~恢复购买）来自客户端埋点，右半（新增订阅）来自服务端 store webhook。🛑 **两侧时效不同** —— 埋点走 ETL 每天灌前一日（SGT 09:02~11:03 浮动），服务端实时；**最新一天必然「左半全 0、右半有数」，那是 ETL 没到，不是付费墙没曝光**。🛑 **两个率的分母不同**：曝光→发起的分母是付费墙曝光人数，发起→成功的分母是发起购买人数，**两者不可相乘当整体转化率**；且样本是个位数（09-08 为 3 人发起、2 人成功），率仅作趋势参考，**引用请报绝对人数**。⚠️「用户取消」是用户在应用商店弹窗自己取消（`is_user_cancel=true`），不是技术故障。⚠️ 新增订阅已排除内部测试（`admin_test` 约占该表四成）｜ Left half is client telemetry (ETL-lagged one day); right half is server-side store webhook (realtime). Never add or cross-validate them. The two rates have different denominators and must not be multiplied. Sample sizes are single-digit — quote absolute counts, not rates")),
+            note="左右两半是两个源，不可相加、不可互验：左半（付费墙曝光~恢复购买）来自客户端埋点、走 ETL 每天灌前一日；右半（新增订阅）来自服务端 store webhook、实时。最新一天必然「左半全 0、右半有数」，那是 ETL 没到。付费墙曝光拆两列：专家墙与额度墙，两墙漏斗不同、转化率不要混着读；额度墙曝光埋点 2026-09-11 上线，该日之前恒为 0。右半的渠道三列（新增订阅 / Apple / Google）与阶段三列（点击试用 / 试用生效 / 付费）是同一批人的两种切法，不要相加；阶段三列只统计付费功能上线后才建立订阅关系的用户。右半（点击试用 / 试用生效 / 付费 / Apple / Google）全部只统计付费功能 2026-09-11 上线后才建立订阅关系的用户，已排除后台授予的测试权限。末列「恢复成功」只数真正恢复到订阅的（`restored=1`）—— 近 30 天 74 个点过恢复的账号里有 71 个什么都没恢复到，那是 UI 行为不是付费；该列与「付费」有重叠，只作诊断、不要相加。样本是个位数，引用请报绝对人数。 ｜ Left half is client telemetry (ETL-lagged one day); right half is server-side webhook (realtime). The two rates have different denominators. Sample sizes are single-digit.")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
@@ -499,7 +534,7 @@ SECTIONS = [
  ("⑧ 模型 · Model", [
    ("model_provider_daily", "模型调用与供应商 · Model & Provider Daily", "table",
        # 2026-09-09 新建,为日报「模型与成本」一节供数。
-       #   模型维度当前退化(近7天只有 qwen/qwen3-235b-a22b-2507 一个),故按**供应商**拆。
+       #   模型维度当前退化(近7天只有 qwen/qwen3-235b-a22b-2507 一个),故按供应商拆。
        #   不写 sort = 保持 SQL 的 ORDER BY date DESC。
        dict(top=14,
             cols=[("date","日期 Date","text"),
@@ -515,7 +550,7 @@ SECTIONS = [
                   ("degraded_calls","降级数 Degraded","int"),
                   ("degraded_rate","降级率 Deg %","pct1")],
             bar=["llm_calls","degraded_rate"],
-            note="🛑 **降级率的分母是「有 replyTier 的行」(tier_rows),不是调用数** —— model 那组键只覆盖约 66% 的 llm_response,缓冲路径、B-RP 驾驶、即时首句与 Haiku/Gemini 降级层都不在白名单,缺 model 的行是混合桶、降级恰恰藏在里面,拿它当分母等于先把降级筛掉。🛑 replyTier **2026-09-03 13:26 SGT 才上线**,之前 tier_rows=0 是字段没上线、不是没有降级。⚠️ 模型维度当前退化(只有一个模型),故按供应商拆;新供应商落进「其他」不会消失。🛑 **Token 与成本全库都没有**(push_attempt_log.tokens_* 是推送设备 token,与 LLM 无关) ｜ Degraded-rate denominator is rows having replyTier, NOT total calls. replyTier only went live 2026-09-03 13:26 SGT. No token or cost data exists anywhere in the DB")),
+            note="降级率的分母是「有 replyTier 的行」(tier_rows),不是调用数 —— model 那组键只覆盖约 66% 的 llm_response,缓冲路径、B-RP 驾驶、即时首句与 Haiku/Gemini 降级层都不在白名单,缺 model 的行是混合桶、降级恰恰藏在里面,拿它当分母等于先把降级筛掉。replyTier 2026-09-03 13:26 SGT 才上线,之前 tier_rows=0 是字段没上线、不是没有降级。模型维度当前退化(只有一个模型),故按供应商拆;新供应商落进「其他」不会消失。Token 与成本全库都没有(push_attempt_log.tokens_* 是推送设备 token,与 LLM 无关) ｜ Degraded-rate denominator is rows having replyTier, NOT total calls. replyTier only went live 2026-09-03 13:26 SGT. No token or cost data exists anywhere in the DB")),
  ]),
  ("⑨ 能力链路 · Capability Chain", [
    ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
@@ -618,7 +653,7 @@ def build_card(metrics, mid, title, kind, p):
                             matrix={r["step"]: {w: _num(r.get(w)) for w in weeks} for r in rows})
             return base
         if kind == "table":
-            # 表格卡:SQL 出什么就铺什么,渲染器不做聚合。用于**排行榜**这类
+            # 表格卡:SQL 出什么就铺什么,渲染器不做聚合。用于排行榜这类
             # 折线/漏斗表达不了的形态(行数多、每行是一个实体、多列指标并列)。
             rows = metrics.get(mid)
             if not rows: return None
@@ -626,10 +661,10 @@ def build_card(metrics, mid, title, kind, p):
             miss = [c for c, _l, _f in cols if c not in rows[0]]
             if miss:
                 raise ValueError(f"table 卡缺列 {miss},SQL 实际列: {list(rows[0])}")
-            # sort 不填 = **保持 SQL 的 ORDER BY**(2026-08-20 改)。
+            # sort 不填 = 保持 SQL 的 ORDER BY(2026-08-20 改)。
             # 改前是「不填就按 cols 第一列降序」,结果「行序本身有含义」的表(如用量分位的
             # 人群×计量口径)在 DataGrip 里对、上了看板就乱 —— 渲染器不该替 SQL 决定行序。
-            # ⚠️ 代价:SQL 忘写 ORDER BY 的话行序就是数据库返回的顺序。写表格卡记得加 ORDER BY。
+            # 代价:SQL 忘写 ORDER BY 的话行序就是数据库返回的顺序。写表格卡记得加 ORDER BY。
             srt = p.get("sort")
             if srt:
                 rows = sorted(rows, key=lambda r: _num(r.get(srt)), reverse=True)
@@ -801,7 +836,7 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
 .modalbox{background:var(--surface);border:1px solid var(--bd);border-radius:12px;width:min(1000px,92vw);max-height:88vh;overflow:auto;padding:18px 20px;position:relative}
 /* 2026-09-09 表格详情用更宽的弹窗。卡片本身是两列网格里的半屏格子,13 列的表在那里必须
    横向滚才能读全;点 View details 后用这个尺寸,常见屏幕一屏放得下。
-   ⚠️ 只给表格加,折线/漏斗仍用 1000px —— 那两种图放大到 1800px 反而稀疏。 */
+   只给表格加,折线/漏斗仍用 1000px —— 那两种图放大到 1800px 反而稀疏。 */
 .modalbox.wide{width:min(1800px,96vw)}
 /* 详情里的表格给到 70vh,而不是卡片里的 380px */
 .tbldetail .tblwrap{max-height:70vh}
@@ -837,7 +872,7 @@ STALE_MAX_DAYS = 14   # 抓失败时沿用上一次的值,超过这个天数就�
                      # 只要有一次跑够 25 张卡过了 guard 就会渲染+push,此时超过上限的卡
                      # 被删掉,而卡一旦从 index.html 消失,下次连沿用的来源都没有了。
                      # 当时已有 1 张卡沿用到 2026-09-03(4 天,已过原来的 3 天线)。
-                     # ⚠️ Metabase 稳定后调回 3 —— 14 天的冻结数据本身也是误导。
+                     # Metabase 稳定后调回 3 —— 14 天的冻结数据本身也是误导。
 
 
 def _load_prev(out_path: Path) -> tuple[dict, str | None]:
@@ -860,7 +895,7 @@ def _load_prev(out_path: Path) -> tuple[dict, str | None]:
 
 
 def _carry(prev_cards: dict, mid: str, prev_date: str | None):
-    """这次没抓到 → 沿用上一次的卡。stale 记的是**数据真正的日期**,沿用链上不刷新,
+    """这次没抓到 → 沿用上一次的卡。stale 记的是数据真正的日期,沿用链上不刷新,
     否则一张永久超时的卡会天天显示"昨天",永远不过期。"""
     card = prev_cards.get(mid)
     if not card: return None
@@ -927,12 +962,12 @@ def render(raw_path: Path, out_path: Path):
                          f"STALE_MAX_DAYS={STALE_MAX_DAYS} 天。")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(doc, encoding="utf-8")
-    print(f"✅ 写出 {out_path} ({len(sections)} 板块, {sum(len(s['cards']) for s in sections)} 卡"
+    print(f"写出 {out_path} ({len(sections)} 板块, {sum(len(s['cards']) for s in sections)} 卡"
           + (f", 沿用旧值 {len(carried)}: {carried}" if carried else "") + ")")
 
 APP_JS = r"""
 const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
-// ⚠️ Metabase query/json 把 >=1000 的数返回成带千分位逗号的**字符串**("1,184"),
+// Metabase query/json 把 >=1000 的数返回成带千分位逗号的字符串("1,184"),
 // 直接 +v 会得到 NaN。Python 侧 _num() 早就处理了,JS 侧 2026-08-20 之前一直没处理 ——
 // 后果是所有 table 卡里 >=1000 的整数列全显示 NaN(<1000 的正常,所以很容易漏掉)。
 function toNum(v){return typeof v==='string'?+v.replace(/,/g,''):+v;}
