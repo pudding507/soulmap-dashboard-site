@@ -280,10 +280,12 @@ SECTIONS = [
             note="四级漏斗（严格嵌套，可直接读转化率）：装机 → 发过消息 → 达成 QCD（同日同角色 ≥6 句）→ 累计 20 句。变现三级：点击试用 → 试用生效（商店确认）→ 最终付费（试用到期扣费后才算）。目前最大的一道坎在「点击试用 → 试用生效」，约四成点了试用没走通。付费为 0 是预期内的 —— 最早的试用 09-11 开始，7 天后 09-18 才到期扣费；变现三列只统计付费功能 2026-09-11 上线后的用户。留存是比率、分母是装机：装机量小的素材噪声很大，读之前先看装机列。最后两天的 D1、最后九天的 D7 窗必然偏低（成熟期未到），看首个装机日判断，别拿留存给首投日很晚的素材排序。 ｜ Four-step nested funnel, then trial-tap → trial-active → paid. Paid is zero as expected: the first trials started 09-11 and only convert after 7 days.")),
  ]),
  ("② 激活 · Activation", [
-   ("activation_funnel", "激活漏斗 · Activation Funnel", "funnel",
-       dict(note="各步骤人数,按安装日归入版本周;activated=≥3轮 · deep=≥5轮 ｜ Users at each step, grouped by install week; activated = ≥3 turns, deep = ≥5 turns")),
+   # 2026-09-14 下线「激活漏斗 · Activation Funnel」(activation_funnel)。
+   #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_funnel.sql
    ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
-       dict(note="同激活漏斗,按 source×广告类型分组;近4版本周·取前8组 ｜ Same funnel split by source × ad type; last 4 release weeks, top 8 groups")),
+       # 2026-09-14 随 SQL 改:只统计最新 1 个装机版本(原为最新 2 个)。
+       #   note 改为自述式 —— 原文「同激活漏斗」引用的那张卡已下线。
+       dict(note="onboarding 七步按 source×广告类型分组;只统计最新一个装机版本·近4版本周·取前8组;activated=≥3轮 deep=≥5轮 ｜ Seven onboarding steps split by source × ad type; latest install version only, last 4 release weeks, top 8 groups")),
    ("activation_guardrail_funnel", "护栏漏斗分版本 · Guardrail Funnel by Version", "funnel",
        # 2026-09-07 随 SQL 改:9 级→8 级(删掉「看到角色目录」),版本来源改用顶层 version,
         #   选版本规则改为「人数前 6 + 强制含最新版」——原按版本号取最新 7 个,把人数最多的
