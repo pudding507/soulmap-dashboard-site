@@ -286,14 +286,14 @@ SECTIONS = [
        # 2026-09-14 随 SQL 改:只统计最新 1 个装机版本(原为最新 2 个)。
        #   note 改为自述式 —— 原文「同激活漏斗」引用的那张卡已下线。
        # 2026-09-15 随 SQL 改:轮数两级+埋点首条 → 累计句数五级,7 级改 9 级(与护栏卡同步)。
-       dict(note="九步按 source×广告类型分组，只统计最新一个装机版本·近4版本周·取前8组。前四步是埋点（设备级），后五步是服务端累计句数（账号级、全历史）——累计N句 = chat_history 里 role=user 且非空的累计条数 ≥N，不限 host，与「护栏漏斗分版本」「免费额度撞墙」「Meta 素材全链路」同口径，可跨卡对照。🛑 2026-09-15 由轮数改为累计句数，绝对数跳了一次（护栏卡同口径实测 ≥3 +17.6%、≥5 +29.5%、≥10 +50.7%）——句数是全历史而轮数只近30天，且一轮要一问一答比一句严格。翻历史截图对不上数时先看这条。🛑 第2步「Welcome」取自 first_screen_visible，该事件触发位置不稳定（实测 40.5% 的设备在它之前就触发了 onboarding 表单事件），所以 1→2 的落差里有多少是真流失分不清；连带 4→5 会明显往上翘（实测某组 完成onboarding 455 → 累计1句 942）。前四步与后五步不同源不同窗，只在各自区段内比较；5~9 步之间严格嵌套。 ｜ Nine steps by source × ad type. First four from telemetry (device), last five from server-side cumulative user-message counts (account, all-time). Steps 1-4 and 5-9 are not comparable across the boundary.")),
+       dict(note="九步按 source×广告类型分组，只统计最新一个装机版本，近4版本周、取前8组。前四步是埋点（设备级），后五步是服务端全历史累计句数（账号级），与护栏卡、撞墙卡、Meta 素材卡同口径，可跨卡对照。2026-09-15 由轮数改为累计句数，绝对数跳过一次（同口径实测 ≥3 +17.6%、≥5 +29.5%、≥10 +50.7%），翻历史截图对不上数时先看这条。第2步 Welcome 取自 first_screen_visible，该事件触发位置不稳定，1→2 的落差不全是真流失，连带 4→5 会往上翘。前四步与后五步不同源不同窗，只在各自区段内比较。 ｜ Nine steps by source x ad type. Steps 1-4 telemetry, 5-9 server-side cumulative messages; do not compare across that boundary.")),
    ("activation_guardrail_funnel", "护栏漏斗分版本 · Guardrail Funnel by Version", "funnel",
        # 2026-09-07 随 SQL 改:9 级→8 级(删掉「看到角色目录」),版本来源改用顶层 version,
         #   选版本规则改为「人数前 6 + 强制含最新版」——原按版本号取最新 7 个,把人数最多的
         #   2.6.1(5,147 人)排除在外了。
         # 2026-09-15 随 SQL 改:轮数三级 → 累计句数五级,8 级改 9 级。
        #   绝对数会跳一次(≥3 +17.6% / ≥5 +29.5% / ≥10 +50.7%),是口径变化不是数据错。
-       dict(gsort="version", note="九步按版本分组：前四步是 onboarding 埋点（设备级、近30天），后五步是服务端累计句数（账号级、全历史）——累计N句 = chat_history 里 role=user 且非空的累计条数 ≥N，不限 host，与「免费额度撞墙」「Meta 素材全链路」两张卡的「累计20句」同口径，可跨卡对照。🛑 2026-09-15 由轮数（activated≥3轮 / deep≥5轮 / deep≥10轮）改为累计句数，绝对数跳了一次：≥3 +17.6%、≥5 +29.5%、≥10 +50.7% —— 句数是全历史而轮数只近30天，且一轮要一问一答比一句严格，阈值越高差越多。翻历史截图对不上数时先看这条。⚠️ 第4步到第5步之间可能往上翘（跨源跨窗），第5~9步之间严格嵌套。小样本版本的漏斗率波动大，先看第一行人数。 ｜ Nine steps by app version: first four from onboarding telemetry (device, last 30d), last five from server-side cumulative user-message counts (account, all-time). Switched from turn-based to message-based on 2026-09-15; absolute numbers stepped up.")),
+       dict(gsort="version", note="九步按版本分组。前四步是 onboarding 埋点（设备级、近30天），后五步是服务端全历史累计句数（账号级），与 adgroup 卡、撞墙卡、Meta 素材卡同口径，可跨卡对照。2026-09-15 由轮数（activated/deep）改为累计句数，绝对数跳过一次（≥3 +17.6%、≥5 +29.5%、≥10 +50.7%），翻历史截图对不上数时先看这条。4→5 之间可能往上翘（跨源跨窗），5~9 步之间严格嵌套。小样本版本波动大，先看第一行人数。 ｜ Nine steps by app version. Steps 1-4 telemetry, 5-9 server-side cumulative messages. Switched from turn-based on 2026-09-15; absolute numbers stepped up.")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
             note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
@@ -327,19 +327,15 @@ SECTIONS = [
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
        dict(rate=("tab_users","active_users"), fmt="pct0",
-            note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU",
-            order=["Chat","Discover","Me"],
-            dims=[("tab","","tab")])),
-   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate",
-       dict(
-            note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1",
-            order=["Chat","Discover","Me"],
-            dims=[("tab","","tab")])),
-   ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"),
-       note="点击未解锁 Tab 的用户 ÷ 当天DAU ｜ Users tapping a locked tab ÷ that day's DAU",
-       dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
+                        note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
+   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate", dict( note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
+   ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"), note="点击未解锁 Tab 的用户 ÷ 当天DAU ｜ Users tapping a locked tab ÷ that day's DAU", dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
  ]),
  ("⑤ 对话 · Chat", [
+   # —— 角色类型 · Character type ——
+   # 2026-09-15 新建。四组按「进过哪类角色的聊天页」分,每台设备只进一组 ⇒ 四行可相加。
+   #   分组不能用「对谁发过消息」—— 那样回复率会恒等于 100%。
+   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","试用生效 Trial OK","int"), ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note="A = 真实 realistic，B = 幻想 fictional。按「进过哪类角色的聊天页」分组，每台设备只进一组、四行可相加；全库 16.2% 的用户两类都用过，故混用组单列。分母用客户端埋点（chat_entry_shown，2026-09-04 上线，本卡实际起点为该日）——服务端只在用户开口后才落库，拿不到「进了但没开口」的人。6句/20句 = 全历史累计全部用户消息、不限 host，与撞墙卡、护栏卡、Meta 素材卡同口径。试用/付费靠「进过哪类聊天页」反推（订阅表无角色维度），个位数、不配比率；没进过聊天页的订阅用户不在任何一行，故两列合计小于付费漏斗卡，是预期不是漏数。「未知类型」多来自会话列表入口（老用户回访），深度天然偏高，不要与前三行并列比较。｜ A = realistic, B = fictional. Grouped by which type's chat page was entered; rows are additive. Trial/paid are inferred and single-digit."))
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
@@ -491,7 +487,7 @@ SECTIONS = [
                   ("capped_trial_effective_users","撞墙后试用生效","int"),
                   ("capped_paid_users","撞墙后付费","int")],
             bar=["newly_capped_users","capped_saw_paywall_rate"],
-            note="付费墙模型：累计免费 20 句，用完后每天 2 句；本卡答「多少人已撞墙、每天新增多少」。句数口径是全部用户消息，与 QCD_v1 的「仅角色卡」不同，两者不可互换。累计值从 chat_history 重建（配额表只存最新状态、无历史），两种算法对「累计≥20」的判定一致率 98.77%。「撞墙后看到额度墙」的曝光埋点 2026-09-11 才上线，该日之前恒为 0，那是没埋点不是没人看到墙。最新一天该列也必然是 0，那是埋点 ETL 还没到。末尾三列「撞墙后点试用 → 试用生效 → 付费」走服务端，不受埋点影响，只统计付费功能上线后才建立订阅关系的用户。🛑 这三列按**撞墙日**归属、且是「撞墙日或之后」的**累积**口径——所以**历史行会随时间变化**，且**不能与「付费漏斗」卡的同名三列逐日对照**（那张卡数全部用户、按事件发生日归属、当日新增）。两卡的指标定义已于 2026-09-14 对齐（同取 start_time、同只算首次）。 ｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. The quota-wall exposure event shipped on 2026-09-11; earlier days are zero for that reason.")),
+            note="付费墙模型：累计免费 20 句，用完后每天 2 句；本卡答「多少人已撞墙、每天新增多少」。句数口径是全部用户消息，与 QCD_v1 的「仅角色卡」不同，两者不可互换。累计值从 chat_history 重建（配额表只存最新状态、无历史），两种算法对「累计≥20」的判定一致率 98.77%。「撞墙后看到额度墙」的曝光埋点 2026-09-11 才上线，该日之前恒为 0，那是没埋点不是没人看到墙。最新一天该列也必然是 0，那是埋点 ETL 还没到。末尾三列「撞墙后点试用 → 试用生效 → 付费」走服务端，不受埋点影响，只统计付费功能上线后才建立订阅关系的用户。这三列按**撞墙日**归属、且是「撞墙日或之后」的**累积**口径——所以**历史行会随时间变化**，且**不能与「付费漏斗」卡的同名三列逐日对照**（那张卡数全部用户、按事件发生日归属、当日新增）。两卡的指标定义已于 2026-09-14 对齐（同取 start_time、同只算首次）。｜ Free tier is 20 cumulative messages, then 2/day. Message counting here is ALL user messages, not role-card-only as in QCD_v1. The quota-wall exposure event shipped on 2026-09-11; earlier days are zero for that reason.")),
    ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
        # 2026-09-09 新建。付费链路 09-08~09 刚打通。
        #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
@@ -516,7 +512,7 @@ SECTIONS = [
                   ("new_subscription_google","Google","int"),
                   ("restore_success_users","恢复成功 Restored","int")],
             bar=["paywall_users","new_subscription_users"],
-            note="左右两半是两个源，不可相加、不可互验：左半（付费墙曝光~恢复购买）来自客户端埋点、走 ETL 每天灌前一日；右半（新增订阅）来自服务端 store webhook、实时。最新一天必然「左半全 0、右半有数」，那是 ETL 没到。付费墙曝光拆两列：专家墙与额度墙，两墙漏斗不同、转化率不要混着读；额度墙曝光埋点 2026-09-11 上线，该日之前恒为 0。右半的渠道三列（新增订阅 / Apple / Google）与阶段三列（点击试用 / 试用生效 / 付费）是同一批人的两种切法，不要相加；阶段三列只统计付费功能上线后才建立订阅关系的用户。右半（点击试用 / 试用生效 / 付费 / Apple / Google）全部只统计付费功能 2026-09-11 上线后才建立订阅关系的用户，已排除后台授予的测试权限，且只计每人**首次**达成（2026-09-14 改；原按订阅行建立日逐日去重，同一用户跨天开多行会被重复计）。🛑 本卡的「点击试用 / 试用生效 / 付费」与「免费额度撞墙」卡的同名三列**指标定义已对齐**（同取 start_time、同只算首次、同一上线日与测试排除），但**不可逐日对照**：本卡数全部用户、按事件发生日归属、当日新增；那张卡只数当天新撞墙的子集、按撞墙日归属、且是累积口径（历史行会随时间变化）。问「每天多少人点试用付费」看本卡，问「撞墙有没有推动付费」看那张卡。末列「恢复成功」只数真正恢复到订阅的（`restored=1`）—— 近 30 天 74 个点过恢复的账号里有 71 个什么都没恢复到，那是 UI 行为不是付费；该列与「付费」有重叠，只作诊断、不要相加。样本是个位数，引用请报绝对人数。 ｜ Left half is client telemetry (ETL-lagged one day); right half is server-side webhook (realtime). The two rates have different denominators. Sample sizes are single-digit.")),
+            note="左右两半是两个源，不可相加、不可互验：左半（付费墙曝光~恢复购买）来自客户端埋点、走 ETL 每天灌前一日；右半（新增订阅）来自服务端 store webhook、实时。最新一天必然「左半全 0、右半有数」，那是 ETL 没到。付费墙曝光拆两列：专家墙与额度墙，两墙漏斗不同、转化率不要混着读；额度墙曝光埋点 2026-09-11 上线，该日之前恒为 0。右半的渠道三列（新增订阅 / Apple / Google）与阶段三列（点击试用 / 试用生效 / 付费）是同一批人的两种切法，不要相加；阶段三列只统计付费功能上线后才建立订阅关系的用户。右半（点击试用 / 试用生效 / 付费 / Apple / Google）全部只统计付费功能 2026-09-11 上线后才建立订阅关系的用户，已排除后台授予的测试权限，且只计每人**首次**达成（2026-09-14 改；原按订阅行建立日逐日去重，同一用户跨天开多行会被重复计）。本卡的「点击试用 / 试用生效 / 付费」与「免费额度撞墙」卡的同名三列**指标定义已对齐**（同取 start_time、同只算首次、同一上线日与测试排除），但**不可逐日对照**：本卡数全部用户、按事件发生日归属、当日新增；那张卡只数当天新撞墙的子集、按撞墙日归属、且是累积口径（历史行会随时间变化）。问「每天多少人点试用付费」看本卡，问「撞墙有没有推动付费」看那张卡。末列「恢复成功」只数真正恢复到订阅的（`restored=1`）—— 近 30 天 74 个点过恢复的账号里有 71 个什么都没恢复到，那是 UI 行为不是付费；该列与「付费」有重叠，只作诊断、不要相加。样本是个位数，引用请报绝对人数。｜ Left half is client telemetry (ETL-lagged one day); right half is server-side webhook (realtime). The two rates have different denominators. Sample sizes are single-digit.")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
