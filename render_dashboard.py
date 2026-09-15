@@ -285,7 +285,8 @@ SECTIONS = [
    ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
        # 2026-09-14 随 SQL 改:只统计最新 1 个装机版本(原为最新 2 个)。
        #   note 改为自述式 —— 原文「同激活漏斗」引用的那张卡已下线。
-       dict(note="onboarding 七步按 source×广告类型分组;只统计最新一个装机版本·近4版本周·取前8组;activated=≥3轮 deep=≥5轮 ｜ Seven onboarding steps split by source × ad type; latest install version only, last 4 release weeks, top 8 groups")),
+       # 2026-09-15 随 SQL 改:轮数两级+埋点首条 → 累计句数五级,7 级改 9 级(与护栏卡同步)。
+       dict(note="九步按 source×广告类型分组，只统计最新一个装机版本·近4版本周·取前8组。前四步是埋点（设备级），后五步是服务端累计句数（账号级、全历史）——累计N句 = chat_history 里 role=user 且非空的累计条数 ≥N，不限 host，与「护栏漏斗分版本」「免费额度撞墙」「Meta 素材全链路」同口径，可跨卡对照。🛑 2026-09-15 由轮数改为累计句数，绝对数跳了一次（护栏卡同口径实测 ≥3 +17.6%、≥5 +29.5%、≥10 +50.7%）——句数是全历史而轮数只近30天，且一轮要一问一答比一句严格。翻历史截图对不上数时先看这条。🛑 第2步「Welcome」取自 first_screen_visible，该事件触发位置不稳定（实测 40.5% 的设备在它之前就触发了 onboarding 表单事件），所以 1→2 的落差里有多少是真流失分不清；连带 4→5 会明显往上翘（实测某组 完成onboarding 455 → 累计1句 942）。前四步与后五步不同源不同窗，只在各自区段内比较；5~9 步之间严格嵌套。 ｜ Nine steps by source × ad type. First four from telemetry (device), last five from server-side cumulative user-message counts (account, all-time). Steps 1-4 and 5-9 are not comparable across the boundary.")),
    ("activation_guardrail_funnel", "护栏漏斗分版本 · Guardrail Funnel by Version", "funnel",
        # 2026-09-07 随 SQL 改:9 级→8 级(删掉「看到角色目录」),版本来源改用顶层 version,
         #   选版本规则改为「人数前 6 + 强制含最新版」——原按版本号取最新 7 个,把人数最多的
