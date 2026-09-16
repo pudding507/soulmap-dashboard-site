@@ -46,17 +46,47 @@ def _req(path, method="GET", data=None, tok=None, timeout=180):
         return json.loads(r.read())
 
 
+def _req_retry(path, method="GET", data=None, tok=None,
+               timeout=90, max_retries=3, backoff=2.0, label=""):
+    """给启动阶段(登录/取看板)用的带重试请求。
+
+    2026-09-16 新增。原来这两步是 timeout=30 且无重试,Metabase 一忙就整条挂掉 ——
+    实测一次 `/api/session` 读超时就让整个 run 死在第一步,卡片那边的 4 次重试根本没机会跑。
+    `/api/health` 不碰应用库所以秒回,但登录要查用户表 + bcrypt + 写 session,
+    Metabase 被并发查询压住时这一步会明显变慢。放宽到 90 秒并退避重试 3 次。
+
+    4xx 直接抛(凭据错/看板不存在,重试无意义),5xx 与超时才退避。
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return _req(path, method, data, tok, timeout=timeout)
+        except E.HTTPError as ex:
+            if 500 <= ex.code < 600 and attempt < max_retries:
+                s = backoff ** attempt
+                print(f"   ⏳ {label} retry {attempt+1}/{max_retries} (server {ex.code}) sleep={s:.1f}s")
+                time.sleep(s); continue
+            raise
+        except Exception as ex:
+            if attempt < max_retries:
+                s = backoff ** attempt
+                print(f"   ⏳ {label} retry {attempt+1}/{max_retries} ({type(ex).__name__}) sleep={s:.1f}s")
+                time.sleep(s); continue
+            raise
+
+
 def login() -> str:
     if not USERNAME or not PASSWORD:
         raise SystemExit("缺少 Metabase 凭据:请设 METABASE_USER / METABASE_PASSWORD 环境变量(线上放 secrets)")
-    tok = _req("/api/session", "POST",
-               {"username": USERNAME, "password": PASSWORD}, timeout=30)["id"]
+    tok = _req_retry("/api/session", "POST",
+                     {"username": USERNAME, "password": PASSWORD},
+                     timeout=90, label="login")["id"]
     print(f"✅ login OK ({tok[:8]}…)")
     return tok
 
 
 def get_dashboard_cards(tok: str, dashboard_id: int):
-    d = _req(f"/api/dashboard/{dashboard_id}", tok=tok, timeout=30)
+    d = _req_retry(f"/api/dashboard/{dashboard_id}", tok=tok,
+                   timeout=90, label="dashboard")
     name = str(d.get("name") or f"dashboard_{dashboard_id}")
     cards = []
     for dc in (d.get("dashcards") or []):
