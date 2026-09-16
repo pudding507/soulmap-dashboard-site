@@ -17,6 +17,16 @@ on:
     - cron: "20 13 * * *"   # 新加坡 21:20
     - cron: "20 20 * * *"   # 新加坡 04:20(低峰,补抓前几次没抓全的硬骨头卡)
   workflow_dispatch: {}
+
+# 2026-09-16 新增。GitHub cron 是 best-effort,实测常晚 40min~2.5h ——
+# 延迟大的时候前一次还在跑、下一次就排上来了,两次 run 同时对 Metabase 打 4 并发,
+# 47 张卡每张都要全表扫 firebase_event(无 event_name 索引),Metabase 被压住后
+# 连 /api/session 都会超时。这里让同组的 run 排队而不是叠加。
+# cancel-in-progress: false —— 正在跑的那次可能已经抓到大半,别掐掉。
+concurrency:
+  group: soulmap-dashboard
+  cancel-in-progress: false
+
 permissions:
   contents: write
 jobs:
@@ -27,6 +37,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # 2026-09-16 新增。放在 fetch 之前,因为抓数要 10 多分钟 ——
+      # 渲染脚本的语法错如果等到 render 那步才暴露,这一整轮卡全白抓了。
+      # 实测踩过:卡片定义列表里两条元组之间漏了逗号(中间还隔着注释行),
+      # Python 读成 (元组)(元组) 去调用,报 TypeError 而不是 SyntaxError。
+      # 用 -W error::SyntaxWarning 把「perhaps you missed a comma」这类警告升成错误才拦得住。
+      - name: syntax check
+        run: |
+          python3 -W error::SyntaxWarning -c "
+          import ast, sys
+          for f in ['fetch_metabase.py', 'render_dashboard.py']:
+              src = open(f).read()
+              ast.parse(src)
+              compile(src, f, 'exec')
+              print(f'  OK {f}')
+          "
+
       - name: fetch
         env:
           METABASE_USER: ${{ secrets.METABASE_USER }}
