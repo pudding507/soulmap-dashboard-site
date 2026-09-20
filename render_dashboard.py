@@ -293,7 +293,7 @@ SECTIONS = [
         #   2.6.1(5,147 人)排除在外了。
         # 2026-09-15 随 SQL 改:轮数三级 → 累计句数五级,8 级改 9 级。
        #   绝对数会跳一次(≥3 +17.6% / ≥5 +29.5% / ≥10 +50.7%),是口径变化不是数据错。
-       dict(gsort="version", note="九步按版本分组。前四步是 onboarding 埋点（设备级、近30天），后五步是服务端全历史累计句数（账号级），与 adgroup 卡、撞墙卡、Meta 素材卡同口径，可跨卡对照。2026-09-15 由轮数（activated/deep）改为累计句数，绝对数跳过一次（≥3 +17.6%、≥5 +29.5%、≥10 +50.7%），翻历史截图对不上数时先看这条。4→5 之间可能往上翘（跨源跨窗），5~9 步之间严格嵌套。小样本版本波动大，先看第一行人数。 ｜ Nine steps by app version. Steps 1-4 telemetry, 5-9 server-side cumulative messages. Switched from turn-based on 2026-09-15; absolute numbers stepped up.")),
+       dict(gsort="version", note="八步按版本分组。前两步是埋点（设备级、近30天），后六步是服务端全历史累计句数（账号级），与 adgroup 卡、撞墙卡、Meta 素材卡同口径。1→2 跨源跨窗可能往上翘，2~8 步严格嵌套。小样本版本波动大，先看第一行人数。2026-09-20 删掉 onboarding 三步（3.1.1 起已从产品移除）。｜ Eight steps by app version. Steps 1-2 telemetry, 3-8 server-side cumulative messages. Onboarding steps dropped 2026-09-20.")),
    ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
             note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
@@ -505,7 +505,6 @@ SECTIONS = [
                   ("purchase_started_rate","曝光→发起","pct1"),
                   ("purchase_completed_users","购买成功 Completed","int"),
                   ("purchase_canceled_users","用户取消 Canceled","int"),
-                  ("purchase_started_users","发起购买 Started","int"),
                   ("trial_effective_users","试用生效 Trial OK","int"),
                   ("paid_users","付费 Paid","int"),
                   ("new_subscription_apple","Apple","int"),
@@ -513,6 +512,23 @@ SECTIONS = [
                   ("restore_success_users","恢复成功 Restored","int")],
             bar=["paywall_users","new_subscription_users"],
             note="左半走埋点（滞后 1–2 天）、右半走服务端（实时），两半不可相加或互验；最新一天左半为 0 是 ETL 未到。付费墙曝光拆专家墙与额度墙，转化率不要混读。样本是个位数，引用请报绝对人数。｜ Left half is telemetry (1–2 day lag), right half is server-side (realtime). Do not cross-compare. Single-digit samples.")),
+   ("monetize_trial_cohort", "试用队列 · Trial Cohort", "table",
+       # 2026-09-20 新建。首批试用 09-19 到期,三态(转付费/退订/仍在试用)至此才都有真实样本。
+       #   不并进付费漏斗:那张卡每列是「当天发生了什么」写下即固定,本卡末三列是
+       #   「查询那一刻处于哪个阶段」,随试用到期不断回填、历史行会变。两种时间语义
+       #   放一张表,读的人分不清哪些数字稳定。
+       dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY trial_start_date DESC
+            cols=[("trial_start_date","试用开始日 Trial Start","text"),
+                  ("trial_started_users","试用生效 Started","int"),
+                  ("converted_to_paid_users","转付费 Converted","int"),
+                  ("canceled_users","退订 Canceled","int"),
+                  ("still_in_trial_users","仍在试用 In Trial","int"),
+                  ("days_to_expiry","距到期天数 Days Left","int"),
+                  ("conversion_rate","履约率 Conversion","pct1"),
+                  ("revenue_local","本地实收 Local","text"),
+                  ("revenue_usd_estimated","USD 估算 USD est.","int")],
+            bar=["trial_started_users"],
+            note="按试用开始日分批。三态互斥、合计等于试用生效，可横读校验。末几列随到期回填，历史行会变。履约率只在该批全部到期后才出。本地实收是商店标价（gross），USD 为手工汇率折算的估算值，实收以商店 payout 报表为准。与付费漏斗的付费列归属日不同，不可逐日对照。｜ Trial cohorts by start date. Three states are mutually exclusive and sum to Started. Revenue is gross list price; USD is an estimate, settle against store payout reports.")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
@@ -623,7 +639,12 @@ def build_card(metrics, mid, title, kind, p):
                 for r in rows:
                     g = str(r["grp"]); st = r["step"]
                     groups.setdefault(g, {}); groups[g][st] = groups[g].get(st, 0) + _num(r.get("users"))
-                steps = sorted({r["step"] for r in rows}); s1 = steps[0] if steps else None
+                # 2026-09-20:改自然序。原按字符串排,步骤 ≥10 级时 '10_'/'11_' 会排到
+                #   '1_' 前面,漏斗第一级变成最后一步、成了 100% 基准(护栏卡实测 624%/761%)。
+                def _sk(st):
+                    h = str(st).split("_", 1)[0]
+                    return (int(h), str(st)) if h.isdigit() else (1 << 30, str(st))
+                steps = sorted({r["step"] for r in rows}, key=_sk); s1 = steps[0] if steps else None
                 if p.get("gsort") == "version":   # 按版本号从大到小(如 2.5.1 > 2.5.0 > 2.4.2)
                     def _vk(g):
                         try: return tuple(int(x) for x in str(g).split("."))
