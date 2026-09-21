@@ -547,6 +547,25 @@ SECTIONS = [
                   ("current_tier","","text")],
             bar=["users_hitting_cap_rate","messages_blocked_rate"],
             note="免费额度决策表:一行一个候选额度,读「多少人会撞墙」;现行 30/天 已标出 ｜ Free-quota decision table: one row per candidate cap showing how many users would hit it; the current 30/day is marked")),
+   ("monetize_payment_funnel_by_country", "付费漏斗分国家 · Payment Funnel by Country", "funnel",
+       # 2026-09-21 新建。起因:09-18 晚把 Meta 地域定向改到英美加澳,需要一条能持续看
+       #   「发达国家 vs 南亚在付费链路上差在哪一环」的线,而不是每次手工取数。
+       # 🛑 队列起点写死 2026-09-12(额度付费墙上线日),不是滚动 30 天 ——
+       #   09-11 之前装机的用户不可能撞墙,算进分母会凭空压低撞墙率。
+       #   实测这个坑有多深:按整月算英美加澳撞墙率 1.5%、南亚 8.9%;按 09-12 起算是 6.4% / 14.5%。
+       # 🛑 与 monetize_full_funnel_by_version 共有五个环节,数值必须一致,改口径要同步改两张。
+       dict(note="七步按国家分组，队列是 2026-09-12 起新装的设备（额度付费墙那天上线，此前装机的人碰不到它）。前五步是埋点（设备级），后两步是服务端订阅表（账号级），需经埋点里的数字 uid 桥接、覆盖约 85%，所以试用与付费两级系统性偏低约一成半。英美加澳样本只有三位数，撞墙以下每级都是个位数，只能看「差距出现在哪一段」，不能比较两地付费率。｜ Seven steps by country. Cohort installs from 2026-09-12 (paywall launch). Steps 1-5 telemetry, 6-7 server-side subscriptions bridged via numeric uid (~85% coverage, so trial/paid are understated). The UK/US/CA/AU arm is small; read where the gap appears, not the paid rates.")),
+   ("monetize_full_funnel_by_version", "全链路付费漏斗分版本 · Full Payment Funnel by Version", "funnel",
+       # 2026-09-21 新建。补 `2_点击角色卡` 这一环 —— Discover 页到聊天页之间唯一的观测点。
+       #   点击取 card_tap 且 card_type='character',**不限 sub_tab**:
+       #   discover_character_daily_ctr 限了三个 tab 是为了让 CTR 分子分母同盘(曝光只在那三个发),
+       #   本卡只数点击不算率,限了反而漏掉 foryou(每天 631~779 次点击但曝光恒为 0)。
+       # 🛑 队列起点同上写死 09-12,代价是装机窗口最长 9 天,只有 3.1.0 / 3.1.1 够样本,
+       #   其余版本并入「zz_其它版本合计」不丢行,否则各版本之和对不上总数。
+       # 🛑 4_撞墙 在版本之间**不完全可比**:免费额度自 09-15 起是 20/40/60 三档随机实验
+       #   (soulmap_message_quota_usage.quota_arm),不同版本用户被随机分到不同额度档。
+       #   且 60 档墙曝光覆盖率仅 10.8%(20/40 档 65.6%/75.5%),疑似未正常触发,已报客户端。
+       dict(gsort="version", note="七步按 App 版本分组，队列是 2026-09-12 起新装的设备。第 2 步「点击角色卡」取 card_tap（不限 sub_tab，foryou 有点击无曝光）。装机量不足 200 的版本并入「其它版本合计」，不丢行。⚠️ 第 4 步「撞墙」跨版本不可直接比较：免费额度自 2026-09-15 起是 20/40/60 三档随机实验，不同版本用户被随机分到不同档位；且 60 档疑似未正常弹窗（曝光覆盖率 10.8% vs 65~76%），已报客户端排查。要看额度本身的影响应按 quota_arm 拆，不是按版本。｜ Seven steps by app version, installs from 2026-09-12. Step 4 is NOT comparable across versions: free quota is a randomised 20/40/60 experiment since 2026-09-15, and the 60 arm looks like it is not firing (10.8% wall-exposure coverage vs 65-76%).")),
  ]),
  ("⑧ 模型 · Model", [
    ("model_provider_daily", "模型调用与供应商 · Model & Provider Daily", "table",
@@ -1011,7 +1030,21 @@ const STEPMAP={'打开':'打开 Open','Welcome':'Welcome','进入onboarding':'�
   '拿到token':'拿到 Token','服务端注册':'服务端注册 Registered',
   '看到目录':'看到目录 Catalog Shown','看到角色卡':'看到角色卡 Cards Seen',
   '点击角色':'点击角色 Character Tapped','发出首条':'发出首条 First Msg',
-  '冷启动展示':'冷启动展示 Cold Shown','种子星点击':'种子星点击 Seed Tap','转成实心星':'转成实心星 Owned'};
+  '冷启动展示':'冷启动展示 Cold Shown','种子星点击':'种子星点击 Seed Tap','转成实心星':'转成实心星 Owned',
+  // 2026-09-21 补:激活两张漏斗卡 2026-09-15 由轮数改为累计句数后,这六级一直没进 STEPMAP,
+  //   图上显示的是中文裸名。句数口径为服务端全历史累计,见对应 SQL 头部。
+  '累计1句':'累计1句 ≥1 msg','累计3句':'累计3句 ≥3 msgs','累计5句':'累计5句 ≥5 msgs',
+  '累计10句':'累计10句 ≥10 msgs','累计20句':'累计20句 ≥20 msgs',
+  '单host累计20句':'单host 20句 ≥20 w/ one host',
+  // 2026-09-21 新增:两张付费漏斗卡(by country / by version)的环节
+  '装机':'装机 Install','开口':'开口 First Msg','点击角色卡':'点击角色卡 Card Tap',
+  '撞墙':'撞墙 Quota Wall','点订阅':'点订阅 Subscribe Tap',
+  '试用生效':'试用生效 Trial','真实付费':'真实付费 Paid',
+  // 分组值(不是步骤):付费漏斗分国家的三组 / 分版本的长尾合计。
+  //   check_cards.py 按 `数字_中文` 的格式识别,分组值与步骤同格式,所以一并登记;
+  //   登记后图例也会显示英文,与其余卡一致。
+  '英美加澳':'英美加澳 US/UK/CA/AU','南亚':'南亚 South Asia','其它':'其它 Other',
+  'zz_其它版本合计':'其它版本合计 Other versions'};
 function drawTable(el,card){
   el.innerHTML='';
   const cols=card.cols||[],all=card.rows||[];let expanded=false;
