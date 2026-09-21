@@ -526,9 +526,9 @@ SECTIONS = [
                   ("days_to_expiry","距到期天数 Days Left","int"),
                   ("conversion_rate","履约率 Conversion","pct1"),
                   ("revenue_local","本地实收 Local","text"),
-                  ("revenue_usd_estimated","USD 估算 USD est.","int")],
+                  ("revenue_usd","USD 估算 USD est.","int")],
             bar=["trial_started_users"],
-            note="按试用开始日分批。三态互斥、合计等于试用生效，可横读校验。末几列随到期回填，历史行会变。履约率只在该批全部到期后才出。本地实收是商店标价（gross），USD 为手工汇率折算的估算值，实收以商店 payout 报表为准。与付费漏斗的付费列归属日不同，不可逐日对照。｜ Trial cohorts by start date. Three states are mutually exclusive and sum to Started. Revenue is gross list price; USD is an estimate, settle against store payout reports.")),
+            note="按试用开始日分批。三态互斥、合计等于试用生效，可横读校验。末几列随到期回填，历史行会变。履约率只在该批全部到期后才出。本地实收是商店标价（gross），USD 按 SQL 里的汇率快照折算，为估算值，实收以商店 payout 报表为准。与付费漏斗的付费列归属日不同，不可逐日对照。｜ Trial cohorts by start date. Three states are mutually exclusive and sum to Started. Revenue is gross list price; USD is an estimate, settle against store payout reports.")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
