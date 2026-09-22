@@ -320,9 +320,15 @@ SECTIONS = [
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note="第7天开App的设备 ÷ 装机当天的新设备;末尾几天观察窗未满 \uff5c Devices reopening on day 7 \u00f7 new devices that installed that day; the trailing days\u2019 window hasn\u2019t closed")),
    ("retention_push_funnel", "推送链路漏斗 · Push Setup Funnel", "funnel",
-       dict(note="弹出权限窗的设备:授权 → 拿到 token → 服务端注册,按系统分组;数据自 2.7.0(8/15)起 ｜ Devices shown the permission prompt: granted → token obtained → registered on server, grouped by OS; data starts with 2.7.0 (Aug 15)")),
+       # 2026-09-22 随 SQL 改:分组由**操作系统**改为**最近 3 个版本**。
+       #   gsort="version" 必须加 —— 不加的话渲染器按第一级人数排序,版本顺序会乱。
+       #   ⚠️ 丢掉了 Android / iOS 对照,而该维度在本卡上有内容(近30天 android 14,510 / ios 1,365,
+       #      两者授权流程本就不同)。漏斗图只支持一维分组,要按系统看需另建卡。
+       dict(gsort="version", note="弹出权限窗的设备：授权 → 拿到 token → 服务端注册，按最近 3 个版本分组（下限为占本队列 5%，排除灰度包）。设备归到它**进入漏斗那一刻**所在的版本。数据自 2.7.0（8/15）起。⚠️ 本卡不再区分 Android / iOS，而两者授权流程不同（iOS 走 ATT、Android 走运行时权限），「授权通过」一级是两种机制的混合。｜ Devices shown the permission prompt: granted → token obtained → registered, by the 3 most recent versions (floor: 5% of the cohort, to exclude staged-rollout builds). Note this no longer splits Android/iOS, whose permission flows differ.")),
    ("retention_push_delivery", "推送触达漏斗 · Push Delivery Funnel", "funnel",
-       dict(note="收到通知的设备:有反应(点开或划掉) → 点开 → 点开后 30 分钟内发消息;数据自 2.7.0(8/15)起 ｜ Devices that received a notification: reacted (opened or dismissed) → opened → sent a message within 30 min of opening; data starts with 2.7.0 (Aug 15)")),
+       # 2026-09-22 随 SQL 改:分组由 platform 改为**最近 3 个版本**。
+       #   原分组实测近30天 100% 是 ANDROID(单组),无信息量;改版本后才有对照。
+       dict(gsort="version", note="收到通知的设备：有反应（点开或划掉）→ 点开 → 点开后 30 分钟内发消息，按最近 3 个版本分组（下限为占本队列 5%，排除灰度包）。设备归到它**收到第一条通知时**所在的版本。数据自 2.7.0（8/15）起。｜ Devices that received a notification: reacted → opened → sent a message within 30 min, by the 3 most recent versions (floor: 5% of the cohort).")),
  ]),
  ("④ 模块 · Modules", [
    ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
@@ -525,6 +531,12 @@ SECTIONS = [
                   ("still_in_trial_users","仍在试用 In Trial","int"),
                   ("days_to_expiry","距到期天数 Days Left","int"),
                   ("conversion_rate","履约率 Conversion","pct1"),
+                  # 2026-09-21 随 SQL 加两列国家。两者**经常不一致**,这是数据实情不是错:
+                  #   实测 9 个试用用户里 3 个不一致(商店 US / IP 分别在印度、巴基斯坦、俄罗斯)。
+                  #   定价按商店地区走 ⇒ revenue_local 的币种跟 store_region 对应、与 IP 无关,
+                  #   一个"美国账号"付 PKR 690 是正常的。故两列并排,让差异一眼可见。
+                  ("ip_country_list","实际所在地 IP Country","text"),
+                  ("store_region_list","商店地区 Store Region","text"),
                   ("revenue_local","本地实收 Local","text"),
                   ("revenue_usd","USD 估算 USD est.","int")],
             bar=["trial_started_users"],
