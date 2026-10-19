@@ -112,6 +112,9 @@ def _ord(ser, order):
     return od
 
 _ADG = lambda r: f"{r.get('source')}_{r.get('adgroup')}"   # source×adgroup 组合序列
+# 2026-09-29:素材名本身已含来源信息(SoulMap_CH01_… / SoulMap_MV1_… / SoulMap_SM_TA_…),
+#   不再叠 source,否则图例会长到放不下。取不到素材的落 others,与自然量混在一起 —— 见 SQL 头部。
+_CRE = lambda r: r.get('creative')
 
 # 三张留存卡共用的维度配置(SQL 输出 dimension 列的取值 → 选项卡标签/顺序)
 RETENTION_DIMS = dict(
@@ -178,7 +181,45 @@ PREFERENCE_DIMS = dict(
 # line 卡: dims = [(key,label,by_col)]; by_col=None 即总体
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
 SECTIONS = [
+
+ # ╔══════════════════════════════════════════════════════════════════════════╗
+ # ║ 2026-10-19 新增六章,全部来自 Metabase 看板 24(experiment)                ║
+ # ╚══════════════════════════════════════════════════════════════════════════╝
+ # 起因:Pages 看板原来只抓看板 18(Report raw),而 10-15 玩法改成 0.99 直购之后,
+ #   新玩法的卡(0.99/付费墙实验/额度墙/邀请/语音)全部建在看板 24,线上一张都看不到。
+ #   fetch_metabase.py 已改成同时抓 18+24,重叠的 15 张按 card_id 去重。
+ #
+ # 🛑 这六章的卡全部用 table —— 不是偷懒,是跟着看板 24 的设计走:
+ #    那边每张卡的卡头都写了「展示形式:表格」,理由是比率画成折线会把分母的变化藏起来
+ #    (撞墙人数、分臂人数每天都在动)。这里画成折线等于把那层保护拆掉。
+ #
+ # 🛑 看板 24 的百分比列一律是 `ROUND(100.0 * ... , 1)`,也就是 0~100 的数;
+ #    而本文件的 pct0/pct1 格式化器吃的是 0~1(见 APP_JS 的 fmtV)。
+ #    所以这些列一律用 `d1`、把 % 写进列名 —— 同 capability 卡的 delivery_rate_before_0819。
+ #    ⚠️ 写成 pct1 的话会显示成 7540%,而且不会报错。
+
+ # 2026-10-19 第二次调整:区从 15 压到 10,顺序改成「用户旅程」。
+ #   · 额度墙(1 张)并进付费墙实验 —— 「撞墙才弹墙」和「什么时机弹墙」是一件事的两面
+ #   · 模型(1 张)+ 能力链路(2 张)合成「后端」—— 原来各自单卡成区
+ #   · 原「现状」区的 2 张拆散:各国新用户与深度 → 增长,语音文字占比 → 语音
+ #   · 0.99 首月(3 张)并进变现 —— 0.99 是价格、付费漏斗是结果,本来就是一条链
+ #   · 三 Tab(3 张)并进发现 —— Tab 是进发现页的入口,渗透率和点击连着看
  ("① 增长 · Growth", [
+   ("snapshot_country_depth", "各国新用户与聊天深度 · New Users & Depth by Country", "table",
+       dict(top=25,
+            cols=[("country","国家 Country","text"),
+                  ("new_users","新用户 New Users","int"),
+                  ("engaged_gt3",">3句 >3 msgs","int"),
+                  ("engaged_gt3_pct",">3句 % ","d1"),
+                  ("engaged_ge10","≥10句 ≥10 msgs","int"),
+                  ("engaged_ge10_pct","≥10句 %","d1"),
+                  ("deep_ge20","≥20句 ≥20 msgs","int"),
+                  ("deep_ge20_pct","≥20句 %","d1"),
+                  ("returned_denom","回访分母 Denom","int"),
+                  ("returned","回访 Returned","int"),
+                  ("returned_pct","回访率 %","d1")],
+            bar=["new_users","engaged_ge10_pct"],
+            note="首日句数口径(day0_msgs),一行一个国家。三个深度档的分母都是该国新用户;回访那组分母另算(returned_denom),不要拿 returned 去除 new_users。｜ Day-0 message depth by country; the return columns have their own denominator.")),
    ("growth_dau", "日活跃用户数 · DAU", "line", dict(
             note="当天打开过 App 的用户(session_start) ｜ Users who opened the app that day (session_start)",val="value", cap=12,
        rollup={"country": 20},
@@ -193,9 +234,15 @@ SECTIONS = [
        # 2026-09-09 加 by placement:source 是平台归并(Meta 三版位合成 Facebook),placement 是
        #   pf 原值。实测三个版位的地区结构差别大(Facebook Installs 英语一线 9.0% vs
        #   Off-Facebook 3.5%),合并会抹掉。两个切页都留:汇报看 source,投放看 placement。
+       # 2026-09-29 加 by creative:埋点侧没有素材字段(attribution_received 只有 pf/pm/type,
+       #   且 pm 装的是 campaign 名 —— TypeB 测试下三条素材的 pm 完全相同),
+       #   素材来自服务端 app_launch,在 SQL 里 join 进来。
+       #   ⚠️ 2026-09-01 之前的设备 app_instance_id 恒为 0、join 不上,那几天落 others;
+       #      约 2026-10-01 后 09-01 滚出 30 天窗口即自愈。详见 SQL 头部。
        dims=[("overall","Overall",None),("source","by source","source"),
              ("placement","by placement","placement"),
-             ("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
+             ("adgroup","by source×adgroup",_ADG),("creative","by creative",_CRE),
+             ("country","by country","country")])),
    ("growth_version_adoption", "版本覆盖率 · Version Adoption", "rate",
          dict(rate=("devices","daily_active_devices"), fmt="pct0", cap=9,
               note="当天活跃设备按 App 版本拆分;设备一天内跨版本时归入较高版本 ｜ Daily active devices by app version; a device spanning versions in one day counts to the higher one",
@@ -234,7 +281,7 @@ SECTIONS = [
                   ("reached_20msg","累计 20 句","int"),
                   ("msg20_rate","装机→20句","pct1"),
                   ("purchase_started_users","发起购买 Started","int"),
-                  ("trial_effective_users","试用生效 Trial OK","int"),
+                  ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
                   ("paid_users","付费 Paid","int"),
                   ("retained_d1_rate","D1 回访率","pct1"),
                   ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1")],
@@ -270,7 +317,7 @@ SECTIONS = [
                   ("reached_20msg","累计 20 句","int"),
                   ("msg20_rate","装机→20句","pct1"),
                   ("purchase_started_users","发起购买 Started","int"),
-                  ("trial_effective_users","试用生效 Trial OK","int"),
+                  ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
                   ("paid_users","付费 Paid","int"),
                   ("retained_d1_rate","D1 回访率","pct1"),
                   ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1"),
@@ -280,8 +327,6 @@ SECTIONS = [
             note="四级漏斗：装机 → 发消息 → QCD → 累计20句，严格嵌套可直读转化率。变现三级跨源，不可相减。「发起购买」走埋点、滞后 1–2 天，最近两天偏低是数据未到。｜ Four-level funnel by creative. Monetisation columns mix sources; Started is telemetry, lagged 1–2 days.")),
  ]),
  ("② 激活 · Activation", [
-   # 2026-09-14 下线「激活漏斗 · Activation Funnel」(activation_funnel)。
-   #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_funnel.sql
    ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
        # 2026-09-14 随 SQL 改:只统计最新 1 个装机版本(原为最新 2 个)。
        #   note 改为自述式 —— 原文「同激活漏斗」引用的那张卡已下线。
@@ -330,18 +375,8 @@ SECTIONS = [
        #   原分组实测近30天 100% 是 ANDROID(单组),无信息量;改版本后才有对照。
        dict(gsort="version", note="收到通知的设备：有反应（点开或划掉）→ 点开 → 点开后 30 分钟内发消息，按最近 3 个版本分组（下限为占本队列 5%，排除灰度包）。设备归到它**收到第一条通知时**所在的版本。数据自 2.7.0（8/15）起。｜ Devices that received a notification: reacted → opened → sent a message within 30 min, by the 3 most recent versions (floor: 5% of the cohort).")),
  ]),
- ("④ 模块 · Modules", [
-   ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
-       dict(rate=("tab_users","active_users"), fmt="pct0",
-                        note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
-   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate", dict( note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
-   ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"), note="点击未解锁 Tab 的用户 ÷ 当天DAU ｜ Users tapping a locked tab ÷ that day's DAU", dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
- ]),
- ("⑤ 对话 · Chat", [
-   # —— 角色类型 · Character type ——
-   # 2026-09-15 新建。四组按「进过哪类角色的聊天页」分,每台设备只进一组 ⇒ 四行可相加。
-   #   分组不能用「对谁发过消息」—— 那样回复率会恒等于 100%。
-   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","试用生效 Trial OK","int"), ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note="A = 真实 realistic，B = 幻想 fictional。按「进过哪类角色的聊天页」分组，每台设备只进一组、四行可相加；全库 16.2% 的用户两类都用过，故混用组单列。分母用客户端埋点（chat_entry_shown，2026-09-04 上线，本卡实际起点为该日）——服务端只在用户开口后才落库，拿不到「进了但没开口」的人。6句/20句 = 全历史累计全部用户消息、不限 host，与撞墙卡、护栏卡、Meta 素材卡同口径。试用/付费靠「进过哪类聊天页」反推（订阅表无角色维度），个位数、不配比率；没进过聊天页的订阅用户不在任何一行，故两列合计小于付费漏斗卡，是预期不是漏数。「未知类型」多来自会话列表入口（老用户回访），深度天然偏高，不要与前三行并列比较。｜ A = realistic, B = fictional. Grouped by which type's chat page was entered; rows are additive. Trial/paid are inferred and single-digit.")),
+ ("④ 对话 · Chat", [
+   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"), ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note="A = 真实 realistic，B = 幻想 fictional。按「进过哪类角色的聊天页」分组，每台设备只进一组、四行可相加；全库 16.2% 的用户两类都用过，故混用组单列。分母用客户端埋点（chat_entry_shown，2026-09-04 上线，本卡实际起点为该日）——服务端只在用户开口后才落库，拿不到「进了但没开口」的人。6句/20句 = 全历史累计全部用户消息、不限 host，与撞墙卡、护栏卡、Meta 素材卡同口径。试用/付费靠「进过哪类聊天页」反推（订阅表无角色维度），个位数、不配比率；没进过聊天页的订阅用户不在任何一行，故两列合计小于付费漏斗卡，是预期不是漏数。「未知类型」多来自会话列表入口（老用户回访），深度天然偏高，不要与前三行并列比较。｜ A = realistic, B = fictional. Grouped by which type's chat page was entered; rows are additive. Trial/paid are inferred and single-digit.")),
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
@@ -380,13 +415,6 @@ SECTIONS = [
    ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(
             note="用户每条文字消息的字符数取平均 ｜ Avg characters per user text message",val="char_len", agg="avg",
        dims=[("overall","Overall",None)])),
-   ("chat_voice_text_ratio", "语音消息占比 · Voice Msg Share", "rate",
-       dict(rate=("voice_msgs","total_msgs"),
-            note="语音消息 ÷ 全部用户消息,按消息实际模态统计 ｜ Voice messages ÷ all user messages, by the message's actual mode",
-            dims=[("overall","Overall",None)])),
-   # —— 系统质量 · System quality ——
-   # 2026-09-08 下线「模块成功响应率」(chat_module_call_success)。
-   #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Chat_module call success.sql
    ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "rate",
        dict(rate=("latency_sec_total","turns"), pct=False, fmt="d1",
             note="每一轮 AI 生成回复的耗时,取平均(llm_response 组件) ｜ Avg time for the AI to generate a reply, per turn (llm_response)",
@@ -399,7 +427,67 @@ SECTIONS = [
             slorder={"host_type":["角色卡","reception","SoulMap系统行"]},
             note="QCD = 同一天对同一个 Host 发≥6条非空消息的账号,占当天启动过 App 的账号数;按 host 类型分三档 ｜ QCD = accounts sending 6+ non-empty messages to the same host in a day, over accounts that launched the app that day; split by host type")),
  ]),
- ("⑥ 发现 · Discover", [
+ ("⑤ 语音 · Voice", [
+   ("snapshot_voice_text_share", "语音与文字使用占比 · Voice vs Text Share", "table",
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("country","国家 Country","text"),
+                  ("users","用户 Users","int"),
+                  ("voice_users","语音用户 Voice Users","int"),
+                  ("voice_user_pct","语音用户占比 %","d1"),
+                  ("msgs","消息 Msgs","int"),
+                  ("voice_msgs","语音消息 Voice Msgs","int"),
+                  ("voice_msg_pct","语音消息占比 %","d1")],
+            bar=["users","voice_user_pct"],
+            note="一行一天×一个国家。🛑 两个占比的分母不是同一个(一个是人、一个是消息),不要互相换算,也不要画成饼图。本卡替代原「Chat_voice text ratio」,那张没有国家维度。｜ One row per day x country. The two shares have different denominators.")),
+   ("voice_arm_comparison", "分桶对照 · Randomized Arm Comparison", "table",
+       dict(cols=[("seq","#","int"),
+                  ("metric","指标 Metric","text"),
+                  ("metric_en","Metric (EN)","text"),
+                  ("holdout_k","对照 分子 k","int"),
+                  ("holdout_n","对照 分母 n","int"),
+                  ("holdout_pct","对照 %","d1"),
+                  ("holdout_lo","对照 区间下 lo","d1"),
+                  ("holdout_hi","对照 区间上 hi","d1"),
+                  ("treat_k","实验 分子 k","int"),
+                  ("treat_n","实验 分母 n","int"),
+                  ("treat_pct","实验 %","d1"),
+                  ("treat_lo","实验 区间下 lo","d1"),
+                  ("treat_hi","实验 区间上 hi","d1"),
+                  ("readable","读得出? Readable","text")],
+            note="🛑 先看最后一列 readable —— 两边区间重叠时这一行读不出差异,别把百分比的高低当结论。分子分母都列出来了,比率要连着分母一起看。｜ Check the `readable` column first; overlapping intervals mean no readable difference.")),
+   ("voice_latency_miss", "等待与漏回 · Latency & Miss Rate (Server)", "table",
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("voice_user_msgs","语音消息 Voice Msgs","int"),
+                  ("miss_n","漏回 Missed","int"),
+                  ("miss_pct","漏回率 %","d1"),
+                  ("pending_n","待回 Pending","int"),
+                  ("asr_p50_s","ASR 中位(秒)","d1"),
+                  ("first_audio_p50_s","首个音频 中位(秒)","d1"),
+                  ("wait_after_asr_p50_s","ASR后等待 中位(秒)","d1"),
+                  ("over_10s_n",">10 秒 Over 10s","int"),
+                  ("over_10s_pct",">10 秒 %","d1")],
+            bar=["voice_user_msgs","miss_pct"],
+            note="时延一律给中位数(p50),不给均值 —— 这类分布尾巴很长,均值会被少数极慢的拖走。｜ Latency is reported as median; the distribution has a long tail.")),
+   ("voice_playback_reasons", "播放结果与没出声的原因 · Playback & No-Audio Reasons (Client)", "table",
+       dict(top=25,
+            cols=[("grp","分组 Group","text"),
+                  ("grp_en","Group (EN)","text"),
+                  ("item","项 Item","text"),
+                  ("item_cn","项(中) Item CN","text"),
+                  ("events","次数 Events","int"),
+                  ("users","人数 Users","int"),
+                  ("pct_within_grp","组内占比 %","d1")],
+            bar=["events"],
+            note="🛑 两组各自成一块,组内占比的分母是本组 —— 不要跨组相加或相除,也不要画成饼图。｜ The two groups have different denominators; do not combine them.")),
+ ]),
+ ("⑥ 发现与导航 · Discover & Navigation", [
+   ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
+       dict(rate=("tab_users","active_users"), fmt="pct0",
+                        note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
+   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate", dict( note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
+   ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"), note="点击未解锁 Tab 的用户 ÷ 当天DAU ｜ Users tapping a locked tab ÷ that day's DAU", dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
    ("discover_search_usage", "搜索使用与结果质量 · Search Usage & Result Quality", "table",
        # 2026-09-09 新建。选表格不选折线:13 个指标折线放不下,而零结果率需要精确读数
        #   (40.0% 与 52.0% 的差别要看得出);且日均仅 33–467 次搜索、6–70 用户,折线噪声大。
@@ -466,34 +554,35 @@ SECTIONS = [
             bar=["chatted_users","qcd_rate"],
             note="各角色的开聊 → QCD → 回访;仅列被 ≥20 人聊过的角色 ｜ Chat → QCD → return per character; only characters chatted by 20+ people")),
  ]),
- ("⑦ 商业化 · Monetization", [
-   ("monetize_free_quota_wall_daily", "免费额度撞墙 · Free-Quota Wall Daily", "table",
-       # 2026-09-09 新建。付费墙模型:累计免费 20 句,用完后每天 2 句。
-       #   选表格:① 一行里同时有存量(已撞墙)与增量(新撞墙),折线会被误读成同一类;
-       #   ② 撞墙人数要精确引用;③ 与另两张表格卡一致,按 date 倒序。
-       #   与 monetize_usage_distribution_30d 分工:那张答「额度定多少」(旧模型),
-       #      本卡答「多少人已撞墙、每天新增多少」(现行模型)。
-       # 2026-09-11 随 SQL 改:「撞墙后看到付费墙」两列收窄为只认额度墙
-       #   (source='plus_sheet' AND trigger='message_quota')。原口径数的是专家墙曝光,
-       #   与撞墙漏斗无关。额度墙曝光埋点 2026-09-11 上线,该日之前恒为 0。
-       # 2026-09-14 随 SQL 改:撞墙后付费一列拆成 点试用 / 试用生效 / 付费 三级,
-       #   只统计付费功能 2026-09-11 上线后才建立订阅关系的用户。
-       dict(top=14,
-            cols=[("date","日期 Date","text"),
-                  ("active_users","活跃账号 Active","int"),
-                  ("newly_capped_users","新撞墙 Newly Capped","int"),
-                  ("newly_capped_rate","新撞墙率","pct1"),
-                  ("active_under_20_users","累计<20 句","int"),
-                  ("active_20_plus_users","累计≥20 句","int"),
-                  ("active_20_plus_rate","≥20 占比","pct1"),
-                  ("avg_cumulative_messages","人均累计句数","d1"),
-                  ("capped_saw_paywall_users","撞墙后看到额度墙","int"),
-                  ("capped_saw_paywall_rate","撞墙后看到额度墙率","pct1"),
-                  ("capped_purchase_started_users","撞墙后发起购买","int"),
-                  ("capped_trial_effective_users","撞墙后试用生效","int"),
-                  ("capped_paid_users","撞墙后付费","int")],
-            bar=["newly_capped_users","capped_saw_paywall_rate"],
-            note="累计免费 20 句、用完每天 2 句；本卡答「多少人已撞墙」。句数含全部用户消息，与 QCD 的仅角色卡不同。末尾三列按撞墙日累积归属，历史行会变；「发起购买」走埋点、滞后 1–2 天。｜ Free quota is 20 cumulative messages. Last three columns are cumulative from the capping date, so historic rows change.")),
+ ("⑦ 变现 · Monetization", [
+   ("intro_by_client_version", "首购按客户端版本 · Intro Purchase by Client Version", "table",
+       dict(cols=[("client_version","客户端版本 Version","text"),
+                  ("intro_buyers","买 0.99 Intro Buyers","int"),
+                  ("trial_users","开免费试用 Free Trial","int"),
+                  ("total_users","合计 Total","int"),
+                  ("intro_pct","0.99 占比 %","d1")],
+            bar=["total_users","intro_pct"],
+            note="🛑 判据是 subscription_event_log.period_type='INTRO'。不能用 subscription.in_trial=0 —— 买 0.99 的人 in_trial 同样是 1,那个条件接不住他们。｜ Intro = period_type='INTRO'; in_trial=0 does NOT identify them.")),
+   ("intro_by_country", "首购按国家 · Intro Purchase by Country", "table",
+       dict(top=25,
+            cols=[("country","国家 Country","text"),
+                  ("intro_buyers","买 0.99 Buyers","int"),
+                  ("currency","币种 Currency","text"),
+                  ("price_local","本地价 Local Price","text"),
+                  ("first_at","首笔 First","text"),
+                  ("latest_at","末笔 Latest","text")],
+            bar=["intro_buyers"],
+            note="🛑 本地价会变:印度 2026-10-16 15:07(UTC)从 ₹99 降到 ₹49,同一国家前后两段单价不同,拿笔数乘单价会算错收入。｜ Local price changed mid-window for India (₹99 → ₹49 on 10-16).")),
+   ("intro_rollout_coverage", "放量覆盖按装机日 · Rollout Coverage by Install Date", "table",
+       dict(top=30,
+            cols=[("install_date","装机日 Install Date","text"),
+                  ("new_devices","新设备 New Devices","int"),
+                  ("eligible_370","可见 0.99(≥3.7.0) Eligible","int"),
+                  ("v361","3.6.1","int"),
+                  ("older","更老 Older","int"),
+                  ("eligible_pct","可见占比 %","d1")],
+            bar=["new_devices","eligible_pct"],
+            note="能不能看到 0.99 取决于客户端版本。读「0.99 转化率」之前先看这一列 —— 分母里混着根本看不到这个价格的人。｜ Only ≥3.7.0 can see the intro offer; check coverage before reading conversion.")),
    ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
        # 2026-09-09 新建。付费链路 09-08~09 刚打通。
        #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
@@ -511,36 +600,13 @@ SECTIONS = [
                   ("purchase_started_rate","曝光→发起","pct1"),
                   ("purchase_completed_users","购买成功 Completed","int"),
                   ("purchase_canceled_users","用户取消 Canceled","int"),
-                  ("trial_effective_users","试用生效 Trial OK","int"),
+                  ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
                   ("paid_users","付费 Paid","int"),
                   ("new_subscription_apple","Apple","int"),
                   ("new_subscription_google","Google","int"),
                   ("restore_success_users","恢复成功 Restored","int")],
             bar=["paywall_users","new_subscription_users"],
             note="左半走埋点（滞后 1–2 天）、右半走服务端（实时），两半不可相加或互验；最新一天左半为 0 是 ETL 未到。付费墙曝光拆专家墙与额度墙，转化率不要混读。样本是个位数，引用请报绝对人数。｜ Left half is telemetry (1–2 day lag), right half is server-side (realtime). Do not cross-compare. Single-digit samples.")),
-   ("monetize_trial_cohort", "试用队列 · Trial Cohort", "table",
-       # 2026-09-20 新建。首批试用 09-19 到期,三态(转付费/退订/仍在试用)至此才都有真实样本。
-       #   不并进付费漏斗:那张卡每列是「当天发生了什么」写下即固定,本卡末三列是
-       #   「查询那一刻处于哪个阶段」,随试用到期不断回填、历史行会变。两种时间语义
-       #   放一张表,读的人分不清哪些数字稳定。
-       dict(top=30,          # 不填 sort = 保持 SQL 的 ORDER BY trial_start_date DESC
-            cols=[("trial_start_date","试用开始日 Trial Start","text"),
-                  ("trial_started_users","试用生效 Started","int"),
-                  ("converted_to_paid_users","转付费 Converted","int"),
-                  ("canceled_users","退订 Canceled","int"),
-                  ("still_in_trial_users","仍在试用 In Trial","int"),
-                  ("days_to_expiry","距到期天数 Days Left","int"),
-                  ("conversion_rate","履约率 Conversion","pct1"),
-                  # 2026-09-21 随 SQL 加两列国家。两者**经常不一致**,这是数据实情不是错:
-                  #   实测 9 个试用用户里 3 个不一致(商店 US / IP 分别在印度、巴基斯坦、俄罗斯)。
-                  #   定价按商店地区走 ⇒ revenue_local 的币种跟 store_region 对应、与 IP 无关,
-                  #   一个"美国账号"付 PKR 690 是正常的。故两列并排,让差异一眼可见。
-                  ("ip_country_list","实际所在地 IP Country","text"),
-                  ("store_region_list","商店地区 Store Region","text"),
-                  ("revenue_local","本地实收 Local","text"),
-                  ("revenue_usd","USD 估算 USD est.","int")],
-            bar=["trial_started_users"],
-            note="按试用开始日分批。三态互斥、合计等于试用生效，可横读校验。末几列随到期回填，历史行会变。履约率只在该批全部到期后才出。本地实收是商店标价（gross），USD 按 SQL 里的汇率快照折算，为估算值，实收以商店 payout 报表为准。与付费漏斗的付费列归属日不同，不可逐日对照。｜ Trial cohorts by start date. Three states are mutually exclusive and sum to Started. Revenue is gross list price; USD is an estimate, settle against store payout reports.")),
    ("monetize_usage_distribution_30d", "免费额度撞墙测算 · Free-Quota Impact (30d)", "table",
        # 不写 sort = 保持 SQL 的 ORDER BY(人群 → 额度由低到高的自然阅读序)
        # 2026-09-07 随 SQL 改版:原为分位数表(6 行),现为「额度 → 撞墙影响」表(3 人群 × 10 档 = 30 行)。
@@ -579,7 +645,190 @@ SECTIONS = [
        #   且 60 档墙曝光覆盖率仅 10.8%(20/40 档 65.6%/75.5%),疑似未正常触发,已报客户端。
        dict(gsort="version", note="七步按 App 版本分组，队列是 2026-09-12 起新装的设备。第 2 步「点击角色卡」取 card_tap（不限 sub_tab，foryou 有点击无曝光）。装机量不足 200 的版本并入「其它版本合计」，不丢行。⚠️ 第 4 步「撞墙」跨版本不可直接比较：免费额度自 2026-09-15 起是 20/40/60 三档随机实验，不同版本用户被随机分到不同档位；且 60 档疑似未正常弹窗（曝光覆盖率 10.8% vs 65~76%），已报客户端排查。要看额度本身的影响应按 quota_arm 拆，不是按版本。｜ Seven steps by app version, installs from 2026-09-12. Step 4 is NOT comparable across versions: free quota is a randomised 20/40/60 experiment since 2026-09-15, and the 60 arm looks like it is not firing (10.8% wall-exposure coverage vs 65-76%).")),
  ]),
- ("⑧ 模型 · Model", [
+ ("⑧ 付费墙实验 · Paywall Experiment", [
+   ("paywall_trial_outcome_by_arm", "试用结局分臂 · Trial Outcome by Arm", "table",
+       dict(top=30,
+            cols=[("country_group","国家组 Country Group","text"),
+                  ("arm","臂 Arm","text"),
+                  ("trials","开过订阅 Trials","int"),
+                  ("trials_intro","其中 0.99 Intro","int"),
+                  ("trials_free7","其中 免费7天 Free7","int"),
+                  ("in_trial","仍在试用 In Trial","int"),
+                  ("canceled","试用期内取消 Canceled","int"),
+                  ("canceled_after_expiry","到期后失效 Expired-Unsub","int"),
+                  ("converted","转付费 Converted","int"),
+                  ("billing_failed","扣款失败 Billing Failed","int"),
+                  ("grace_period","宽限期 Grace","int"),
+                  ("expired","已过期 Expired","int"),
+                  ("pending_recheck","待复查 Pending","int")],
+            bar=["trials"],
+            note="🛑「开过订阅」含两种人:买 0.99(trials_intro)和开免费 7 天试用(trials_free7),已拆成两列。退订也有两种:试用期内取消(canceled)、退订后走到期末失效(canceled_after_expiry),两者不要相加当「退订」读。｜ Trials mix intro-paid and free-7-day; cancellation has two distinct shapes.")),
+   ("paywall_arm_funnel", "分臂漏斗 · Paywall Arm Funnel", "table",
+       dict(top=40,
+            cols=[("country_group","国家组 Country Group","text"),
+                  ("step","环节 Step","text"),
+                  ("arm_a_wall_on_launch_users","A 启动墙 A: Wall on Launch","int"),
+                  ("arm_a_pct","A %","d1"),
+                  ("arm_b_wall_after_msgs_users","B 消息后墙 B: After Msgs","int"),
+                  ("arm_b_pct","B %","d1"),
+                  ("arm_c_launch_then_5msgs_users","C 启动+5条 C: Launch+5","int"),
+                  ("arm_c_pct","C %","d1")],
+            note="🛑 B 臂这一列覆盖率低(分臂表对 B 臂的写入条件和其它臂不同),B 的绝对数会偏小,不要拿 A/B 的数直接相比。三臂各自的百分比以本臂第一级为分母。｜ Arm B is under-covered by the assignment table; do not compare arms on absolute counts.")),
+   ("paywall_tpc_by_country", "试用付费取消 · 按国家 · Trial-Paid-Cancel by Country", "table",
+       dict(top=25,
+            cols=[("country","国家 Country","text"),
+                  ("new_users","新用户 New Users","int"),
+                  ("trials","开订阅 Trials","int"),
+                  ("trial_pct","开订阅率 %","d1"),
+                  ("canceled","取消 Canceled","int"),
+                  ("cancel_pct","取消率 %","d1"),
+                  ("lost","流失 Lost","int"),
+                  ("lost_pct","流失率 %","d1"),
+                  ("user_unsubscribed","主动退订 Unsub","int"),
+                  ("billing_failed","扣款失败 Billing Failed","int"),
+                  ("billing_failed_share_of_lost","扣款失败占流失 %","d1"),
+                  ("expired","过期 Expired","int"),
+                  ("paid","付费 Paid","int"),
+                  ("paid_pct","付费率 %","d1"),
+                  ("arm_a_share","A 臂占比 %","d1"),
+                  ("arm_b_share","B 臂占比 %","d1"),
+                  ("arm_c_share","C 臂占比 %","d1")],
+            bar=["new_users","paid_pct"],
+            note="🛑 三个臂占比列是说这个国家的人怎么分到各臂的,不同国家的臂结构不同 —— 跨国比付费率之前先看这三列,差异可能来自分臂而不是国家。分子小于 10 的比率读不出来,不要排名。｜ Arm mix differs by country; check it before comparing paid rates across countries.")),
+   ("paywall_tpc_by_creative", "试用付费取消 · 按素材 · Trial-Paid-Cancel by Creative", "table",
+       dict(top=30,
+            cols=[("creative_name","素材 Creative","text"),
+                  ("creative_id","素材 ID","text"),
+                  ("networks","渠道 Networks","text"),
+                  ("campaign_name","Campaign","text"),
+                  ("new_users","新用户 New Users","int"),
+                  ("trials","开订阅 Trials","int"),
+                  ("trial_pct","开订阅率 %","d1"),
+                  ("canceled","取消 Canceled","int"),
+                  ("cancel_pct","取消率 %","d1"),
+                  ("user_unsubscribed","主动退订 Unsub","int"),
+                  ("billing_failed","扣款失败 Billing","int"),
+                  ("expired","过期 Expired","int"),
+                  ("paid","付费 Paid","int"),
+                  ("paid_pct","付费率 %","d1")],
+            bar=["new_users","paid_pct"],
+            note="🛑 素材名会重复,必须看 creative_id —— 实测同名素材有三个不同 ID,每装机收入差一倍以上。广告组也会改名,按名字归组会把同一组拆开。｜ Creative names repeat; always read creative_id.")),
+   ("paywall_retention_by_arm", "分臂留存 · Retention by Arm", "table",
+       dict(top=40,
+            cols=[("install_date","装机日 Install Date","text"),
+                  ("arm","臂 Arm","text"),
+                  ("cohort_users","队列人数 Cohort","int"),
+                  ("d1_users","D1","int"), ("d1_pct","D1 %","d1"),
+                  ("d3_users","D3","int"), ("d3_pct","D3 %","d1"),
+                  ("d7_users","D7","int"), ("d7_pct","D7 %","d1"),
+                  ("maturity","成熟度 Maturity","text")],
+            bar=["cohort_users","d1_pct"],
+            note="🛑 先看 maturity 那列 —— 没满窗的队列 D3/D7 天然偏低,那不是留存变差。｜ Check the maturity column first; immature cohorts under-report D3/D7.")),
+   ("paywall_writeback_by_version", "回写率分客户端版本 · Writeback Rate by Client Version", "table",
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("app_version","版本 Version","text"),
+                  ("should_show","应展示 Should Show","int"),
+                  ("devices","设备 Devices","int"),
+                  ("written_back","已回写 Written Back","int"),
+                  ("pct_written_back","回写率 %","d1")],
+            bar=["devices","pct_written_back"],
+            note="这是实验数据本身的质量卡:回写率低的版本,它的分臂结果就不可信。读上面几张分臂卡之前先看这张。｜ Data-quality guard for the experiment: low writeback = unreliable arm data for that version.")),
+   ("paywall_free_quota_line", "免费额度线 · Free Quota Line", "table",
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("reason","原因 Reason","text"),
+                  ("free_total","免费额度 Free Total","int"),
+                  ("rows_n","行数 Rows","int"),
+                  ("sessions","会话 Sessions","int"),
+                  ("total_min","最小 Min","int"),
+                  ("total_avg","均值 Avg","d1"),
+                  ("total_max","最大 Max","int")],
+            note="看免费额度线实际落在多少。🛑 这张卡数的是 total 的上下界,不是「撞墙人数」—— 撞墙人数看下面的额度墙那张(424),它用的是真正的 chat_wall_blocked 事件。｜ This shows the quota bound, NOT the number of users who hit it.")),
+   ("quota_wall_blocked_next", "撞墙与撞墙之后 · Quota Wall — Blocked & Next", "table",
+       dict(top=30,
+            cols=[("d","日期 Date","text"),
+                  ("blocked_users","撞墙人数 Blocked Users","int"),
+                  ("blocked_events","撞墙次数 Events","int"),
+                  ("events_per_user","人均次数 per User","d1"),
+                  ("saw_paywall_24h","24h内看到付费墙 Saw Paywall","int"),
+                  ("saw_paywall_pct","看到墙 %","d1"),
+                  ("tapped_sub_24h","24h内点订阅 Tapped","int"),
+                  ("tapped_sub_pct","点订阅 %","d1"),
+                  ("billing_done_24h","24h内完成扣款 Billing Done","int"),
+                  ("note","备注 Note","text")],
+            bar=["blocked_users","saw_paywall_pct"],
+            note="撞墙用服务端 chat_wall_blocked 事件数,下游三级都是撞墙后 24 小时内。🛑 本卡替代原「Monetize_free quota wall daily」—— 那张没有真正的撞墙字段,只能看 total 的上界。🛑 比率的分母是当天撞墙人数,这个分母每天都在动,读比率时要同时看第一列。｜ Replaces the old quota-wall card, which had no real blocked-event field.")),
+   ("paywall_arm_split_hourly", "分流比例逐小时 · Arm Split Hourly", "table",
+       dict(top=48,
+            cols=[("hour_sgt","小时(SGT) Hour","text"),
+                  ("assigned","入组 Assigned","int"),
+                  ("arm_a","A","int"), ("arm_c","C","int"),
+                  ("pct_a","A %","d1"), ("pct_c","C %","d1"),
+                  ("new_install_share","新装占比 %","d1"),
+                  ("developed_four_assigned","发达四国入组 Dev4","int"),
+                  ("developed_four_pct_a","Dev4 A %","d1"),
+                  ("developed_four_pct_c","Dev4 C %","d1")],
+            bar=["assigned"],
+            note="用途是盯分流比例的变更点,逐行读。🛑 B 臂不在这张表里(写入条件不同,覆盖率太低,列出来会误导)。｜ For spotting when the split changed. Arm B is omitted — its assignment rows are too sparse to read.")),
+ ]),
+ ("⑨ 邀请 · Invite", [
+   ("invite_inviter_side", "邀请人侧 · Invite — Inviter Side", "table",
+       dict(cols=[("seq","#","int"),
+                  ("step","环节 Step","text"),
+                  ("step_en","Step (EN)","text"),
+                  ("users","人数 Users","int"),
+                  ("events","次数 Events","int"),
+                  ("pct_of_code_holders","占持码人 %","d1")],
+            bar=["users"],
+            note="🛑 这六行不是嵌套漏斗,是六个各自独立的动作,把相邻两行相除当转化率会得到没有意义的数。｜ These six rows are independent actions, NOT a nested funnel.")),
+   ("invite_invitee_side", "被邀请人侧 · Invite — Invitee Side", "table",
+       dict(cols=[("seq","#","int"),
+                  ("step","环节 Step","text"),
+                  ("step_en","Step (EN)","text"),
+                  ("source","数据源 Source","text"),
+                  ("users","人数 Users","int"),
+                  ("note","备注 Note","text")],
+            bar=["users"],
+            note="🛑 最后一行换了数据源(见 source 列),所以五行仍要逐行读、不画漏斗图。多数行分子是个位数,读不出比例。｜ The last row comes from a different source; read row by row.")),
+   ("invite_bonus_30msg", "30 条奖励发放 · 30-Message Bonus Grants", "table",
+       dict(cols=[("seq","#","int"),
+                  ("policy_version","策略版本 Policy","text"),
+                  ("side","侧 Side","text"),
+                  ("side_en","Side (EN)","text"),
+                  ("bindings","绑定数 Bindings","int"),
+                  ("granted","已发放 Granted","int"),
+                  ("granted_pct","发放率 %","d1"),
+                  ("lag_p50_min","延迟中位(分) p50","d1"),
+                  ("lag_max_min","延迟最大(分) max","int"),
+                  ("invitee_sent_msg","被邀请人发过消息 Sent","int"),
+                  ("sandbox_invitee","沙盒 Sandbox","int"),
+                  ("note","备注 Note","text")],
+            bar=["bindings","granted_pct"],
+            note="🛑 发放与否看 invite_binding 的 bonus_at 字段,不看 reward_state。🛑 延迟同时给中位和最大值 —— 实测逐条是 0/0/1/1/2/3/20/2933 分钟,只看均值会被那个极值带偏。｜ Grant is determined by bonus_at, not reward_state; median and max are both shown because the tail is extreme.")),
+   ("invite_redeem_by_source", "兑换结果按来源 · Redeem by Source & Reason", "table",
+       dict(top=25,
+            cols=[("via_cn","来源 Source","text"),
+                  ("via","Source (raw)","text"),
+                  ("reason_cn","原因 Reason","text"),
+                  ("reason","Reason (raw)","text"),
+                  ("ok","成功? OK","text"),
+                  ("attempts","尝试 Attempts","int"),
+                  ("users","人数 Users","int")],
+            bar=["attempts"],
+            note="兑换失败的原因分布,按来源(链接 / 手动输码)拆。｜ Redemption outcomes split by entry path and failure reason.")),
+   ("invite_reward_grants", "奖励发放明细 · Reward Grants", "table",
+       dict(top=40,
+            cols=[("granted_date","发放日 Date","text"),
+                  ("kind","类型 Kind","text"),
+                  ("inviter_user_id","邀请人 Inviter","text"),
+                  ("invitee_user_id","被邀请人 Invitee","text"),
+                  ("invitee_env","环境 Env","text"),
+                  ("is_real","真实? Real","int"),
+                  ("month_index","月序 Month","int")],
+            note="🛑 逐条明细,看 is_real 和 invitee_env 两列筛掉沙盒数据再数。｜ Row-level grants; filter sandbox rows via is_real / invitee_env before counting.")),
+ ]),
+ ("⑩ 后端 · Backend", [
    ("model_provider_daily", "模型调用与供应商 · Model & Provider Daily", "table",
        # 2026-09-09 新建,为日报「模型与成本」一节供数。
        #   模型维度当前退化(近7天只有 qwen/qwen3-235b-a22b-2507 一个),故按供应商拆。
@@ -599,8 +848,6 @@ SECTIONS = [
                   ("degraded_rate","降级率 Deg %","pct1")],
             bar=["llm_calls","degraded_rate"],
             note="降级率的分母是「有 replyTier 的行」(tier_rows),不是调用数 —— model 那组键只覆盖约 66% 的 llm_response,缓冲路径、B-RP 驾驶、即时首句与 Haiku/Gemini 降级层都不在白名单,缺 model 的行是混合桶、降级恰恰藏在里面,拿它当分母等于先把降级筛掉。replyTier 2026-09-03 13:26 SGT 才上线,之前 tier_rows=0 是字段没上线、不是没有降级。模型维度当前退化(只有一个模型),故按供应商拆;新供应商落进「其他」不会消失。Token 与成本全库都没有(push_attempt_log.tokens_* 是推送设备 token,与 LLM 无关) ｜ Degraded-rate denominator is rows having replyTier, NOT total calls. replyTier only went live 2026-09-03 13:26 SGT. No token or cost data exists anywhere in the DB")),
- ]),
- ("⑨ 能力链路 · Capability Chain", [
    ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
        dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY surfaced_7d DESC
             cols=[("capability","能力 Capability","text"),
