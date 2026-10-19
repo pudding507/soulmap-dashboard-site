@@ -59,13 +59,17 @@ jobs:
           METABASE_PASSWORD: ${{ secrets.METABASE_PASSWORD }}
         # 并发抓卡:第1轮 4 并发拼吞吐,第2轮 2、第3轮 1,后面几轮只剩硬骨头,降并发给每张卡完整带宽。
         # 实测(2026-08-04):串行 6 轮 55 分钟 / 缺 7  →  平并发4 12 分钟 / 缺 6  →  递减 17 分钟 / 缺 7。
+        # ⚠️ 2026-10-19 起抓两个看板(18+24),卡数 51 → 73,整体耗时会比上面那组实测更长。
         # 那 6-7 张卡在 Metabase 侧就是 >60 秒,并发 1 也救不回来 —— 调度到此为止,要归零得靠兜底。
         run: python3 fetch_metabase.py --out raw_metrics.json
       - name: guard
         run: |
           n=$(python3 -c "import json;print(len(json.load(open('raw_metrics.json')).get('metrics',{})))")
           echo "本次抓到 $n 张卡"
-          if [ "$n" -lt 25 ]; then echo "太少($n),跳过发布、保留上一版"; exit 1; fi
+          # 2026-10-19:阈值 25 → 35。看板从只抓 18(51 卡)改成抓 18+24(去重后 73 卡),
+          # 原来的 25 相当于「一半就放行」,现在 25 连三分之一都不到,
+          # 新加的六章(0.99/付费墙/额度墙/邀请/语音)全缺也能过 guard。
+          if [ "$n" -lt 35 ]; then echo "太少($n),跳过发布、保留上一版"; exit 1; fi
       - name: render
         run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
       - name: push
