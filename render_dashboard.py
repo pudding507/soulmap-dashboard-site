@@ -1245,6 +1245,8 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
 .fbarwrap{display:flex;justify-content:center}
 .fbar{background:var(--acc);color:#fff;text-align:center;border-radius:5px;padding:5px 6px;font-size:11px;font-weight:600;white-space:nowrap;min-width:24px}
 .fpc{font-size:11px;color:var(--ts);text-align:right;font-weight:600}
+.meta.src{margin-top:6px;line-height:1.55;max-width:1100px}
+.meta.src b{color:var(--ts);font-weight:600}
 .nav{position:sticky;top:0;z-index:8;display:flex;gap:6px;flex-wrap:wrap;align-items:center;
 padding:8px 24px;margin-bottom:4px;background:var(--plane);border-bottom:1px solid var(--bd)}
 .nav .nb{font-size:12.5px;color:var(--ts);background:transparent;border:none;border-radius:7px;padding:5px 12px;cursor:pointer}
@@ -1334,14 +1336,29 @@ def render(raw_path: Path, out_path: Path):
     #   20260831→09-01 10:02   20260830→08-31 10:03
     # 灌数本身只花 ~20 秒,但时点在 09:02~11:03 之间浮动 ⇒ 对外只能说"11:00 之后",
     # 说 10:00 会在 ETL 迟到那天(如 09-03 的 11:03)变成谎话。
-    lag_note = ('每天 11:00(SGT) 前入库前一天的埋点数据,数据有延迟'
-                ' ｜ Event data for the previous day lands by 11:00 SGT — charts lag accordingly')
+    # 2026-10-20 扩写。原来只说了客户端埋点的延迟,但本页从 10-20 起同时抓看板 18 和 24,
+    # 服务端表的卡(额度墙/付费墙/邀请/回传对账/参考照)是**实时**的,和客户端埋点表差一天。
+    # 🛑 看板上没有任何手动导入的数据 —— 全是 Metabase 跑 SQL 查生产库。
+    #   385/386 虽然叫「Meta 素材全链路」,数据源也是 soulmap_app_launch 的归因字段,
+    #   不是 Meta 导出的表格(那个在「战情室/素材级对账」本地管线里,不进看板)。
+    # 不说清楚的话,同一页上把「服务端今天的数」和「客户端昨天的数」并排读会误判。
+    lag_note = (
+        '每天自动刷新 5 次(SGT 11:20 / 14:20 / 17:20 / 21:20 / 04:20)'
+        ' ｜ Auto-refreshed 5×/day')
+    source_note = (
+        '🛑 本页全部来自生产库,但两类表的新鲜度差一天:'
+        '<b>服务端表</b>(额度墙 / 付费墙 / 邀请 / 回传对账 / 参考照 / 推送发送)= <b>实时</b>;'
+        '<b>客户端埋点表</b> host.firebase_event(版本覆盖 / 语音 / 回忆页 / 各国首日深度)= <b>T+1</b>,'
+        '每天 11:00(SGT) 前入库前一天的数据 ⇒ <b>这些卡最后一天偏低或为 0,是没入库不是业务为 0</b>。'
+        ' ｜ All cards query the production DB. Server tables are live; client telemetry lands one day late.')
     hdr = (f'<header><h1>SoulMap 看板 · SoulMap Dashboard</h1><div class="meta">'
-           f'数据 {meta.get("run_date","?")} · Metabase dashboard {meta.get("dashboard_id","?")} · '
+           f'数据 {meta.get("run_date","?")} · Metabase 看板 '
+           f'{",".join(str(x) for x in (meta.get("dashboard_ids") or [meta.get("dashboard_id","?")]))} · '
            f'{sum(len(s["cards"]) for s in sections)} 卡'
            + (f' · 缺 {len(failed)}' if failed else '')
            + (f' · 沿用旧值 {len(carried)}' if carried else '') +
-           f'</div><div class="meta lag">{lag_note}</div></header>'
+           f'</div><div class="meta lag">{lag_note}</div>'
+           f'<div class="meta src">{source_note}</div></header>'
            + (f'<div class="banner">{BANNER}</div>' if BANNER else ''))
     doc = f"""<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · SoulMap Dashboard</title>
