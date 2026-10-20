@@ -282,6 +282,7 @@ SECTIONS = [
                   ("msg20_rate","装机→20句","pct1"),
                   ("purchase_started_users","发起购买 Started","int"),
                   ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
+                  ("intro_users","其中 0.99 Intro","int"),
                   ("paid_users","付费 Paid","int"),
                   ("retained_d1_rate","D1 回访率","pct1"),
                   ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1")],
@@ -318,6 +319,7 @@ SECTIONS = [
                   ("msg20_rate","装机→20句","pct1"),
                   ("purchase_started_users","发起购买 Started","int"),
                   ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
+                  ("intro_users","其中 0.99 Intro","int"),
                   ("paid_users","付费 Paid","int"),
                   ("retained_d1_rate","D1 回访率","pct1"),
                   ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1"),
@@ -344,9 +346,6 @@ SECTIONS = [
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
    # 2026-09-08 下线「新版 Onboarding Anchor 分布」(activation_onboarding_from_2.5.0)。
    #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_onboarding from 2.5.0.sql
-   ("activation_user_first_latency", "用户首条消息时延 · User First-Msg Latency (avg s)", "line", dict(val="avg_secs", agg="avg",
-       note="用户看到 AI 首句后发出第一条消息的秒数,取平均 ｜ Avg seconds from the AI's opening line to the user's first message",
-       dims=[("overall","Overall",None)])),
    ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (avg s)", "line", dict(
             note="每会话首次 composer 回复的耗时,每用户取最早一次再平均;不含前置组件,是真实等待的下限 ｜ Avg time for composer to generate the first reply; excludes upstream components, so a lower bound",val="avg_secs", agg="avg",
        dims=[("overall","Overall",None)])),
@@ -364,19 +363,48 @@ SECTIONS = [
    ("retention_d7", "留存 D7 · Retention D7", "long_dim",
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note="第7天开App的设备 ÷ 装机当天的新设备;末尾几天观察窗未满 \uff5c Devices reopening on day 7 \u00f7 new devices that installed that day; the trailing days\u2019 window hasn\u2019t closed")),
-   ("retention_push_funnel", "推送链路漏斗 · Push Setup Funnel", "funnel",
-       # 2026-09-22 随 SQL 改:分组由**操作系统**改为**最近 3 个版本**。
-       #   gsort="version" 必须加 —— 不加的话渲染器按第一级人数排序,版本顺序会乱。
-       #   ⚠️ 丢掉了 Android / iOS 对照,而该维度在本卡上有内容(近30天 android 14,510 / ios 1,365,
-       #      两者授权流程本就不同)。漏斗图只支持一维分组,要按系统看需另建卡。
-       dict(gsort="version", note="弹出权限窗的设备：授权 → 拿到 token → 服务端注册，按最近 3 个版本分组（下限为占本队列 5%，排除灰度包）。设备归到它**进入漏斗那一刻**所在的版本。数据自 2.7.0（8/15）起。⚠️ 本卡不再区分 Android / iOS，而两者授权流程不同（iOS 走 ATT、Android 走运行时权限），「授权通过」一级是两种机制的混合。｜ Devices shown the permission prompt: granted → token obtained → registered, by the 3 most recent versions (floor: 5% of the cohort, to exclude staged-rollout builds). Note this no longer splits Android/iOS, whose permission flows differ.")),
-   ("retention_push_delivery", "推送触达漏斗 · Push Delivery Funnel", "funnel",
-       # 2026-09-22 随 SQL 改:分组由 platform 改为**最近 3 个版本**。
-       #   原分组实测近30天 100% 是 ANDROID(单组),无信息量;改版本后才有对照。
-       dict(gsort="version", note="收到通知的设备：有反应（点开或划掉）→ 点开 → 点开后 30 分钟内发消息，按最近 3 个版本分组（下限为占本队列 5%，排除灰度包）。设备归到它**收到第一条通知时**所在的版本。数据自 2.7.0（8/15）起。｜ Devices that received a notification: reacted → opened → sent a message within 30 min, by the 3 most recent versions (floor: 5% of the cohort).")),
- ]),
+   ("retention_push_funnel", "推送权限与注册 · Push Permission & Registration", "table",
+       # 2026-10-19 由漏斗图改表格。原四级「弹窗→授权→token→注册」**不是嵌套关系**:
+       #   实测 4,848 台(占有 token 总数的 64%)没授权通知权限却照样拿到了 FCM token ——
+       #   Android 上 token 不依赖通知权限,app 启动就能拿。画成漏斗必然"掉下去又涨回来"。
+       #   现拆成两条各自嵌套的线并排:左=权限(弹窗→授权) 右=推送能力(token→注册)。
+       # 🛑 **两条线之间不要相除**。
+       dict(top=10,
+            cols=[("app_version","版本 Version","text"),
+                  ("prompt_devices","弹过权限窗 Prompted","int"),
+                  ("granted_devices","授权通过 Granted","int"),
+                  ("granted_rate","授权率 Grant %","pct1"),
+                  ("token_devices","拿到 token Token","int"),
+                  ("registered_devices","服务端注册 Registered","int"),
+                  ("registered_rate","注册率(÷token) Reg %","pct1"),
+                  ("token_without_grant","没授权但有token No-Grant Token","int"),
+                  ("token_without_grant_rate","占有token的 %","pct1")],
+            bar=["prompt_devices","granted_rate"],
+            note="🛑 左右两组是**两条互不嵌套的线**,不要跨组相除 —— FCM token 不依赖通知权限,实测 69~70% 拿到 token 的设备并没有授权。左组分母=弹过窗的设备;右组「注册率」分母=拿到 token 的设备。｜ Two independent tracks, not one funnel: FCM tokens do not require notification permission.")),
+   ("retention_push_delivery", "推送发送与送达 · Push Send & Delivery", "table",
+       # 2026-10-19 换数据源 + 漏斗改表格,**改前改后不可比**。
+       #   原卡用客户端埋点做四级漏斗,但实测队列只剩 31~42 台、分子全是个位数。
+       #   根因不是埋点漏了,是**推送本身几乎没在发**:服务端近 14 天 2,051 次尝试里
+       #   NO_DEVICE_TOKEN 占 64%,根本没发出去。改成服务端口径把这个瓶颈摆出来。
+       # 🛑 不给「收到÷发出」:服务端发出与客户端收到会跨日,逐日相除会得出 160% 这种数。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("attempts","尝试 Attempts","int"),
+                  ("no_token","没 token No Token","int"),
+                  ("no_token_rate","没 token %","pct0"),
+                  ("fcm_attempted","实际发出 Sent","int"),
+                  ("dedup_skipped","去重跳过 Dedup","int"),
+                  ("tokens_accepted","FCM 接受 Accepted","int"),
+                  ("tokens_invalid","无效 token Invalid","int"),
+                  ("tokens_invalid_rate","无效 %","pct0"),
+                  ("client_received","客户端收到 Received","int"),
+                  ("client_opened","点开 Opened","int")],
+            bar=["attempts","no_token_rate"],
+            note="🛑 左边七列是**服务端**口径(次数),右边两列是**客户端**口径(设备去重),两边不同源、而且发出与收到会跨日 —— **不要相除**,只做量级对照。🛑 最大的瓶颈是「没 token」常年 64~88%,和「无效 token」(10-19 达 49%)是同一问题的两面。🛑 20261011 客户端埋点整天空白,那天的 0 是 ETL 缺口不是业务为 0。｜ Left = server-side counts, right = client-side devices; different sources and they cross days. Do not divide across."))
+   ]),
  ("④ 对话 · Chat", [
-   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"), ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note="A = 真实 realistic，B = 幻想 fictional。按「进过哪类角色的聊天页」分组，每台设备只进一组、四行可相加；全库 16.2% 的用户两类都用过，故混用组单列。分母用客户端埋点（chat_entry_shown，2026-09-04 上线，本卡实际起点为该日）——服务端只在用户开口后才落库，拿不到「进了但没开口」的人。6句/20句 = 全历史累计全部用户消息、不限 host，与撞墙卡、护栏卡、Meta 素材卡同口径。试用/付费靠「进过哪类聊天页」反推（订阅表无角色维度），个位数、不配比率；没进过聊天页的订阅用户不在任何一行，故两列合计小于付费漏斗卡，是预期不是漏数。「未知类型」多来自会话列表入口（老用户回访），深度天然偏高，不要与前三行并列比较。｜ A = realistic, B = fictional. Grouped by which type's chat page was entered; rows are additive. Trial/paid are inferred and single-digit.")),
+   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
+                  ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note="A = 真实 realistic，B = 幻想 fictional。按「进过哪类角色的聊天页」分组，每台设备只进一组、四行可相加；全库 16.2% 的用户两类都用过，故混用组单列。分母用客户端埋点（chat_entry_shown，2026-09-04 上线，本卡实际起点为该日）——服务端只在用户开口后才落库，拿不到「进了但没开口」的人。6句/20句 = 全历史累计全部用户消息、不限 host，与撞墙卡、护栏卡、Meta 素材卡同口径。试用/付费靠「进过哪类聊天页」反推（订阅表无角色维度），个位数、不配比率；没进过聊天页的订阅用户不在任何一行，故两列合计小于付费漏斗卡，是预期不是漏数。「未知类型」多来自会话列表入口（老用户回访），深度天然偏高，不要与前三行并列比较。｜ A = realistic, B = fictional. Grouped by which type's chat page was entered; rows are additive. Trial/paid are inferred and single-digit.")),
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
@@ -555,6 +583,21 @@ SECTIONS = [
             note="各角色的开聊 → QCD → 回访;仅列被 ≥20 人聊过的角色 ｜ Chat → QCD → return per character; only characters chatted by 20+ people")),
  ]),
  ("⑦ 变现 · Monetization", [
+   ("attribution_adjust_recon", "Adjust 发送对账 · Attribution Reconciliation", "table",
+       # 2026-10-20 新建(Metabase 卡 427)。3.7.2 起同一笔 0.99 最多有三条路到 Meta,
+       #   其中两路没有共享 event_id、Meta 去重不了。本卡盯服务端这一路。
+       # 🛑 两张表的 event_at 都是 UTC,SQL 里都已 CONVERT_TZ 到 SGT。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("intro_should_send","应发(真实0.99) Should","int"),
+                  ("intro_sent","实发 Sent","int"),
+                  ("intro_gap","差 Gap","int"),
+                  ("trial_start_sent","试用开始 TrialStart","int"),
+                  ("trial_conversion_sent","试用转化 TrialConv","int"),
+                  ("skipped_no_device_id","跳过·无设备ID Skipped","int"),
+                  ("failed","发送失败 Failed","int")],
+            bar=["intro_should_send"],
+            note="🛑「差」不是 0 就是漏发或双算,要查。实测 18 天全部对平。🛑「实发」只数 status='SENT';跳过和失败单独成列——它们是真的没发出去,算进实发会让对账永远是平的。🛑 **第三路(RevenueCat 后台的 Meta 集成)要去 Events Manager 对,看板里放不进来**,所以本卡对平不等于 Meta 侧没有双算。｜ Gap≠0 means missing or double-sent. The third path (RC's own Meta integration) is not visible here.")),
    ("intro_by_client_version", "首购按客户端版本 · Intro Purchase by Client Version", "table",
        dict(cols=[("client_version","客户端版本 Version","text"),
                   ("intro_buyers","买 0.99 Intro Buyers","int"),
@@ -601,6 +644,7 @@ SECTIONS = [
                   ("purchase_completed_users","购买成功 Completed","int"),
                   ("purchase_canceled_users","用户取消 Canceled","int"),
                   ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
+                  ("intro_users","其中 0.99 Intro","int"),
                   ("paid_users","付费 Paid","int"),
                   ("new_subscription_apple","Apple","int"),
                   ("new_subscription_google","Google","int"),
@@ -646,6 +690,24 @@ SECTIONS = [
        dict(gsort="version", note="七步按 App 版本分组，队列是 2026-09-12 起新装的设备。第 2 步「点击角色卡」取 card_tap（不限 sub_tab，foryou 有点击无曝光）。装机量不足 200 的版本并入「其它版本合计」，不丢行。⚠️ 第 4 步「撞墙」跨版本不可直接比较：免费额度自 2026-09-15 起是 20/40/60 三档随机实验，不同版本用户被随机分到不同档位；且 60 档疑似未正常弹窗（曝光覆盖率 10.8% vs 65~76%），已报客户端排查。要看额度本身的影响应按 quota_arm 拆，不是按版本。｜ Seven steps by app version, installs from 2026-09-12. Step 4 is NOT comparable across versions: free quota is a randomised 20/40/60 experiment since 2026-09-15, and the 60 arm looks like it is not firing (10.8% wall-exposure coverage vs 65-76%).")),
  ]),
  ("⑧ 付费墙实验 · Paywall Experiment", [
+   ("paywall_triggers_side_by_side", "四道墙并排 · Paywall Triggers Side by Side", "table",
+       # 2026-10-20 新建(Metabase 卡 425)。3.7.2 起 wall='chat' 里混了额度硬墙(message_quota)
+       #   和软墙(quota_soft_wall),「wall='chat' = 撞上额度被挡住」这个老等式不成立了。
+       #   本卡按 trigger 并排拆开,并把成交按 period_type 分成「免费试用 / 0.99」两列。
+       # 🛑 occurred_at 是 UTC(实测差 8 小时),SQL 里已 CONVERT_TZ 到 SGT。
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("trigger_cn","哪道墙 Trigger","text"),
+                  ("shown_users","曝光 Shown","int"),
+                  ("tapped_users","点订阅 Tapped","int"),
+                  ("tapped_rate","点击率 Tap %","pct1"),
+                  ("opened_users","开收银台 Billing","int"),
+                  ("succeeded_users","成交 Done","int"),
+                  ("succeeded_intro","其中 0.99 Intro","int"),
+                  ("succeeded_trial","其中 免费试用 Trial","int"),
+                  ("succeeded_rate","成交率 Done %","pct1")],
+            bar=["shown_users","tapped_rate"],
+            note="🛑 一个用户一天可能撞多道墙,各行人数**不能跨 trigger 相加**,合计会重复计人。🛑 成交必须分开读:10-14 之前全是免费试用、10-19 之后全是 0.99,合成一个「付款」的任何跨期比较都不成立。🛑 **分母缺两类**:trigger=sp_locked(点锁住的照片)和 sp_vision_quota(看图额度)不进服务端这四个事件,所以本卡不是全部付费入口。🛑 软墙(印度可关弹窗)起点 2026-10-20 17:20,现在只有个位数人,三天内不要读它的比率。｜ One row per day x trigger. Users can hit multiple walls a day — do NOT sum across rows.")),
    ("paywall_trial_outcome_by_arm", "试用结局分臂 · Trial Outcome by Arm", "table",
        dict(top=30,
             cols=[("country_group","国家组 Country Group","text"),
@@ -877,6 +939,39 @@ SECTIONS = [
                   ("top_unknown_reason","最大未知原因 Top Unknown Reason","text")],
             bar=["surfaced"],
             note="一天一行,看能力链路当天是否正常;status 由「报 delivered 的能力数」判定,该列正常时送达率才有意义 ｜ One row per day showing whether the capability chain is healthy; status comes from the count of capabilities reporting delivered — the delivery rate is only meaningful when that count is normal")),
+ ]),
+ ("⑪ 风险 · Risk", [
+   ("risk_ref_photo_uploads", "合照参考照上传量 · Reference Photo Uploads", "table",
+       # 2026-10-20 新建(Metabase 卡 426)。🔴 合照功能还不存在,但用户已经在上传真人照片。
+       #   10-17 起累计 36 张在库,10-20 单日 20 张(15 人),在加速。
+       #   这张卡盯的是存量风险,不是增长 —— 产品要定先关入口还是加文案。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("uploaded","当天上传 Uploaded","int"),
+                  ("uploaded_users","上传人数 Users","int"),
+                  ("later_deleted","其中后被删 Deleted","int"),
+                  ("active_cumulative","累计仍在库 Active","int"),
+                  ("card_shown_devices","客户端·卡片展示 Shown","int"),
+                  ("add_tap_devices","客户端·点添加 Add","int"),
+                  ("set_ok_devices","客户端·设置成功 Set OK","int")],
+            bar=["active_cumulative","uploaded"],
+            note="🔴 **这张卡看的是风险不是增长**:合照算法还没做,但真人照片已经在进库。「累计仍在库」是按天滚动的存量,产品决定前应该盯着它。🛑 服务端 soulmap_user_media 是权威数,客户端三列只做补充 —— 它们在 sp_step 的 params.step 里(不是独立事件名)。🛑 firebase 是 T+1 入库,客户端三列**最后一天通常是 0**,不是没人用。｜ Risk monitor, not a growth metric: users are uploading real photos for a feature that does not exist yet.")),
+ ]),
+ ("⑫ Super Power", [
+   ("sp_memories_usage", "我们的回忆页使用 · Memories Page Usage", "table",
+       # 2026-10-20 新建(Metabase 卡 428)。Super Power 里唯一对所有角色都开的入口。
+       # 🛑 这几步不是独立事件名,是 sp_step 的 params.step 取值 —— 按事件名查会一条都查不到。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("entry_tap_devices","点入口 Entry","int"),
+                  ("open_devices","打开 Open","int"),
+                  ("loaded_devices","加载完 Loaded","int"),
+                  ("loaded_nonempty_devices","其中有内容 Non-empty","int"),
+                  ("nonempty_rate","有内容率 Non-empty %","pct1"),
+                  ("filter_devices","用了筛选 Filter","int"),
+                  ("more_tap_devices","点更多 More","int")],
+            bar=["entry_tap_devices","nonempty_rate"],
+            note="🛑 **有内容率低是正常的,不是 bug** —— 入口对所有角色显示,大部分人的回忆本来就是空的。实测 98 台用过、只有 1 台真有内容。🛑 三级**不是严格嵌套**(点入口/页面打开/数据加载完),loaded 可能多于 open(重复加载或筛选触发),**不要相除当转化率**,只看量级是否匹配。🛑 firebase 是 T+1 入库,最后一天通常偏低。｜ A low non-empty rate is expected: the entry shows for every character. The three steps are NOT a nested funnel.")),
  ]),
 ]
 

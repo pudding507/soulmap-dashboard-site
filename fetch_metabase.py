@@ -51,6 +51,7 @@ SKIP_CARDS = {
     396: "Monetize_free quota wall daily —— 已被看板 24 的 424 替代(那张用真正的 chat_wall_blocked 事件)",
     398: "Monetize_trial cohort —— 10-15 起免费试用被 0.99 替代,分母持续萎缩",
     353: "Chat_voice text ratio —— 已被看板 24 的 418 替代(那张分国家分天)",
+    341: "Activation_first msg latency —— 依赖的两个埋点从 3.1.1 起基本停发,近 30 天只剩 20 条和 6 条",
 }
 
 # 看板 24 的卡名是中文,safe_metric_id 转出来没法用。这里显式给 key。
@@ -69,6 +70,10 @@ KEY_OVERRIDE = {
     423: "invite_bonus_30msg",
     414: "voice_arm_comparison",        415: "voice_latency_miss",
     416: "voice_playback_reasons",
+    425: "paywall_triggers_side_by_side",   # 2026-10-20 新建
+    426: "risk_ref_photo_uploads",          # 2026-10-20 新建
+    427: "attribution_adjust_recon",        # 2026-10-20 新建
+    428: "sp_memories_usage",               # 2026-10-20 新建
 }
 
 HERE = Path(__file__).resolve().parent
