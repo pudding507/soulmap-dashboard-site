@@ -52,6 +52,16 @@ SKIP_CARDS = {
     398: "Monetize_trial cohort —— 10-15 起免费试用被 0.99 替代,分母持续萎缩",
     353: "Chat_voice text ratio —— 已被看板 24 的 418 替代(那张分国家分天)",
     341: "Activation_first msg latency —— 依赖的两个埋点从 3.1.1 起基本停发,近 30 天只剩 20 条和 6 条",
+    # ↓ 2026-10-21 停抓。前两张是「均值类卡」,Michael 10-21 反馈明确归为「用处不大:
+    #   均值会被长尾带偏,和人·天≥10条的聊深对不上,没有决策用途」⇒ 不值得为它们优化 60 秒的慢查询。
+    354: "Chat_AI latency —— 均值类,无决策用途;且 turn_log 近 14 天 1,163 万行,查询 60 秒超时,自 10-10 起一直沿用旧值",
+    394: "Model_provider daily —— 同上,自 10-10 起一直沿用旧值",
+    # ↓ 瓶颈是 firebase_event(1,077 万行/5.5GB)缺 (uid,event_date) 复合索引,SQL 改不动,等 DDL。
+    #   在那之前每天被抓 5 次 × 3 轮 = 15 次注定 60 秒超时的重查询,是压 Metabase 的那类负载。
+    404: "付费墙实验_分臂漏斗 —— day0 62.8s + events_day0 82s,必定超时;等 firebase_event 加 (uid,event_date) 索引后恢复",
+    # ↓ 2026-10-21 下线(用户决定)。不是性能问题,是这两张本身已经没用了。
+    344: "Module_locked tab tap —— 锁定 Tab 点击率,数据停在 10-17,且不服务「聊深·回来·不退订」",
+    370: "Chat_engaged user focus —— 投入用户数,purpose 字段来自**旧版 onboarding 表单**,已废",
 }
 
 # 看板 24 的卡名是中文,safe_metric_id 转出来没法用。这里显式给 key。
@@ -74,6 +84,9 @@ KEY_OVERRIDE = {
     426: "risk_ref_photo_uploads",          # 2026-10-20 新建
     427: "attribution_adjust_recon",        # 2026-10-20 新建
     428: "sp_memories_usage",               # 2026-10-20 新建
+    429: "intro_expiry_per_user",           # 2026-10-21 新建
+    430: "revenue_first_time_payers",       # 2026-10-21 新建
+    431: "revenue_renewals",                # 2026-10-21 新建
 }
 
 HERE = Path(__file__).resolve().parent

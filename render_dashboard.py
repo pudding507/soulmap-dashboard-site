@@ -182,6 +182,8 @@ PREFERENCE_DIMS = dict(
 # rate 卡: 加 rate=(num,den); long_dim: SQL 自带 dimension/dimension_value 列; funnel: 无参
 SECTIONS = [
 
+
+
  # ╔══════════════════════════════════════════════════════════════════════════╗
  # ║ 2026-10-19 新增六章,全部来自 Metabase 看板 24(experiment)                ║
  # ╚══════════════════════════════════════════════════════════════════════════╝
@@ -204,6 +206,29 @@ SECTIONS = [
  #   · 原「现状」区的 2 张拆散:各国新用户与深度 → 增长,语音文字占比 → 语音
  #   · 0.99 首月(3 张)并进变现 —— 0.99 是价格、付费漏斗是结果,本来就是一条链
  #   · 三 Tab(3 张)并进发现 —— Tab 是进发现页的入口,渗透率和点击连着看
+
+ # 2026-10-21 第三次调整:按 Michael 10-21 看板反馈第七条「瘦身」,
+ #   把 23 张卡移进新建的「⑬ 附录」—— **不是删卡,只是挪到后面**。
+ #   他的判据是「不服务『聊深、回来、不退订』这三件事」,具体四类:
+ #     · 日活 / DAU新老占比 / 新用户数 —— Bible 写明注册数、日活不作成功指标(被买量主导)
+ #     · 装机口径的 D1/D3/D7 —— 和「有效留存 D1」并存会有两个 D1,后者才是北极星口径
+ #     · 导航与发现页 —— 做界面时有用,不服务上面三件事
+ #     · 均值类(轮数/时长/消息长度/人均消息/AI首条时延)—— 均值被长尾带偏,和「人·天≥10条」对不上
+ #   另外两张按他的意见也挪了:投入用户数(purpose 来自旧版 onboarding 表单)、
+ #   深度新用户数(还在用「≥5 轮」,其余卡已改成按句数)。
+ # 🛑 发现页只留两张在前面:角色表现榜 + 角色 QCD与回访 —— 他把后者列进「最有用」前三。
+ #   原「⑥ 发现与导航」因此改名为「⑥ 角色」。
+
+ # 2026-10-21 第四次调整:把 5 张从附录拿回前面。
+ #   原因:Michael 反馈第七条点名的四类里,有两类的理由只对部分卡成立 ——
+ #   · **日活 / DAU新老占比 / 新用户数**:Bible 说它们不作**成功指标**是对的,
+ #     但它们是**分母**。10-21 查有效 D1 下滑,正是靠「注册账号从 240 涨到 436」
+ #     才定位到是分母在动;他自己也用新用户数做过分析。**不当 KPI ≠ 不用看。**
+ #   · **留存 D3 / D7**:「和有效留存 D1 并存会有两个 D1」只对 **D1** 成立 ——
+ #     有效留存卡**没有 D3、D7**,移走就没有任何三日/七日留存了。
+ #   ⇒ 附录只留 18 张,全部是「实在没用」的:渲染失败 1 张(角色卡漏斗分场景 error:'0')、
+ #     字段已废 1 张(投入用户数的 purpose 来自旧版 onboarding 表单)、
+ #     口径不一致 1 张(深度新用户仍用「≥5 轮」)、均值类 5 张、导航 3 张、发现页 7 张。
  ("① 增长 · Growth", [
    ("snapshot_country_depth", "各国新用户与聊天深度 · New Users & Depth by Country", "table",
        dict(top=25,
@@ -262,11 +287,7 @@ SECTIONS = [
                     ("retention_d1_rate","D1 留存率 Rate","pct0")],
               bar=["new_users","first_message_rate"],
               note="各广告组新增设备的首日行为与次日留存,按日倒序;分母 = 该广告组当天新设备数 \uff5c Day-0 behaviour and D1 retention by ad group, newest first; denominator = that group\u2019s new devices that day")),
-     ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
-       note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
-       rollup={"country": 20},
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
-   ("growth_meta_daily_qcd_by_creative", "Meta 素材全链路 · 按装机日 · Meta Full Funnel by Install Date", "table",
+   ("growth_meta_daily_qcd_by_creative", "Meta 素材全链路 · 按装机日明细 · Meta Funnel by Install Date", "table",
        # 2026-09-14 随 SQL 改版:列结构与 growth_meta_funnel_by_creative 对齐,只是多一个 date 维度。
        #   两张卡变成「明细 / 汇总」的关系:本卡按装机日拆,那张按素材汇总,口径完全一致。
        #   唯一例外是本卡有 HAVING installs >= 10,所以按 date 求和会略小于汇总表。
@@ -288,7 +309,7 @@ SECTIONS = [
                   ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1")],
             bar=["installs","qcd_rate"],
             note="上一张卡的按装机日明细，列与口径相同，滤掉装机<10 的素材-日。按天拆分母更小，读比率前先看装机列。「发起购买」走埋点、滞后 1–2 天。｜ Per-install-date detail of the card above; same definitions. Started is telemetry, lagged 1–2 days.")),
-   ("growth_meta_funnel_by_creative", "Meta 素材全链路 · Meta Full Funnel by Creative", "table",
+   ("growth_meta_funnel_by_creative", "Meta 素材全链路 · 按素材汇总 · Meta Funnel by Creative", "table",
        # 2026-09-07 随 SQL 重构:删掉「看过角色卡」与两个相关率列 —— 曝光埋点只覆盖部分 tab
        #   (foryou/new_this_week/try_different 曝光恒为 0,而这三个占点击 79.5%),拿它当漏斗
        #   第一级会出现「点击比看卡多 2.7 倍」。漏斗只留严格嵌套三级,目录那条路降为并列列。
@@ -346,14 +367,8 @@ SECTIONS = [
        dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
    # 2026-09-08 下线「新版 Onboarding Anchor 分布」(activation_onboarding_from_2.5.0)。
    #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_onboarding from 2.5.0.sql
-   ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (avg s)", "line", dict(
-            note="每会话首次 composer 回复的耗时,每用户取最早一次再平均;不含前置组件,是真实等待的下限 ｜ Avg time for composer to generate the first reply; excludes upstream components, so a lower bound",val="avg_secs", agg="avg",
-       dims=[("overall","Overall",None)])),
  ]),
  ("③ 留存 · Retention", [
-   ("retention_d1", "留存 D1 · Retention D1", "long_dim",
-       dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
-            note="次日开App的设备 ÷ 装机当天的新设备;回访=session_start ｜ Devices reopening on day 1 \u00f7 new devices that installed that day; return = session_start")),
    ("retention_d1_effective", "有效留存 D1 · Effective Retention D1", "long_dim",
        dict(rate=("messaged_users","new_users"), **RETENTION_DIMS,
             note="次日发过消息的账号 ÷ 当天注册的账号;只算用户自己发言,打开App不算 \uff5c Accounts that sent a message on day 1 \u00f7 accounts registered that day; user messages only, reopening alone doesn\u2019t count")),
@@ -401,7 +416,7 @@ SECTIONS = [
                   ("client_opened","点开 Opened","int")],
             bar=["attempts","no_token_rate"],
             note="🛑 左边七列是**服务端**口径(次数),右边两列是**客户端**口径(设备去重),两边不同源、而且发出与收到会跨日 —— **不要相除**,只做量级对照。🛑 最大的瓶颈是「没 token」常年 64~88%,和「无效 token」(10-19 达 49%)是同一问题的两面。🛑 20261011 客户端埋点整天空白,那天的 0 是 ETL 缺口不是业务为 0。｜ Left = server-side counts, right = client-side devices; different sources and they cross days. Do not divide across."))
-   ]),
+ ]),
  ("④ 对话 · Chat", [
    ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
                   ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note="A = 真实 realistic，B = 幻想 fictional。按「进过哪类角色的聊天页」分组，每台设备只进一组、四行可相加；全库 16.2% 的用户两类都用过，故混用组单列。分母用客户端埋点（chat_entry_shown，2026-09-04 上线，本卡实际起点为该日）——服务端只在用户开口后才落库，拿不到「进了但没开口」的人。6句/20句 = 全历史累计全部用户消息、不限 host，与撞墙卡、护栏卡、Meta 素材卡同口径。试用/付费靠「进过哪类聊天页」反推（订阅表无角色维度），个位数、不配比率；没进过聊天页的订阅用户不在任何一行，故两列合计小于付费漏斗卡，是预期不是漏数。「未知类型」多来自会话列表入口（老用户回访），深度天然偏高，不要与前三行并列比较。｜ A = realistic, B = fictional. Grouped by which type's chat page was entered; rows are additive. Trial/paid are inferred and single-digit.")),
@@ -418,35 +433,11 @@ SECTIONS = [
                  "linked back to an instrumented device (~23%), not that the country is unknown.",
             rollup={"country": 20},
             dims=[("overall","Overall",None),("country","by country","country")])),
-   ("chat_engaged_user_focus", "投入用户数 · Engaged Users", "line",
-       dict(val="users",
-            note="当天发≥5条消息的用户(含老用户);purpose 来自旧版 onboarding 表单,新版用 anchor ｜ Users sending ≥5 messages that day; purpose comes from the old onboarding form, the new one uses anchors",
-            dims=[("overall","Overall",None),
-                  ("user_type","by user type","user_type"),
-                  ("source","by source","source"),("adgroup","by source×adgroup",_ADG),
-                  ("purpose","by purpose (old form)","purpose")])),
    ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
        note="开了会话但一条没发的会话 ÷ 全部会话 ｜ Sessions opened with no message sent ÷ all sessions",
        rollup={"country": 20},
        dims=[("overall","Overall",None),("path","by path","path"),("country","by country","country")])),
    # —— 参与深度 · Engagement depth ——
-   ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
-       note="当天开始的每场会话的轮数,取平均(1问1答=1轮) ｜ Avg turns per session started that day (1 exchange = 1 turn)", dims=[("overall","Overall",None)])),
-   ("chat_daily_msgs_per_user", "当天人均消息数 · Daily Msgs per User", "rate",
-       dict(rate=("messages","users"), pct=False, fmt="d1",
-            note="当天用户发出的消息数 ÷ 当天发过消息的用户数(不含AI回复) ｜ User messages that day ÷ users who sent at least one (AI replies excluded)",
-            dims=[("overall","Overall",None)])),
-   ("chat_session_duration", "对话时长 · Session Duration (avg min)", "line", dict(val="duration_min", agg="avg",
-       note="当天开始的每场会话首末消息间隔,取平均(仅含 2 条以上消息的会话) ｜ Avg minutes from a session's first to last message, for sessions with 2+ messages",
-       dims=[("overall","Overall",None)])),
-   # —— 交互形态 · Interaction form ——
-   ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(
-            note="用户每条文字消息的字符数取平均 ｜ Avg characters per user text message",val="char_len", agg="avg",
-       dims=[("overall","Overall",None)])),
-   ("chat_ai_latency", "AI 响应时延 · AI Reply Latency (avg s)", "rate",
-       dict(rate=("latency_sec_total","turns"), pct=False, fmt="d1",
-            note="每一轮 AI 生成回复的耗时,取平均(llm_response 组件) ｜ Avg time for the AI to generate a reply, per turn (llm_response)",
-            dims=[("overall","Overall",None)])),
    ("chat_qcd_v1_daily", "QCD 日度 · Quality Conversations per Day", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", min_vol=0,
             dimorder=["overall","host_type"],
@@ -510,48 +501,7 @@ SECTIONS = [
             bar=["events"],
             note="🛑 两组各自成一块,组内占比的分母是本组 —— 不要跨组相加或相除,也不要画成饼图。｜ The two groups have different denominators; do not combine them.")),
  ]),
- ("⑥ 发现与导航 · Discover & Navigation", [
-   ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
-       dict(rate=("tab_users","active_users"), fmt="pct0",
-                        note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
-   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate", dict( note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
-   ("module_locked_tab_tap", "锁定 Tab 点击率 · Locked-Tab Tap Rate", "rate", dict(rate=("users","active_users"), note="点击未解锁 Tab 的用户 ÷ 当天DAU ｜ Users tapping a locked tab ÷ that day's DAU", dims=[("overall","Overall",None),("tab_name","by tab","tab_name")])),
-   ("discover_search_usage", "搜索使用与结果质量 · Search Usage & Result Quality", "table",
-       # 2026-09-09 新建。选表格不选折线:13 个指标折线放不下,而零结果率需要精确读数
-       #   (40.0% 与 52.0% 的差别要看得出);且日均仅 33–467 次搜索、6–70 用户,折线噪声大。
-       #   表格按 date 倒序 —— 纵向扫一列看趋势,横向扫一行看当天横截面,两种读法都在。
-       # 不写 sort = 保持 SQL 的 ORDER BY date DESC(行序有含义)。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("discover_users","发现页用户 Discover","int"),
-                  ("search_users","搜索用户 Searchers","int"),
-                  ("search_penetration_rate","搜索渗透率 Penetration","pct1"),
-                  ("search_count","搜索次数 Searches","int"),
-                  ("searches_per_user","人均次数 per User","d1"),
-                  ("distinct_query_count","不同 query Distinct","int"),
-                  ("repeat_search_rate","重复搜索率 Repeat","pct1"),
-                  ("zero_result_count","零结果 Zero","int"),
-                  ("zero_result_rate","零结果率 Zero %","pct1"),
-                  ("narrow_result_count","1-20 结果","int"),
-                  ("broad_result_count","21-399 结果","int"),
-                  ("near_full_result_count","400+ 结果","int")],
-            bar=["search_penetration_rate","zero_result_rate"],
-            note="搜索框只在发现页里，所以渗透率的分母是当天打开过发现页的人，不是 DAU。零结果率四成以上：分子是 resultCount=0 的搜索次数，分母是当天全部搜索次数。「400+ 结果」不等于全量（角色库 865），只是筛得很宽。本卡不提供搜索→点击转化：catalogue_search 没有 slate_id，点击事件也区分不出是搜来的还是逛来的。这条通道批量上传，最后 1–2 天必然偏低，不要拿来做对比；数据下限 2026-09-02。 ｜ Penetration denominator is users who opened Discover that day, not DAU. Zero-result rate is above 40%. No search-to-tap conversion available. The last 1-2 days are always low (batched upload).")),
-   ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
-            note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
-   ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
-            note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10 ｜ Daily taps ÷ impressions per character in the catalogue, top 10 by cumulative taps"
-                 "曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
-                 "Daily taps ÷ impressions per character, top 10 by cumulative taps (<20 dropped)")),
-   ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
-            note="角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
-   ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
-       dict(val="characters", cap=4,
-            note="每天被曝光 / 被点击过的角色个数(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
-            dims=[("metric","","metric")])),
+ ("⑥ 角色 · Characters", [
    ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
        dict(top=20, sort="ctr",
             # host_id 排最后:它最长、也最不常看,放前面会把关键列挤出可视区
@@ -562,12 +512,6 @@ SECTIONS = [
                   ("deep_rate","曝光→深聊 Impr→Deep","pct1"), ("host_key","host_id","text")],
             bar=["ctr","chat_rate","deep_rate"],
             note="近30天累计,每个角色一行,仅列曝光≥50 的角色;曝光按(用户×角色×日)去重 ｜ Last 30 days, one row per character, characters with ≥50 impressions only; impressions deduped per user × character × day")),
-   ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
-            note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
-       dims=[("overall","Overall",None),("destination","by destination","destination")])),
-   ("discover_preference_distribution", "用户偏好分布 · Preference Distribution", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct0", **PREFERENCE_DIMS,
-            note="用户在 Preferences 面板设置的偏好占比,分母 = 当天成功写入 profile 的用户数;主题为多选,各线之和大于 100% ｜ Preferences set in the Preferences panel, over users whose profile was written that day; themes are multi-select so the lines sum to over 100%")),
    ("discover_character_qcd_and_retention", "角色 QCD 与回访 · Character QCD & Return", "table",
        dict(top=20, sort="chatted_users",
             cols=[("character","角色 Character","text"),
@@ -598,6 +542,57 @@ SECTIONS = [
                   ("failed","发送失败 Failed","int")],
             bar=["intro_should_send"],
             note="🛑「差」不是 0 就是漏发或双算,要查。实测 18 天全部对平。🛑「实发」只数 status='SENT';跳过和失败单独成列——它们是真的没发出去,算进实发会让对账永远是平的。🛑 **第三路(RevenueCat 后台的 Meta 集成)要去 Events Manager 对,看板里放不进来**,所以本卡对平不等于 Meta 侧没有双算。｜ Gap≠0 means missing or double-sent. The third path (RC's own Meta integration) is not visible here.")),
+   ("revenue_first_time_payers", "每天新首付 · First-Time Payers", "table",
+       # 2026-10-21 新建(Metabase 卡 430)。与「每天续费」成对,按 pay_seq 互斥切分。
+       # 🛑 **不能按事件名判新首付**:实测 29 次 RENEWAL 其实是免费试用到期的**首次**扣款,
+       #   对用户是新首付。按名字归类会少算 29 人、少算 83% 的钱。
+       # 🛑 判「真的扣到钱」用 price_usd > 0 —— INITIAL_PURCHASE+TRIAL(415 次)是开免费试用,一分没扣。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("country","国家 Country","text"),
+                  ("acquisition","来源 Source","text"),
+                  ("first_payers","新首付人数 First Payers","int"),
+                  ("intro_099","其中 0.99 Intro","int"),
+                  ("trial_to_full","其中 试用转全价 Trial→Full","int"),
+                  ("direct_full","其中 直接全价 Direct","int"),
+                  ("revenue_usd","收入 USD","d1"),
+                  ("revenue_099_usd","其中 0.99 收入","d1"),
+                  ("revenue_full_usd","其中 全价收入","d1")],
+            bar=["first_payers","revenue_usd"],
+            note="🛑「新首付」= 该用户**按时间排序的第 1 笔** price_usd>0 的扣款,**不看事件名**。实测 29 次 RENEWAL 是免费试用到期的首次扣款,对用户就是新首付。🛑 三类的单价差 14 倍(0.99 均价 0.71 USD vs 全价 10.22),**读人数必须连着收入一起看** —— 印度 13 个 0.99 只有 6.76 USD,美国 1 个全价就 12.99。🛑 和「每天续费」卡按 pay_seq 互斥,相加=总收入。｜ First payment per user by time order, not by event type.")),
+   ("revenue_renewals", "每天续费 · Renewals", "table",
+       # 2026-10-21 新建(Metabase 卡 431)。pay_seq >= 2,与新首付卡互斥。
+       # 🛑 当前为空是结论不是故障:全库 105 人付过钱,**没有任何人扣过第二次**。
+       #   0.99 最早 10-22 到期,试用转全价那 29 人下个周期也没到。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("country","国家 Country","text"),
+                  ("acquisition","来源 Source","text"),
+                  ("pay_seq","第几次扣款 Pay #","int"),
+                  ("renewals","续费笔数 Renewals","int"),
+                  ("revenue_usd","收入 USD","d1"),
+                  ("days_since_prev","距上一笔(天) Days","d1")],
+            bar=["renewals","revenue_usd"],
+            note="🛑 **当前为空是结论,不是取数坏了** —— 实测全库 105 人付过钱、没有一个人扣过第二次(0.99 最早 10-22 才到期)。从 10-22 起才会有行。🛑「续费」= 同一人**第 2 笔及以后**的扣款,**不能按 event_type='RENEWAL' 判** —— 那 29 次 RENEWAL 全是试用到期的首次扣款,已归新首付卡。🛑「距上一笔」能分开两种周期:0.99 实测 6.82 天、全价是一个月。｜ Empty by fact, not by bug: nobody has been charged a second time yet.")),
+   ("intro_expiry_per_user", "0.99 到期逐人结果 · Intro Expiry Per-User", "table",
+       # 2026-10-21 新建(Metabase 卡 429)。对应 Michael 10-21 反馈 P0 第一条(W43 ③ / D-335)。
+       # 🛑 到期取 MAX(expiration_at),**不能算「首购 + 7 天」** —— 实测周期均值 6.82 天、最长 6.96,
+       #   而且扣款失败时商店会发 SUBSCRIPTION_EXTENDED 把到期往后推,每次推一天。
+       # 🛑「关了自动续费」看最新状态:实测有人 CANCELLATION 之后又 UNCANCELLATION 恢复了。
+       dict(top=100,
+            cols=[("expire_date","到期日 Expire Date","text"),
+                  ("expire_at_sgt","到期时刻(SGT)","text"),
+                  ("purchased_at_sgt","首购时刻(SGT)","text"),
+                  ("user_id","用户 User","text"),
+                  ("country","国家 Country","text"),
+                  ("creative","素材 Creative","text"),
+                  ("network","渠道 Network","text"),
+                  ("price_local","本地价 Price","text"),
+                  ("outcome","结果 Outcome","text"),
+                  ("canceled_at_sgt","关续费时刻 Canceled At","text"),
+                  ("cancel_reason","原因 Reason","text"),
+                  ("was_extended","被推迟过 Extended","int")],
+            note="🛑 结果按**终态优先级**判:扣全价成功 > 扣款失败已失效 > 退订后到期失效 > 扣款失败重试中 > 已关自动续费待到期 > 首期内。🛑 到期取 MAX(expiration_at),不是「首购+7天」—— 周期实测 6.82 天均值,且扣款失败时商店会把到期往后推(was_extended 那列)。🛑 「关了自动续费」看最新状态,有人取消后又恢复过。🛑 判 0.99 只能用 period_type='INTRO',product_id 写的是 monthly 但实际周期不到 7 天。｜ Outcome is resolved by terminal state. Expiry uses MAX(expiration_at), never purchase+7d.")),
    ("intro_by_client_version", "首购按客户端版本 · Intro Purchase by Client Version", "table",
        dict(cols=[("client_version","客户端版本 Version","text"),
                   ("intro_buyers","买 0.99 Intro Buyers","int"),
@@ -725,17 +720,6 @@ SECTIONS = [
                   ("pending_recheck","待复查 Pending","int")],
             bar=["trials"],
             note="🛑「开过订阅」含两种人:买 0.99(trials_intro)和开免费 7 天试用(trials_free7),已拆成两列。退订也有两种:试用期内取消(canceled)、退订后走到期末失效(canceled_after_expiry),两者不要相加当「退订」读。｜ Trials mix intro-paid and free-7-day; cancellation has two distinct shapes.")),
-   ("paywall_arm_funnel", "分臂漏斗 · Paywall Arm Funnel", "table",
-       dict(top=40,
-            cols=[("country_group","国家组 Country Group","text"),
-                  ("step","环节 Step","text"),
-                  ("arm_a_wall_on_launch_users","A 启动墙 A: Wall on Launch","int"),
-                  ("arm_a_pct","A %","d1"),
-                  ("arm_b_wall_after_msgs_users","B 消息后墙 B: After Msgs","int"),
-                  ("arm_b_pct","B %","d1"),
-                  ("arm_c_launch_then_5msgs_users","C 启动+5条 C: Launch+5","int"),
-                  ("arm_c_pct","C %","d1")],
-            note="🛑 B 臂这一列覆盖率低(分臂表对 B 臂的写入条件和其它臂不同),B 的绝对数会偏小,不要拿 A/B 的数直接相比。三臂各自的百分比以本臂第一级为分母。｜ Arm B is under-covered by the assignment table; do not compare arms on absolute counts.")),
    ("paywall_tpc_by_country", "试用付费取消 · 按国家 · Trial-Paid-Cancel by Country", "table",
        dict(top=25,
             cols=[("country","国家 Country","text"),
@@ -891,25 +875,6 @@ SECTIONS = [
             note="🛑 逐条明细,看 is_real 和 invitee_env 两列筛掉沙盒数据再数。｜ Row-level grants; filter sandbox rows via is_real / invitee_env before counting.")),
  ]),
  ("⑩ 后端 · Backend", [
-   ("model_provider_daily", "模型调用与供应商 · Model & Provider Daily", "table",
-       # 2026-09-09 新建,为日报「模型与成本」一节供数。
-       #   模型维度当前退化(近7天只有 qwen/qwen3-235b-a22b-2507 一个),故按供应商拆。
-       #   不写 sort = 保持 SQL 的 ORDER BY date DESC。
-       dict(top=14,
-            cols=[("date","日期 Date","text"),
-                  ("llm_calls","调用数 Calls","int"),
-                  ("sessions","会话数 Sessions","int"),
-                  ("avg_duration_ms","均耗时 ms","int"),
-                  ("slow_call_rate",">10s 占比 Slow","pct1"),
-                  ("share_novita","Novita","pct1"),
-                  ("share_gmicloud","GMICloud","pct1"),
-                  ("share_other","其他 Other","pct1"),
-                  ("share_no_provider","无标记 None","pct1"),
-                  ("tier_rows","降级率分母 Tier","int"),
-                  ("degraded_calls","降级数 Degraded","int"),
-                  ("degraded_rate","降级率 Deg %","pct1")],
-            bar=["llm_calls","degraded_rate"],
-            note="降级率的分母是「有 replyTier 的行」(tier_rows),不是调用数 —— model 那组键只覆盖约 66% 的 llm_response,缓冲路径、B-RP 驾驶、即时首句与 Haiku/Gemini 降级层都不在白名单,缺 model 的行是混合桶、降级恰恰藏在里面,拿它当分母等于先把降级筛掉。replyTier 2026-09-03 13:26 SGT 才上线,之前 tier_rows=0 是字段没上线、不是没有降级。模型维度当前退化(只有一个模型),故按供应商拆;新供应商落进「其他」不会消失。Token 与成本全库都没有(push_attempt_log.tokens_* 是推送设备 token,与 LLM 无关) ｜ Degraded-rate denominator is rows having replyTier, NOT total calls. replyTier only went live 2026-09-03 13:26 SGT. No token or cost data exists anywhere in the DB")),
    ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
        dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY surfaced_7d DESC
             cols=[("capability","能力 Capability","text"),
@@ -972,6 +937,77 @@ SECTIONS = [
                   ("more_tap_devices","点更多 More","int")],
             bar=["entry_tap_devices","nonempty_rate"],
             note="🛑 **有内容率低是正常的,不是 bug** —— 入口对所有角色显示,大部分人的回忆本来就是空的。实测 98 台用过、只有 1 台真有内容。🛑 三级**不是严格嵌套**(点入口/页面打开/数据加载完),loaded 可能多于 open(重复加载或筛选触发),**不要相除当转化率**,只看量级是否匹配。🛑 firebase 是 T+1 入库,最后一天通常偏低。｜ A low non-empty rate is expected: the entry shows for every character. The three steps are NOT a nested funnel.")),
+ ]),
+ ("⑬ 附录 · Appendix", [
+   ("retention_d1", "留存 D1 · Retention D1", "long_dim",
+       dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
+            note="次日开App的设备 ÷ 装机当天的新设备;回访=session_start ｜ Devices reopening on day 1 \u00f7 new devices that installed that day; return = session_start")),
+     ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
+       note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
+       rollup={"country": 20},
+       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
+   ("module_tab_penetration", "三 Tab 渗透率 · Three-Tab Penetration", "rate",
+       dict(rate=("tab_users","active_users"), fmt="pct0",
+                        note="访问过该 Tab 的人 ÷ 当天DAU ｜ Users who opened each tab ÷ that day's DAU", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
+   ("module_tab_opens_per_user", "人均 Tab 打开次数 · Tab Opens per User", "rate", dict( note="该 Tab 打开次数 ÷ 当天DAU ｜ Tab opens ÷ that day's DAU",rate=("tab_opens","active_users"), pct=False, fmt="d1", order=["Chat","Discover","Me"], dims=[("tab","","tab")])),
+   ("discover_search_usage", "搜索使用与结果质量 · Search Usage & Result Quality", "table",
+       # 2026-09-09 新建。选表格不选折线:13 个指标折线放不下,而零结果率需要精确读数
+       #   (40.0% 与 52.0% 的差别要看得出);且日均仅 33–467 次搜索、6–70 用户,折线噪声大。
+       #   表格按 date 倒序 —— 纵向扫一列看趋势,横向扫一行看当天横截面,两种读法都在。
+       # 不写 sort = 保持 SQL 的 ORDER BY date DESC(行序有含义)。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("discover_users","发现页用户 Discover","int"),
+                  ("search_users","搜索用户 Searchers","int"),
+                  ("search_penetration_rate","搜索渗透率 Penetration","pct1"),
+                  ("search_count","搜索次数 Searches","int"),
+                  ("searches_per_user","人均次数 per User","d1"),
+                  ("distinct_query_count","不同 query Distinct","int"),
+                  ("repeat_search_rate","重复搜索率 Repeat","pct1"),
+                  ("zero_result_count","零结果 Zero","int"),
+                  ("zero_result_rate","零结果率 Zero %","pct1"),
+                  ("narrow_result_count","1-20 结果","int"),
+                  ("broad_result_count","21-399 结果","int"),
+                  ("near_full_result_count","400+ 结果","int")],
+            bar=["search_penetration_rate","zero_result_rate"],
+            note="搜索框只在发现页里，所以渗透率的分母是当天打开过发现页的人，不是 DAU。零结果率四成以上：分子是 resultCount=0 的搜索次数，分母是当天全部搜索次数。「400+ 结果」不等于全量（角色库 865），只是筛得很宽。本卡不提供搜索→点击转化：catalogue_search 没有 slate_id，点击事件也区分不出是搜来的还是逛来的。这条通道批量上传，最后 1–2 天必然偏低，不要拿来做对比；数据下限 2026-09-02。 ｜ Penetration denominator is users who opened Discover that day, not DAU. Zero-result rate is above 40%. No search-to-tap conversion available. The last 1-2 days are always low (batched upload).")),
+   ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
+            note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
+   ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
+            note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10 ｜ Daily taps ÷ impressions per character in the catalogue, top 10 by cumulative taps"
+                 "曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
+                 "Daily taps ÷ impressions per character, top 10 by cumulative taps (<20 dropped)")),
+   ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
+            note="角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
+   ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
+       dict(val="characters", cap=4,
+            note="每天被曝光 / 被点击过的角色个数(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
+            dims=[("metric","","metric")])),
+   ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
+            note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
+       dims=[("overall","Overall",None),("destination","by destination","destination")])),
+   ("discover_preference_distribution", "用户偏好分布 · Preference Distribution", "long_dim",
+       dict(rate=("numerator","denominator"), fmt="pct0", **PREFERENCE_DIMS,
+            note="用户在 Preferences 面板设置的偏好占比,分母 = 当天成功写入 profile 的用户数;主题为多选,各线之和大于 100% ｜ Preferences set in the Preferences panel, over users whose profile was written that day; themes are multi-select so the lines sum to over 100%")),
+   ("chat_turns_distribution", "每场对话轮数 · Turns per Session (avg)", "line", dict(val="turn_count", agg="avg",
+       note="当天开始的每场会话的轮数,取平均(1问1答=1轮) ｜ Avg turns per session started that day (1 exchange = 1 turn)", dims=[("overall","Overall",None)])),
+   ("chat_daily_msgs_per_user", "当天人均消息数 · Daily Msgs per User", "rate",
+       dict(rate=("messages","users"), pct=False, fmt="d1",
+            note="当天用户发出的消息数 ÷ 当天发过消息的用户数(不含AI回复) ｜ User messages that day ÷ users who sent at least one (AI replies excluded)",
+            dims=[("overall","Overall",None)])),
+   ("chat_session_duration", "对话时长 · Session Duration (avg min)", "line", dict(val="duration_min", agg="avg",
+       note="当天开始的每场会话首末消息间隔,取平均(仅含 2 条以上消息的会话) ｜ Avg minutes from a session's first to last message, for sessions with 2+ messages",
+       dims=[("overall","Overall",None)])),
+   # —— 交互形态 · Interaction form ——
+   ("chat_msg_length", "用户消息长度 · Msg Length (avg chars)", "line", dict(
+            note="用户每条文字消息的字符数取平均 ｜ Avg characters per user text message",val="char_len", agg="avg",
+       dims=[("overall","Overall",None)])),
+   ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (avg s)", "line", dict(
+            note="每会话首次 composer 回复的耗时,每用户取最早一次再平均;不含前置组件,是真实等待的下限 ｜ Avg time for composer to generate the first reply; excludes upstream components, so a lower bound",val="avg_secs", agg="avg",
+       dims=[("overall","Overall",None)])),
  ]),
 ]
 
