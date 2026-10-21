@@ -47,6 +47,10 @@ DASHBOARD_IDS = [int(x) for x in
 # 但它们还挂在 Metabase 看板 18 上。不跳过的话每轮白抓三张(其中撞墙那张要扫 firebase_event)。
 # 🛑 想重新显示,先在 render_dashboard.py 的 SECTIONS 里加回来,再从这里删掉 ——
 #    只改一边的话会静默不显示。
+# 🛑 2026-10-21:其中 353 / 396 / 398 / 344 / 370 五张**已在 Metabase 归档**,
+#    不会再出现在看板的 dashcards 里 ⇒ 这里的条目已是冗余,留着只为记录原因。
+#    另外四张(341 / 354 / 394 / 404)**没归档**,它们是「等条件恢复」的,
+#    卡头写了各自的恢复条件 —— 归档了容易忘,所以留在看板上但停抓。
 SKIP_CARDS = {
     396: "Monetize_free quota wall daily —— 已被看板 24 的 424 替代(那张用真正的 chat_wall_blocked 事件)",
     398: "Monetize_trial cohort —— 10-15 起免费试用被 0.99 替代,分母持续萎缩",
