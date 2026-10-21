@@ -1088,6 +1088,13 @@ def build_card(metrics, mid, title, kind, p):
             # 折线/漏斗表达不了的形态(行数多、每行是一个实体、多列指标并列)。
             rows = metrics.get(mid)
             if not rows: return None
+            # 🛑 2026-10-21:抓到的东西可能不是行数组 —— Metabase 出错时返回 HTTP 200 +
+            #    错误对象(dict)。原来直接 rows[0] 会抛 KeyError: 0,卡上只显示「渲染失败: 0」,
+            #    看不出到底怎么了。fetch 侧已加同样的检查,这里是第二道防线。
+            if not isinstance(rows, list) or not isinstance(rows[0], dict):
+                raise ValueError(
+                    f"抓到的不是行数组({type(rows).__name__}),很可能是 Metabase 的错误响应:"
+                    f"{str(rows)[:160]}")
             cols = p["cols"]                      # [(列名, 表头, 格式)] 顺序即显示顺序
             miss = [c for c, _l, _f in cols if c not in rows[0]]
             if miss:

@@ -171,7 +171,20 @@ def run_card_with_retry(tok: str, card_id: int, timeout=180, max_retries=4, back
     path = f"/api/card/{card_id}/query/json"
     for attempt in range(max_retries + 1):
         try:
-            return _req(path, "POST", {}, tok=tok, timeout=timeout)
+            rows = _req(path, "POST", {}, tok=tok, timeout=timeout)
+            # 🛑 2026-10-21:必须检查类型。Metabase 查询出错时会返回 **HTTP 200 + 一个错误
+            #    对象(dict)**,不是行数组 —— 例如 {"status":"failed","error":"..."}。
+            #    原来直接 return,这种响应会被当成抓取成功存进 raw_metrics.json,
+            #    到了 render 那边 `rows[0]` 就抛 KeyError: 0,卡片显示成「渲染失败」,
+            #    而且页头的「缺 N」还数不到它(因为 fetch 认为成功了)。
+            #    实测 10-21:425 四道墙并排就是这么坏的 —— SQL 本身 0.3 秒跑通。
+            if not isinstance(rows, list):
+                msg = ""
+                if isinstance(rows, dict):
+                    msg = str(rows.get("error") or rows.get("message") or rows)[:160]
+                print(f"   ⚠️ card={card_id} 返回的不是行数组({type(rows).__name__}): {msg}")
+                raise ValueError("not a row list")
+            return rows
         except E.HTTPError as ex:
             if 500 <= ex.code < 600 and attempt < max_retries:
                 s = backoff ** attempt
