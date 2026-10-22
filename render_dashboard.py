@@ -362,9 +362,17 @@ SECTIONS = [
         # 2026-09-15 随 SQL 改:轮数三级 → 累计句数五级,8 级改 9 级。
        #   绝对数会跳一次(≥3 +17.6% / ≥5 +29.5% / ≥10 +50.7%),是口径变化不是数据错。
        dict(gsort="version", note="八步按版本分组。前两步是埋点（设备级、近30天），后六步是服务端全历史累计句数（账号级），与 adgroup 卡、撞墙卡、Meta 素材卡同口径。1→2 跨源跨窗可能往上翘，2~8 步严格嵌套。小样本版本波动大，先看第一行人数。2026-09-20 删掉 onboarding 三步（3.1.1 起已从产品移除）。｜ Eight steps by app version. Steps 1-2 telemetry, 3-8 server-side cumulative messages. Onboarding steps dropped 2026-09-20.")),
-   ("activation_onboarding_dropoff", "Onboarding 流失 · Onboarding Dropoff", "line", dict(
-            note="放弃 onboarding 的人数,每人计在最后停留的那一屏 ｜ Users abandoning onboarding, counted at the last screen they reached",val="value",
-       dims=[("overall","Overall",None),("last_scene","by scene","last_scene")])),
+   # 🛑 2026-10-22 摘牌(用户决定):这里原有两张卡 ——
+   #     「Onboarding 流失 · Onboarding Dropoff」(Metabase 卡 335,原在 ② 激活)
+   #     「Silent 会话率 · Silent-Session Rate」(Metabase 卡 352,原在 ④ 对话)
+   #   处理方式:**只把 dashcard 从 Metabase 看板上摘掉,卡没有归档** ——
+   #     卡 352 原在看板 18;卡 335 在看板 18 和 24 **两个**上都有,都摘了。
+   #     两张卡仍在 collection 里,能单独打开查,只是不在任何看板上。
+   #   ⇒ 所以抓数侧**不用加 SKIP_CARDS**:fetch 是遍历看板的 dashcard,
+   #     卡不在看板上就自然不会被抓到,写进 SKIP_CARDS 反而是条死配置。
+   #   🛑 恢复的时候:先把 dashcard 加回 Metabase 看板,再把卡定义写回这里。
+   #     看板摘牌前的完整配置备份在
+   #     scratchpad/dashboard_18.bak_20261022.json 和 dashboard_24.bak_20261022.json
    # 2026-09-08 下线「新版 Onboarding Anchor 分布」(activation_onboarding_from_2.5.0)。
    #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_onboarding from 2.5.0.sql
  ]),
@@ -445,10 +453,7 @@ SECTIONS = [
                  "linked back to an instrumented device (~23%), not that the country is unknown.",
             rollup={"country": 20},
             dims=[("overall","Overall",None),("country","by country","country")])),
-   ("chat_silent_rate", "Silent 会话率 · Silent-Session Rate", "rate", dict(rate=("silent_sessions","sessions"),
-       note="开了会话但一条没发的会话 ÷ 全部会话 ｜ Sessions opened with no message sent ÷ all sessions",
-       rollup={"country": 20},
-       dims=[("overall","Overall",None),("path","by path","path"),("country","by country","country")])),
+   # 2026-10-22 摘牌:「Silent 会话率 · Silent-Session Rate」(卡 352),见 ② 激活区那条注释。
    # —— 参与深度 · Engagement depth ——
    ("chat_qcd_v1_daily", "QCD 日度 · Quality Conversations per Day", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", min_vol=0,
@@ -598,6 +603,50 @@ SECTIONS = [
             bar=["renewals","revenue_usd"],
             empty_ok=True,          # 见 table 分支:零行要照常出卡,这张卡空着本身就是结论
             note="🛑 **当前为空是结论,不是取数坏了** —— 实测全库 105 人付过钱、没有一个人扣过第二次(0.99 最早 10-22 才到期)。从 10-22 起才会有行。🛑「续费」= 同一人**第 2 笔及以后**的扣款,**不能按 event_type='RENEWAL' 判** —— 那 29 次 RENEWAL 全是试用到期的首次扣款,已归新首付卡。🛑「距上一笔」能分开两种周期:0.99 实测 6.82 天、全价是一个月。｜ Empty by fact, not by bug: nobody has been charged a second time yet.")),
+   ("india_soft_wall", "软墙转化 · India Soft Wall", "table",
+       # 2026-10-22 新建(Metabase 卡 440)。软墙已是第三大付费入口(近 3 天 378 次/225 人),
+       #   但 10-20 刚开那天 10 次曝光全被关掉。soft_wall_index 只挂在客户端 paywall_viewed 上,
+       #   所以这张卡只能走 host.firebase_event(T+1)。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("soft_wall_index","第几次弹 Which","text"),
+                  ("shown_events","曝光次数 Shown","int"),
+                  ("shown_devices","曝光设备 Devices","int"),
+                  ("dismissed","关掉 Dismissed","int"),
+                  ("dismiss_rate_pct","关掉率 %","d1"),
+                  ("sub_tapped","点订阅 Tapped","int"),
+                  ("sheet_opened","开收银台 Sheet","int"),
+                  ("completed","成交 Completed","int"),
+                  ("failed","失败 Failed","int")],
+            bar=["shown_events","dismiss_rate_pct"],
+            note="印度非会员聊到**第 10、20 条**时弹的**可关掉**的 Plus 弹窗(安卓 build≥211)。🛑 **实测近 3 天:244 次曝光 → 244 次全被关掉 → 3 人点订阅 → 3 人开收银台 → 3 人付款失败 → 成交 0**,曝光数和关掉数精确相等。🛑 **两行的曝光设备数不能相加** —— 同一天同设备可能先后撞到第 10 和第 20 条,合计要另算。🛑 下游事件**都不带 index**(3.8.0 说加了,实测仍全是 NULL),全部按「同设备、之前最近一条软墙曝光」归因。🛑 firebase **T+1**,最后一天天然缺。｜ Soft wall: 100% dismissed, zero conversions so far.")),
+   ("price_by_market", "分市场实收价 · Price by Market", "table",
+       # 2026-10-22 新建(Metabase 卡 438)。起因:当天 ABC 三档取消,全球统一
+       #   「试用 $0.99 / 月订阅 $9.99」,之前手动改过的地区价格全部清掉。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("country_code","国家 Country","text"),
+                  ("period_type","档位 Period","text"),
+                  ("currency","币种 Currency","text"),
+                  ("price_local","本币价 Local","d1"),
+                  ("price_usd","折美元 USD","d1"),
+                  ("purchases","笔数 Purchases","int")],
+            bar=["purchases"],
+            note="看**实际成交价**什么时候真的统一 —— 商店价格改动有生效延迟,配置改了不等于用户看到的价变了。实测 10-22 印度仍是 ₹49≈$0.52,没变成 $0.99。🛑 **同一天同一国家可能有两个价**(改价当天新旧并存),本卡每个价单独一行,**不取均值** —— 取均值会算出一个谁都没付过的数。🛑 判 0.99 只能看 period_type='INTRO',**不能按 product_id**(它写 monthly 但周期不到 7 天)。🛑 price_local 一般含当地税(沙特 SAR4.29 ≈ $0.99 税前 +15% VAT),所以折美元回来不会正好 0.99;**用户在商店看到的是 price_local**。｜ Actual transacted price by market; store price changes take effect with a lag.")),
+   ("paywall_free_quota_line", "免费额度线 · Free Quota Line", "table",
+       # 2026-10-22 复活(Metabase 卡 403)。原来窗口是「2026-09-25 起固定」,每天都在长,
+       #   必定超 nginx 60 秒代理超时,长期抓不到数;改成近 3 天滚动后 25.8 秒。
+       #   🛑 代价:看不到 10-15 / 10-20 这些历史切点,历史切点看 _已落地改动台账.md。
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("reason","原因 Reason","text"),
+                  ("free_total","免费额度 Free Total","int"),
+                  ("rows_n","行数 Rows","int"),
+                  ("sessions","会话 Sessions","int"),
+                  ("total_min","最小 Min","int"),
+                  ("total_avg","均值 Avg","d1"),
+                  ("total_max","最大 Max","int")],
+            note="当前免费额度线是多少、这两三天有没有变。🛑 **只回答「当前」** —— 窗口是近 3 天滚动(再长就超 60 秒网关超时),历史切点看台账。🛑 freeTotal **非空行**正常只有 20(全球)和 30(印度 A 类)两个值,**出现第三个值 = 有人改了配置**;但**空值是正常的、不算第三个值**,实测它全部且仅来自 reason='client_missing' 和 'voice_skipped' 这两条不算额度的代码路径。🛑 **配置改了和数据里旧值消失差约一天** —— freeTotal 按额度周期打戳,已发出的周期仍带旧值。🛑 这张卡数的是 total 的上下界,**不是撞墙人数**,撞墙人数看 424。｜ Current free-quota line only; 3-day rolling window.")),
    ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
        # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
        #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。
@@ -971,6 +1020,34 @@ SECTIONS = [
             note="一天一行,看能力链路当天是否正常;status 由「报 delivered 的能力数」判定,该列正常时送达率才有意义 ｜ One row per day showing whether the capability chain is healthy; status comes from the count of capabilities reporting delivered — the delivery rate is only meaningful when that count is normal")),
  ]),
  ("⑪ 风险 · Risk", [
+   ("churn_winback", "退订与挽回链路 · Churn & Win-back", "table",
+       # 2026-10-22 新建(Metabase 卡 441)。整条链都在跑但看板上一张卡都没有;
+       #   0.99 首批 10-22 到期,这条链马上从边缘变主战场。
+       #   🛑 近 30 天整段合计、**不拆天** —— 分子全是个位数,拆天每格都是 0~3 读不出。
+       dict(top=20,
+            cols=[("chain","链路 Chain","text"),
+                  ("step_no","级 Step","int"),
+                  ("step","步骤 Name","text"),
+                  ("events","次数 Events","int"),
+                  ("users","人数 Users","int")],
+            bar=["users"],
+            note="两条链:**A 扣款失败挽回**(保留期弹窗→点更新→恢复扣款)、**B 主动取消挽回**(取消弹窗→问原因→填/跳过→重新订阅/稍后→撤销取消)。🛑 **不是严格嵌套漏斗**,相邻两级不要相除 —— 实测「问原因」60 人反而多于「取消弹窗曝光」58 人(两个入口不完全重合),**只读各级绝对量,看哪级掉得最狠**。🛑 **分子<10 的级别读不出**,不排名不算比率。🛑 banner 三步是**旁路不是主链**,45 次只来自 9 个人(每次进 App 都弹),**只读 users**。🛑 「扣款失败」≠「流失」:宽限期是 0 天但账户保留期有 60 天,期间仍可能恢复。🛑 和「0.99 到期逐人结果」(429)**分母不同,不要互相相除** —— 那张看到期终态,这张看挽回动作有没有人响应。｜ Two win-back chains; counts are single digits, read absolute levels only.")),
+   ("silence_nudge_by_tier", "沉默提醒按档位与角色类型 · Silence Nudge by Ladder & Class", "table",
+       # 2026-10-22 新建(Metabase 卡 439)。起因:10-21 18:19 服务端上线、10-22 算法侧打开,
+       #   B 类沉默提醒现在能走到 3h 档。原来 B 类在 3m 被算法拒 ⇒ 计数还是 0 ⇒ 永远到不了 3h。
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("tier","档位 Tier","text"),
+                  ("char_class","角色类型 Class","text"),
+                  ("attempts","尝试 Attempts","int"),
+                  ("sent_n","实发 Sent","int"),
+                  ("sent_pct","实发率 %","d1"),
+                  ("declined_empty","拒:算法空回 Empty","int"),
+                  ("declined_quiet_hours","拒:夜间静默 Quiet","int"),
+                  ("declined_no_timezone","拒:无时区 No TZ","int"),
+                  ("declined_non200","拒:接口非200 Non-200","int")],
+            bar=["attempts","sent_pct"],
+            note="🛑 **「尝试」和「实发」必须分开看** —— 算法侧打开前 B 类的 3h 行全是 declined_empty,**不是没触发,是触发了被拒**,只看实发会以为功能没上。实测 B 类 3h 尝试数 10-20 只有 1 → **10-21 跳到 116 → 10-22 到 218**,梯子确实通了;**但 B 类 sent 近 6 天每一档都是 0,一条都没真发出去**,所以推送量并没有跟着涨。🛑 实发率天然到不了 100%(夜间静默、10% 对照组、每日上限照旧生效),它是**结构占比不是健康度**,低不等于坏。｜ Attempts vs actually-sent must be read separately.")),
    ("risk_ref_photo_uploads", "合照参考照上传量 · Reference Photo Uploads", "table",
        # 2026-10-20 新建(Metabase 卡 426)。🔴 合照功能还不存在,但用户已经在上传真人照片。
        #   10-17 起累计 36 张在库,10-20 单日 20 张(15 人),在加速。

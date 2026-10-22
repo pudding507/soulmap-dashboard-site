@@ -66,15 +66,6 @@ SKIP_CARDS = {
     # ↓ 2026-10-21 下线(用户决定)。不是性能问题,是这两张本身已经没用了。
     344: "Module_locked tab tap —— 锁定 Tab 点击率,数据停在 10-17,且不服务「聊深·回来·不退订」",
     370: "Chat_engaged user focus —— 投入用户数,purpose 字段来自**旧版 onboarding 表单**,已废",
-    # ↓ 2026-10-22 停抓,**等条件,不归档**(同 404)。瓶颈不在 SQL 里,三种写法都试过:
-    #   原版(二级索引→随机回表 28.6 万次)148.6s · 只读 data 列不解析 JSON 236.1s(88MB,0.37MB/s)
-    #   · 读列加解析一个字段 260.7s · FORCE INDEX(PRIMARY) 主键顺序扫 243.6s —— 全在 240 秒上下。
-    #   ⇒ JSON 解析只占约 25 秒,换写法没用;顺序扫和随机回表一样慢,不是访问模式的问题。
-    #   根因:soulmap_turn_log 36.8GB 数据 + 13.5GB 索引,而 innodb_buffer_pool_size 只有 1.5GB,
-    #   几乎每次回表都落盘。已写 02_跨团队沟通/服务端/173 请求扩 buffer pool + 加覆盖索引。
-    #   🛑 恢复条件:buffer pool 扩容后先原样重跑一次,够快就直接拿掉这一行;
-    #     还不够才上 173 第三节那条生成列 + idx_quota_line 覆盖索引。
-    403: "付费墙实验_免费额度线 —— 必定超时(240s 上下),SQL 层面无解;等 buffer pool 扩容或 turn_log 覆盖索引",
 }
 
 # 看板 24 的卡名是中文,safe_metric_id 转出来没法用。这里显式给 key。
@@ -106,6 +97,10 @@ KEY_OVERRIDE = {
     435: "india_intro_and_return_excl",     # 2026-10-22 新建(与 434 成对)
     436: "churn_before_after_speaking",     # 2026-10-22 新建
     437: "host_three_metrics",              # 2026-10-22 新建
+    438: "price_by_market",                  # 2026-10-22 新建(需求 ① 分市场实收价)
+    439: "silence_nudge_by_tier",            # 2026-10-22 新建(需求 ② 沉默提醒按档位)
+    440: "india_soft_wall",                  # 2026-10-22 新建(需求 ④ 软墙转化)
+    441: "churn_winback",                    # 2026-10-22 新建(需求 ⑤ 退订与挽回)
 }
 
 HERE = Path(__file__).resolve().parent
