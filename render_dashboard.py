@@ -848,17 +848,14 @@ SECTIONS = [
                   ("pct_written_back","回写率 %","d1")],
             bar=["devices","pct_written_back"],
             note="这是实验数据本身的质量卡:回写率低的版本,它的分臂结果就不可信。读上面几张分臂卡之前先看这张。｜ Data-quality guard for the experiment: low writeback = unreliable arm data for that version.")),
-   ("paywall_free_quota_line", "免费额度线 · Free Quota Line", "table",
-       dict(top=40,
-            cols=[("date","日期 Date","text"),
-                  ("reason","原因 Reason","text"),
-                  ("free_total","免费额度 Free Total","int"),
-                  ("rows_n","行数 Rows","int"),
-                  ("sessions","会话 Sessions","int"),
-                  ("total_min","最小 Min","int"),
-                  ("total_avg","均值 Avg","d1"),
-                  ("total_max","最大 Max","int")],
-            note="看免费额度线实际落在多少。🛑 这张卡数的是 total 的上下界,不是「撞墙人数」—— 撞墙人数看下面的额度墙那张(424),它用的是真正的 chat_wall_blocked 事件。｜ This shows the quota bound, NOT the number of users who hit it.")),
+   # 🛑 2026-10-22 摘牌:「免费额度线」(Metabase 卡 403)已进 fetch_metabase.py 的停抓名单,
+   #   处理方式与 404 分臂漏斗一致 —— **等条件,不是作废**,所以 Metabase 那边没归档。
+   #   原因:必定超 60 秒网关超时(三种写法都在 240 秒上下),根因是 soulmap_turn_log
+   #   36.8GB 数据 + 13.5GB 索引、而 buffer pool 只有 1.5GB,几乎每次回表都落盘,SQL 改不动。
+   #   🛑 恢复的时候:**这段注释换回原来的卡定义**,列名是
+   #     date / reason / free_total / rows_n / sessions / total_min / total_avg / total_max,
+   #     top=40,表格,卡头写明「数的是 total 的上下界,不是撞墙人数,撞墙人数看 424」。
+   #   详见 02_跨团队沟通/服务端/173_TO-Liwen-db-index-and-buffer-pool-20261022.md
    ("quota_wall_blocked_next", "撞墙与撞墙之后 · Quota Wall — Blocked & Next", "table",
        dict(top=30,
             cols=[("d","日期 Date","text"),
