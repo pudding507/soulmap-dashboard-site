@@ -91,6 +91,12 @@ KEY_OVERRIDE = {
     429: "intro_expiry_per_user",           # 2026-10-21 新建
     430: "revenue_first_time_payers",       # 2026-10-21 新建
     431: "revenue_renewals",                # 2026-10-21 新建
+    432: "retention_d1_drop_diagnosis",     # 2026-10-22 新建
+    433: "billing_sheet_success",           # 2026-10-22 新建
+    434: "india_intro_and_return",          # 2026-10-22 新建
+    435: "india_intro_and_return_excl",     # 2026-10-22 新建(与 434 成对)
+    436: "churn_before_after_speaking",     # 2026-10-22 新建
+    437: "host_three_metrics",              # 2026-10-22 新建
 }
 
 HERE = Path(__file__).resolve().parent

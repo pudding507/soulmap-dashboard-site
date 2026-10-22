@@ -369,6 +369,18 @@ SECTIONS = [
    #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_onboarding from 2.5.0.sql
  ]),
  ("③ 留存 · Retention", [
+   ("retention_d1_drop_diagnosis", "有效D1与投入率下滑定位 · D1 & Engagement Drop", "table",
+       # 2026-10-22 新建(Metabase 卡 432)。对应 Michael 10-21 反馈 P0 第三项。
+       # 🛑 分母是「当天注册的账号」(D-151),**不是装机设备** —— 10-17 起有大批设备
+       #   拿不到 uid、根本进不了 soul_map.user(见 OPPO/Realme 那条)。
+       dict(top=80,
+            cols=[("date","日期 Date","text"),("dim","维度 Dim","text"),
+                  ("dim_value","维度值 Value","text"),
+                  ("new_users","注册账号 New","int"),
+                  ("retained_d1","次日发消息 D1","int"),("d1_rate","有效D1 %","pct1"),
+                  ("engaged_5plus","首日≥5条 Engaged","int"),("engaged_rate","投入率 %","pct1")],
+            bar=["new_users","d1_rate"],
+            note="🛑 **实测结论:不是分母被异常装机撑大,也不是流量质量** —— 分子(次日发消息)从 32~34 到 22~33 基本不动,是分母从 240 涨到 436;三个付费来源各自腰斩(Facebook 8.8→4.9、AudienceNet 8.9→4.3、Instagram 14.0→10.4),而自然量只从 6.3 掉到 5.4。🛑 10-13/14 那个 13~14% 的高点是**那两天注册只有 240 人**造成的,不是真的变好。🛑 投入率门槛是 **≥5 条**,和北极星的 >3 条不是一回事。🛑 最后一天 D1 必然偏低(次日没过完)。🔴 `(查不到版本)` 那组每天 18~35 人、D1 和投入率全是 0,会把 overall 拉低。｜ Not a denominator artifact: all three paid sources halved while organic barely moved.")),
    ("retention_d1_effective", "有效留存 D1 · Effective Retention D1", "long_dim",
        dict(rate=("messaged_users","new_users"), **RETENTION_DIMS,
             note="次日发过消息的账号 ÷ 当天注册的账号;只算用户自己发言,打开App不算 \uff5c Accounts that sent a message on day 1 \u00f7 accounts registered that day; user messages only, reopening alone doesn\u2019t count")),
@@ -502,6 +514,17 @@ SECTIONS = [
             note="🛑 两组各自成一块,组内占比的分母是本组 —— 不要跨组相加或相除,也不要画成饼图。｜ The two groups have different denominators; do not combine them.")),
  ]),
  ("⑥ 角色 · Characters", [
+   ("host_three_metrics", "每个角色三个数 · Per-Host Engage/Depth/Return", "table",
+       # 2026-10-22 新建(Metabase 卡 437)。对应 Michael 10-21 反馈 P1 第 7 项(D-181/D-182)。
+       dict(top=60,
+            cols=[("host_name","角色 Host","text"),("char_class","类型 Class","text"),
+                  ("new_chatters","首次聊 New","int"),
+                  ("engaged_gt3",">3条 Engaged","int"),("engage_rate","入戏率 %","pct1"),
+                  ("deep_ge10","≥10条 Deep","int"),("deep_rate","聊深率 %","pct1"),
+                  ("heavy_ge100","≥100句 Heavy","int"),("heavy_rate","≥100句 %","pct1"),
+                  ("returned","24~48h回来 Returned","int"),("return_rate","回来率 %","pct1")],
+            bar=["new_chatters","deep_rate"],
+            note="🛑 **三个门槛都和现有卡不同,不可直接对**:入戏用 **>3 条**(北极星 D-181),而 `373 新用户投入率` 用 ≥5 条;聊深用 **≥10 条**,而 `387 角色QCD与回访` 用 QCD 6 句;回来用 **24~48 小时**窗口,而 387 按自然日。🛑 A/B 类判据是 `character_type`(realistic / fictional),**`host_type='ai_expert'` 不是 A 类**。🛑 分母是「当天**第一次**和该角色聊的人」,同一人对同一角色只进一次。🛑 不足 10 人的角色不出,避免长尾噪声。｜ All three thresholds differ from existing cards — do not cross-compare.")),
    ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
        dict(top=20, sort="ctr",
             # host_id 排最后:它最长、也最不常看,放前面会把关键列挤出可视区
@@ -573,7 +596,41 @@ SECTIONS = [
                   ("revenue_usd","收入 USD","d1"),
                   ("days_since_prev","距上一笔(天) Days","d1")],
             bar=["renewals","revenue_usd"],
+            empty_ok=True,          # 见 table 分支:零行要照常出卡,这张卡空着本身就是结论
             note="🛑 **当前为空是结论,不是取数坏了** —— 实测全库 105 人付过钱、没有一个人扣过第二次(0.99 最早 10-22 才到期)。从 10-22 起才会有行。🛑「续费」= 同一人**第 2 笔及以后**的扣款,**不能按 event_type='RENEWAL' 判** —— 那 29 次 RENEWAL 全是试用到期的首次扣款,已归新首付卡。🛑「距上一笔」能分开两种周期:0.99 实测 6.82 天、全价是一个月。｜ Empty by fact, not by bug: nobody has been charged a second time yet.")),
+   ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
+       # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
+       #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),("country","国家 Country","text"),
+                  ("opened_users","打开付款页 Opened","int"),
+                  ("succeeded_users","成功 Done","int"),("success_rate","成功率 %","pct1"),
+                  ("failed_users","失败 Failed","int"),
+                  ("user_cancel_users","其中 用户取消","int"),
+                  ("other_error_users","其中 其他错误","int"),
+                  ("cancel_share_of_fail","取消占失败 %","pct1"),
+                  ("recovered_events","自动找回 Recovered","int"),
+                  ("true_fail_events","真实失败 True Fail","int")],
+            bar=["opened_users","success_rate"],
+            note="🔴 **直接用 failed 算失败率会高估** —— 失败后自动找回(3.7.2 的 purchase_recovered)那条 purchase_failed **照发、不撤销**,所以「真实失败 = failed − recovered」。🛑 分母是**打开过付款页的人**,从付费墙到付款页之间还有一层流失,那层看「四道墙并排」。🛑 实测整体成功率 19.4%,**印度 23~39%、沙特只有 7~20%**,失败几乎全是「用户取消」。｜ Recovered purchases do NOT cancel the earlier failed event.")),
+   ("india_intro_and_return", "印度·0.99首购率与次日回来 · India Intro & Return", "table",
+       # 2026-10-22 新建(Metabase 卡 434)。与下面那张「剔除A类实验广告」成对读。
+       dict(top=60,
+            cols=[("date","注册日 Date","text"),("creative","素材 Creative","text"),
+                  ("new_users","印度广告新用户 New","int"),
+                  ("intro_buyers","买 0.99 Buyers","int"),("intro_rate","首购率 %","pct1"),
+                  ("returned_d1","次日回来 Returned","int"),("d1_rate","次日回来率 %","pct1")],
+            bar=["new_users","intro_rate"],
+            note="🛑 用**队列口径**:按注册日切人,分子是**这批人后来**买的 —— 不是「当天买家 ÷ 当天新用户」(那样分子分母不是同一批人,Michael 反馈第五节第 4 条指出过)。🛑 **「每个 0.99 成本」这张卡给不了** —— 广告花费不在生产库,只有 Meta 导出的 xlsx。｜ Cohort-based: numerator is what THIS cohort later bought.")),
+   ("india_intro_and_return_excl", "印度·同上·剔除A类实验广告 · India excl. TypeA", "table",
+       # 2026-10-22 新建(Metabase 卡 435)。与上面那张只差一个 WHERE。
+       dict(top=60,
+            cols=[("date","注册日 Date","text"),("creative","素材 Creative","text"),
+                  ("new_users","印度广告新用户 New","int"),
+                  ("intro_buyers","买 0.99 Buyers","int"),("intro_rate","首购率 %","pct1"),
+                  ("returned_d1","次日回来 Returned","int"),("d1_rate","次日回来率 %","pct1")],
+            bar=["new_users","intro_rate"],
+            note="🛑 剔除两个 TypeA 实验 campaign(`SoulMap_TypeA_Android_Board/india_20261016`)。**它们的落地链路是断的** —— 广告里的角色没出现在首页,实测开口率 45.6%/25.0% vs 印度其余 73.9%,聊≥5条 25.9%/17.5% vs 52.1%。🛑 实测当前体量下剔不剔只差 0.01 个点(那两个 campaign 在印度广告口径里只有 80 人),**等 A 类放量后这个对照才有用**。｜ Paired with the card on the left; the difference shows the impact of excluding broken-funnel test ads.")),
    ("intro_expiry_per_user", "0.99 到期逐人结果 · Intro Expiry Per-User", "table",
        # 2026-10-21 新建(Metabase 卡 429)。对应 Michael 10-21 反馈 P0 第一条(W43 ③ / D-335)。
        # 🛑 到期取 MAX(expiration_at),**不能算「首购 + 7 天」** —— 实测周期均值 6.82 天、最长 6.96,
@@ -672,6 +729,17 @@ SECTIONS = [
        #   实测这个坑有多深:按整月算英美加澳撞墙率 1.5%、南亚 8.9%;按 09-12 起算是 6.4% / 14.5%。
        # 🛑 与 monetize_full_funnel_by_version 共有五个环节,数值必须一致,改口径要同步改两张。
        dict(note="七步按国家分组，队列是 2026-09-12 起新装的设备（额度付费墙那天上线，此前装机的人碰不到它）。前五步是埋点（设备级），后两步是服务端订阅表（账号级），需经埋点里的数字 uid 桥接、覆盖约 85%，所以试用与付费两级系统性偏低约一成半。英美加澳样本只有三位数，撞墙以下每级都是个位数，只能看「差距出现在哪一段」，不能比较两地付费率。｜ Seven steps by country. Cohort installs from 2026-09-12 (paywall launch). Steps 1-5 telemetry, 6-7 server-side subscriptions bridged via numeric uid (~85% coverage, so trial/paid are understated). The UK/US/CA/AU arm is small; read where the gap appears, not the paid rates.")),
+   ("churn_before_after_speaking", "退订·讲话前还是讲话后 · Churn Before/After Speaking", "table",
+       # 2026-10-22 新建(Metabase 卡 436)。对应 Michael 10-21 反馈 P1 第 8 项(D-210)。
+       dict(top=60,
+            cols=[("unsub_date","退订日 Date","text"),("country","国家 Country","text"),
+                  ("sub_type","订阅类型 Type","text"),
+                  ("unsub_users","主动退订 Unsub","int"),
+                  ("spoke_then_churned","讲过话才退 Spoke","int"),
+                  ("churned_before_speaking","一句没说就退 Silent","int"),
+                  ("before_speaking_rate","没说话就退 %","pct1")],
+            bar=["unsub_users","before_speaking_rate"],
+            note="🛑 **分母只算主动退订**(cancel_reason='UNSUBSCRIBE',210 人),**不含扣款失败**(BILLING_ERROR,199 人)—— 两者合起来算「退订率」会把支付问题当成产品问题。扣款失败那批看 409/410。🛑 判据是消息落在 [订阅开始, 退订时刻] 之间,不是「有没有聊过天」——后者会把订阅前聊过、订阅后没碰的人误判。🛑 实测 **215 人里 37 人(17.2%)一句话没说就退了**。｜ Denominator is voluntary churn only; billing failures are a different thing.")),
    ("monetize_full_funnel_by_version", "全链路付费漏斗分版本 · Full Payment Funnel by Version", "funnel",
        # 2026-09-21 新建。补 `2_点击角色卡` 这一环 —— Discover 页到聊天页之间唯一的观测点。
        #   点击取 card_tap 且 card_type='character',**不限 sub_tab**:
@@ -1087,7 +1155,19 @@ def build_card(metrics, mid, title, kind, p):
             # 表格卡:SQL 出什么就铺什么,渲染器不做聚合。用于排行榜这类
             # 折线/漏斗表达不了的形态(行数多、每行是一个实体、多列指标并列)。
             rows = metrics.get(mid)
-            if not rows: return None
+            # 🛑 2026-10-22:`empty_ok=True` 的卡,**零行是结论不是故障**,要照常出卡
+            #   (只有表头 + 卡头注释,前端显示「0 行」)。
+            #   起因:431 每天续费 —— 全库没有一个人扣过第二次钱,这正是要让人看到的事;
+            #   按老逻辑 return None,卡直接从看板上消失,那个结论也跟着没了,
+            #   而且页头的「缺 N」会把它算成一张抓失败的卡。
+            #   不加这个开关的卡保持原样:空 = 当缺卡处理,免得真的取数坏了被静默吞掉。
+            if not rows:
+                if not p.get("empty_ok"): return None
+                base.update(kind="table", fmt=None,
+                            cols=[{"k": c, "label": l, "fmt": f, "max": None}
+                                  for c, l, f in p["cols"]],
+                            rows=[], top=p.get("top", 20))
+                return base
             # 🛑 2026-10-21:抓到的东西可能不是行数组 —— Metabase 出错时返回 HTTP 200 +
             #    错误对象(dict)。原来直接 rows[0] 会抛 KeyError: 0,卡上只显示「渲染失败: 0」,
             #    看不出到底怎么了。fetch 侧已加同样的检查,这里是第二道防线。
@@ -1339,6 +1419,13 @@ def _carry(prev_cards: dict, mid: str, prev_date: str | None):
     否则一张永久超时的卡会天天显示"昨天",永远不过期。"""
     card = prev_cards.get(mid)
     if not card: return None
+    # 🛑 2026-10-22:不沿用「上一次就渲染失败」的卡。
+    #   原来不检查 error,于是一张失败的卡会被每天捞出来重显示一遍,
+    #   错误信息一路传下去 —— 实测 425 四道墙并排的 `渲染失败: 0` 就是这么挂了两天的,
+    #   而且页头的「缺 N」数不到它(它被当成"沿用旧值"而不是"缺")。
+    #   改后:上次失败 + 这次没抓到 → 这张卡**不显示**,并计入「缺 N」。
+    #   宁可少一张,也不要显示一张带错误的僵尸卡。
+    if card.get("error") is not None: return None
     stale = card.get("stale") or prev_date
     if not stale: return None
     try:
