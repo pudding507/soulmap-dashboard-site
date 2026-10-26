@@ -362,6 +362,23 @@ SECTIONS = [
         # 2026-09-15 随 SQL 改:轮数三级 → 累计句数五级,8 级改 9 级。
        #   绝对数会跳一次(≥3 +17.6% / ≥5 +29.5% / ≥10 +50.7%),是口径变化不是数据错。
        dict(gsort="version", note="八步按版本分组。前两步是埋点（设备级、近30天），后六步是服务端全历史累计句数（账号级），与 adgroup 卡、撞墙卡、Meta 素材卡同口径。1→2 跨源跨窗可能往上翘，2~8 步严格嵌套。小样本版本波动大，先看第一行人数。2026-09-20 删掉 onboarding 三步（3.1.1 起已从产品移除）。｜ Eight steps by app version. Steps 1-2 telemetry, 3-8 server-side cumulative messages. Onboarding steps dropped 2026-09-20.")),
+   ("activation_first_day_crosstab", "新用户第一天交叉表 · First Day — Crosstab", "table",
+       # 2026-10-26 新建(Metabase 卡 442)。WW46 D-456「新用户第一天」整段重做的第一环,
+       #   Javier 牵头、Kang 配合;Kang 要据此查 3.7.0 起首屏到选角色多出的那一步(D-454)。
+       # 🛑 原稿带 Metabase 模板变量 {{date_from}}/{{date_to}},管线不传参跑不了,
+       #   上线时改成固定近 14 天滚动窗口。卡头记了这件事,别再加回模板变量。
+       dict(top=40,
+            cols=[("version","版本 Version","text"),
+                  ("source","来源 Source","text"),
+                  ("saw_launch_wall","启动墙 Launch Wall","text"),
+                  ("saw_first_msg_gate","首条消息墙 First-Msg Gate","text"),
+                  ("first_host_type","首个角色 First Host","text"),
+                  ("devices","设备数 Devices","int"),
+                  ("pick_rate","打开→选角色 %","d1"),
+                  ("d1_msg5_rate","首日≥5条 %","d1"),
+                  ("d1_return_rate","有效D1 %","d1")],
+            bar=["devices","pick_rate"],
+            note="一行 = 版本 × 来源 × 是否见过启动墙 × 是否撞过首条消息墙 × 首个角色类型,近 14 天、每格 ≥20 台才列出。🛑 **这张卡是把三件事拆开看,不是给出归因** —— 3.7.x 放量、启动墙上线、10-17 起无归因流量三件同期叠在一起(D-454)。🛑 版本取 **first_open** 那条,不取 onboarding_started(该事件近两周只剩 61 行,拿它归版本会把绝大多数设备归成「查不到」)。🛑 前两级是**埋点设备级**,后两级是**服务端账号级**,接不上账号的设备记「未达」不从分母剔除,**跨这条线不要相除**。🛑 `others` = 没有 attribution_received 的无归因设备,**不是 CityPLX**(那些用户不发 SoulMap 埋点,实测 325 个账号 0 条)。🛑 首条消息墙(first_message_gate,10-22 16:16 起)截至 10-26 只有 6 次/2 人,量小读不出,单列是因为它弹在「选了角色、还没发第一条」那个位置,放量后会搅乱这一段归因。｜ Crosstab of day-one behaviour by version x source x walls x first host type.")),
    # 🛑 2026-10-22 摘牌(用户决定):这里原有两张卡 ——
    #     「Onboarding 流失 · Onboarding Dropoff」(Metabase 卡 335,原在 ② 激活)
    #     「Silent 会话率 · Silent-Session Rate」(Metabase 卡 352,原在 ④ 对话)

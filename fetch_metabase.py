@@ -101,6 +101,7 @@ KEY_OVERRIDE = {
     439: "silence_nudge_by_tier",            # 2026-10-22 新建(需求 ② 沉默提醒按档位)
     440: "india_soft_wall",                  # 2026-10-22 新建(需求 ④ 软墙转化)
     441: "churn_winback",                    # 2026-10-22 新建(需求 ⑤ 退订与挽回)
+    442: "activation_first_day_crosstab",     # 2026-10-26 新建(WW46 D-456 新用户第一天)
 }
 
 HERE = Path(__file__).resolve().parent
