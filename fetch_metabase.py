@@ -49,8 +49,12 @@ DASHBOARD_IDS = [int(x) for x in
 #    只改一边的话会静默不显示。
 # 🛑 2026-10-21:其中 353 / 396 / 398 / 344 / 370 五张**已在 Metabase 归档**,
 #    不会再出现在看板的 dashcards 里 ⇒ 这里的条目已是冗余,留着只为记录原因。
-#    另外四张(341 / 354 / 394 / 404)**没归档**,它们是「等条件恢复」的,
-#    卡头写了各自的恢复条件 —— 归档了容易忘,所以留在看板上但停抓。
+# 🛑 2026-10-28:341 / 354 / 394 三张**已从看板 18 摘牌**(摘 dashcard,卡没归档)——
+#    它们停抓之后还挂在看板 18 上,每次打开 Metabase 看板都在那儿、还显示着旧值,
+#    容易被当成当前数据读。摘牌后这三条也变成冗余配置,同样只留作记录。
+#    看板 18 摘牌前的备份:scratchpad/dashboard_18.bak_20261028.json
+#    🛑 **恢复的话:先把 dashcard 加回看板 18,再从这里删掉对应条目。**
+#    ⇒ 现在只剩 **404** 一张是「挂在看板上但停抓」的(等 firebase_event 加索引后恢复)。
 SKIP_CARDS = {
     396: "Monetize_free quota wall daily —— 已被看板 24 的 424 替代(那张用真正的 chat_wall_blocked 事件)",
     398: "Monetize_trial cohort —— 10-15 起免费试用被 0.99 替代,分母持续萎缩",
@@ -93,7 +97,7 @@ KEY_OVERRIDE = {
     431: "revenue_renewals",                # 2026-10-21 新建
     432: "retention_d1_drop_diagnosis",     # 2026-10-22 新建
     433: "billing_sheet_success",           # 2026-10-22 新建
-    434: "india_intro_and_return",          # 2026-10-22 新建
+    434: "india_intro_and_return",          # 2026-10-22 新建;🛑 10-27 已从看板 24 摘牌(保留剔除版 435),key 留着是为了加回时不用再查
     435: "india_intro_and_return_excl",     # 2026-10-22 新建(与 434 成对)
     436: "churn_before_after_speaking",     # 2026-10-22 新建
     437: "host_three_metrics",              # 2026-10-22 新建
@@ -102,6 +106,21 @@ KEY_OVERRIDE = {
     440: "india_soft_wall",                  # 2026-10-22 新建(需求 ④ 软墙转化)
     441: "churn_winback",                    # 2026-10-22 新建(需求 ⑤ 退订与挽回)
     442: "activation_first_day_crosstab",     # 2026-10-26 新建(WW46 D-456 新用户第一天)
+    443: "channel_start_success",             # 2026-10-27 新建(需求 ① AN 渠道启动)
+    444: "energy_waterfall",                  # 2026-10-27 新建(需求 ② 能量系统,壳)
+    445: "search_zero_result_by_length",      # 2026-10-27 新建(需求 ③ 搜索零结果×词长)
+    446: "search_result_relevance",           # 2026-10-27 新建(需求 ③ 配套,结果相关性)
+    447: "power_modes_entry_funnel",          # 2026-10-27 新建(需求 ④ 四种模式入口三层)
+    448: "foryou_community_share",            # 2026-10-27 新建(需求 ⑤ For You 社区角色占比)
+    # 2026-10-28 新建两张,出处:埋点需求(TO-Chris-埋点需求-全链路追踪-20261028)§7 对话质量。
+    #   §7 七条里标「System A」的,有四条库里直接能算 —— 隐私泄漏 / 兜底与空回复 /
+    #   阿语模板残留落在 449,语言错配落在 450。
+    #   🛑 拆两张不是为了多一张卡:**两张的分母不是同一个**(449 是 host 回复条数,
+    #      450 是「用户问—host 答」的配对数),口径清单 ⑥ 规定分母不同必须拆卡。
+    #   🛑 两张卡的**剔除规则完全一致**(开场白 / 主动问候 / CityPLX / 四个测试号),
+    #      改一张必须同步改另一张,否则两卡的数会悄悄不可比。
+    449: "chat_quality_daily_alerts",         # 2026-10-28 新建(埋点需求 §7 隐私/兜底/阿语)
+    450: "chat_quality_lang_mismatch",        # 2026-10-28 新建(埋点需求 §7 语言错配)
 }
 
 HERE = Path(__file__).resolve().parent
