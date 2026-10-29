@@ -611,7 +611,7 @@ SECTIONS = [
                   ("chatted","开聊 Chatted","int"),           ("chat_rate","点击→开聊 Tap→Chat","pct0"),
                   ("deep_rate","曝光→深聊 Impr→Deep","pct1"), ("host_key","host_id","text")],
             bar=["ctr","chat_rate","deep_rate"],
-            note="近30天累计,每个角色一行,仅列曝光≥50 的角色;曝光按(用户×角色×日)去重 ｜ Last 30 days, one row per character, characters with ≥50 impressions only; impressions deduped per user × character × day")),
+            note="🔴 **2026-10-29 口径变更:`foryou` 加进了曝光白名单** —— 此前白名单是 `all/everyday/fantasy`,而 **`all` 早已恒为 0**(近 21 天只有 11 次),等于只算了 `everyday`+`fantasy`,**占全部角色卡曝光的 16.4%**(10-27)。改后分母 2,236 → 12,533(5.6 倍),CTR 3.49% → 4.37%,波动由 2.26~5.07% 收窄到 4.12~4.58%,与服务端独立算出的 foryou CTR 4.58% 相互印证。🛑 **跨 10-29 不要前后对比**。🛑 `search` 有意不加(搜索带意图,与浏览不同质)。🛑 **2026-10-29 窗口由近 30 天缩到近 14 天**(与另外三张 Discover 卡一起),原因是四张卡压着 60 秒网关超时、推上去全部 504;`coverage` 实测缩窗口后 63.6s → 16.5s。🛑 **埋点侧和服务端侧一起缩** —— 本卡两个窗口都动了,只缩一个会让分子分母不同盘。⚠️ **曝光门槛仍是 ≥50 没动,实测也不需要动** —— 加 `foryou` 的 5.6 倍曝光盖过了窗口减半,过门槛的角色由 **529 增到 705**。但「窗口内出现过的角色」由 924 降到 773,那是窗口短了长尾角色没露面,**不是角色下架**,两个数方向相反别混着读。近14天累计,每个角色一行,仅列曝光≥50 的角色;曝光按(用户×角色×日)去重 ｜ Last 14 days (was 30), one row per character, characters with ≥50 impressions only; impressions deduped per user × character × day")),
    ("discover_character_qcd_and_retention", "角色 QCD 与回访 · Character QCD & Return", "table",
        dict(top=20, sort="chatted_users",
             cols=[("character","角色 Character","text"),
@@ -624,7 +624,7 @@ SECTIONS = [
                   ("first_chat_date","首次对话日 First Chat","text"),
                   ("host_key","host_id","text")],
             bar=["chatted_users","qcd_rate"],
-            note="各角色的开聊 → QCD → 回访;仅列被 ≥20 人聊过的角色 ｜ Chat → QCD → return per character; only characters chatted by 20+ people")),
+            note="🛑 **2026-10-29 聊天窗口由近 30 天缩到近 14 天**,与另外四张 Discover 卡对齐(本卡不是性能问题,缩它是为了窗口一致,否则两边的角色没法比)。**代价是上榜角色由 82 个降到 41 个** —— 门槛仍是 ≥20 人聊过,窗口短了过门槛的角色就少一半,**不是角色变差,也不是角色下架**。🔴 **D7 那一列受影响更大**:它看的是首次对话后第 5~9 天是否又回来找同一角色,首次对话落在最近 9 天内的队列这个窗口还没走完、天然判为「没回来」—— 这批人占比由 9/30(**30%**)升到 9/14(**64%**)。⇒ **D7 只能用来比角色之间的相对高低(所有角色受同样影响),不能当绝对回访率读,也不能和 10-29 之前的数比。**🛑 跨 10-29 不要把本卡前后对比。各角色的开聊 → QCD → 回访;仅列被 ≥20 人聊过的角色 ｜ Chat → QCD → return per character; only characters chatted by 20+ people. Window shortened 30d → 14d on 2026-10-29.")),
  ]),
  ("⑦ 变现 · Monetization", [
    ("energy_waterfall", "能量系统瀑布表 · Energy Waterfall", "table",
@@ -1213,15 +1213,15 @@ SECTIONS = [
             note="每个子 tab 里,点击落在哪些位次档(占该 tab 当天点击的比例);只用点击侧数据,不含曝光 ｜ Where taps land in the list, per sub-tab (share of that tab's taps that day); tap-side only, no impressions")),
    ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
-            note="每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10 ｜ Daily taps ÷ impressions per character in the catalogue, top 10 by cumulative taps"
+            note="🔴 **2026-10-29 口径变更:`foryou` 加进了曝光白名单** —— 此前白名单是 `all/everyday/fantasy`,而 **`all` 早已恒为 0**(近 21 天只有 11 次),等于只算了 `everyday`+`fantasy`,**占全部角色卡曝光的 16.4%**(10-27)。改后分母 2,236 → 12,533(5.6 倍),CTR 3.49% → 4.37%,波动由 2.26~5.07% 收窄到 4.12~4.58%,与服务端独立算出的 foryou CTR 4.58% 相互印证。🛑 **跨 10-29 不要前后对比**。🛑 `search` 有意不加(搜索带意图,与浏览不同质)。每天各角色在目录里的点击 ÷ 曝光,按累计点击取 top 10 ｜ Daily taps ÷ impressions per character in the catalogue, top 10 by cumulative taps"
                  "曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛不是变差 ｜ "
                  "Daily taps ÷ impressions per character, top 10 by cumulative taps (<20 dropped)")),
    ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
-            note="角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
+            note="🔴 **2026-10-29 口径变更:`foryou` 加进了曝光白名单** —— 此前白名单是 `all/everyday/fantasy`,而 **`all` 早已恒为 0**(近 21 天只有 11 次),等于只算了 `everyday`+`fantasy`,**占全部角色卡曝光的 16.4%**(10-27)。改后分母 2,236 → 12,533(5.6 倍),CTR 3.49% → 4.37%,波动由 2.26~5.07% 收窄到 4.12~4.58%,与服务端独立算出的 foryou CTR 4.58% 相互印证。🛑 **跨 10-29 不要前后对比**。🛑 `search` 有意不加(搜索带意图,与浏览不同质)。角色卡按场景类别的三级转化:曝光→点击→开聊→深聊(≥5轮);曝光按(用户×角色×日)去重 ｜ Three-step conversion by scene category: impression → tap → chat → deep (≥5 turns); impressions deduped per user × character × day")),
    ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
        dict(val="characters", cap=4,
-            note="每天被曝光 / 被点击过的角色个数(不是用户数);目录共 445 个角色 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
+            note="🔴 **2026-10-29 口径变更:`foryou` 加进了曝光白名单** —— 此前白名单是 `all/everyday/fantasy`,而 **`all` 早已恒为 0**(近 21 天只有 11 次),等于只算了 `everyday`+`fantasy`,**占全部角色卡曝光的 16.4%**(10-27)。改后分母 2,236 → 12,533(5.6 倍),CTR 3.49% → 4.37%,波动由 2.26~5.07% 收窄到 4.12~4.58%,与服务端独立算出的 foryou CTR 4.58% 相互印证。🛑 **跨 10-29 不要前后对比**。🛑 `search` 有意不加(搜索带意图,与浏览不同质)。🛑 **2026-10-29 窗口由近 30 天缩到近 14 天**(四张 Discover 卡一起,原因见「角色表现榜」卡头)。每天被曝光 / 被点击过的角色个数(不是用户数)⚠️ 卡头写的「目录共 445 个角色」是旧数,**口径清单 ⑬ 已把「上线可见角色数」定为 764**(`enabled=1 AND discoverable=1 AND review_status='approved'`),这里待同步 ｜ Number of distinct characters impressed / tapped each day (not users); the catalogue holds 445",
             dims=[("metric","","metric")])),
    ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
             note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
