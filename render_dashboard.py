@@ -38,6 +38,33 @@ CUTOVERS = {
     "2026-10-28": "能量系统上线(14:32:20)—— 能量包 L1~L6 + 能量版 Plus 订阅,同样共用 purchase_* 事件;3.9.0 发版同日",
 }
 
+# ---------- 页头「最近改了什么」(changelog) ----------
+# 出处:02_跨团队沟通/changelog/ —— 各方每周交的改动清单,服务端(liwen)从 W44 起每周五交。
+# 🛑 这里**只挑影响读数的**,不是全量搬运。W44 服务端整理版有 33 行,这里放 10 条。
+#    全量在 `02_跨团队沟通/changelog/服务端-2026-W44.csv`,页头末尾那行指过去。
+# 🛑 **`status` 必须显示** —— README §用这份清单的三条 第 1 条:很多项是
+#    「代码在生产、开关关着」,**上线时间 ≠ 生效时间**。不显示状态会让人把没生效的当生效。
+# 🛑 和 CUTOVERS 的分工:CUTOVERS 是**给 Movers 用的读数切点表**(按日期 key,程序读);
+#    CHANGELOG 是**给人看的改动日志**(精确到分钟,含未生效项)。两者会重叠但用途不同,
+#    不要合并 —— 合了就得在「程序能用」和「人能读」之间二选一。
+# 格式:(时刻, 团队, 改了什么, 状态, 是不是读数切点)
+CHANGELOG = [
+    # 🛑 本块是**直接拼 HTML** 的(不像卡片 note 走 textContent),所以这里写 <b>/<code>,
+    #    不要写 **粗体** 和 `反引号` —— 那两种在这里会原样显示成字面字符。
+    ("10-30 11:57", "服务端", "「研究」模式从入口移除 —— <b>四种模式入口只剩三种</b>",        "已生效", True),
+    ("10-30 12:08", "服务端", "每日「试试 [角色]」推送(本地 21:00,10% 对照)",             "开关关着", False),
+    ("10-30 10:43", "服务端", "聊天中邀请用户开始四种模式(文字 + 语音)",                   "开关关着", False),
+    ("10-29 18:26", "服务端", "<code>SoulMap_TypeB_</code> 广告系列判 B 类(印度 StartPay 那几条)", "已生效", True),
+    ("10-29 18:11", "服务端", "<code>SoulMap_TypeA_</code> 广告系列判 A 类;被邀请人奖励 120 → 60",   "已生效", True),
+    ("10-29 17:01", "服务端", "免费召回改回 40(15:34–17:01 曾是 1,000,没人领到)",         "已生效", False),
+    ("10-29 15:34", "服务端", "「1 能量 = 1 条聊天」全部代码上线,<b>等切换时刻</b>",         "代码在生产·未生效", False),
+    ("10-29 12:14", "服务端", "改价:聊天 2 → 4,语音 20 / 🔊 25,免费能量全部翻倍",         "已生效", True),
+    ("10-28 18:22", "服务端", "搜索结果按角色质量重排 —— <b>全量,不留对照组</b>",           "已生效", True),
+    ("10-28 14:21", "服务端", "能量系统全球放开(此前只有印度;10-26 18:25 起印度已开)",    "已生效", True),
+    ("待定",        "服务端", "「1 能量 = 1 条聊天」切换(3.9.1 上架后第二天 04:00)",       "等配置", True),
+]
+CHANGELOG_SRC = "02_跨团队沟通/changelog/ · 服务端 W44 整理版 33 行"
+
 # ---------- 页头「今天变化最大的 5 个数」的门槛 ----------
 # 出处:埋点需求 §10 最后一行「Chris 每天在看板顶部给一张『今天变化最大的 5 个数』」。
 MOVERS_MIN_N = 30     # 两天的值都要到这个数才进榜,见 _movers() 的口径 ③
@@ -660,7 +687,7 @@ SECTIONS = [
                   ("energy_per_user","人均能量 per User","d1"),
                   ("chat_msgs_equiv","折合聊天条数 Msgs","d1")],
             bar=["energy","users"],
-            note="🔴 **聊天单价一天内改过两次**:① 2 能量/条(10-28 14:32:20 起)② **4(10-29 12:21:47 起,现在线上)** ③ 1(**待定**,切点是配置项 `energy.unit_v2_at`,由 Javier 定)。⇒ 「折合聊天条数」按**当时**的单价折算,跨段可比;**第三段一旦配上,SQL 里的 CASE 必须回去加一段**,否则第三段条数会被按 4 低估到四分之一。🛑 **这一列只对「聊天」算** —— 语音 / 🔊 / 创建角色的单价三段各不相同(30·50 → 20·25 → 5·5,创建 5/20 → 1/5),折了反而更容易误读,所以只给原始能量数。🛑 **`改价补偿` 和 `换单位` 两行不算收入也不算购买**,单独成行,不要并进「购买」。🛑 **已剔两个沙盒号**:`74377`(沙盒购买)、`74592`(沙盒订阅 —— 台账 §九十七 记的「首个能量订阅发 15,000」实为沙盒,生产一笔都没有);另剔 CityPLX 和四个测试号。🛑 **起点是 2026-10-28 14:32:20**,不是任何一个 3.9.0 提交日;影子计费 `soulmap_energy_shadow_charge`(28.5 万行)**不扣用户的钱、不是上线**,本卡不读。🔴 **真实成本**:聊天 **$0.0108/条**(含记忆、理解等后台调用,不是 $0.0076),重度用户 $0.0125;语音回复 $0.0127、语音消息 $0.0257、创建角色约 $0.08。｜ Energy in/out by day and source. Chat unit price changed twice on 10-28/10-29; the msgs column normalizes for it.")),
+            note="🔴 **聊天单价一天内改过两次**:① 2 能量/条(10-28 14:32:20 起)② **4(10-29 12:14 起,现在线上)** ③ 1(**待定**,切点是配置项 `energy.unit_v2_at`,由 Javier 定)。⇒ 「折合聊天条数」按**当时**的单价折算,跨段可比;**第三段一旦配上,SQL 里的 CASE 必须回去加一段**,否则第三段条数会被按 4 低估到四分之一。🛑 **这一列只对「聊天」算** —— 语音 / 🔊 / 创建角色的单价三段各不相同(30·50 → 20·25 → 5·5,创建 5/20 → 1/5),折了反而更容易误读,所以只给原始能量数。🛑 **`改价补偿` 和 `换单位` 两行不算收入也不算购买**,单独成行,不要并进「购买」。🛑 **已剔两个沙盒号**:`74377`(沙盒购买)、`74592`(沙盒订阅 —— 台账 §九十七 记的「首个能量订阅发 15,000」实为沙盒,生产一笔都没有);另剔 CityPLX 和四个测试号。🛑 **起点是 2026-10-28 14:32:20**,不是任何一个 3.9.0 提交日;影子计费 `soulmap_energy_shadow_charge`(28.5 万行)**不扣用户的钱、不是上线**,本卡不读。🔴 **真实成本**:聊天 **$0.0108/条**(含记忆、理解等后台调用,不是 $0.0076),重度用户 $0.0125;语音回复 $0.0127、语音消息 $0.0257、创建角色约 $0.08。｜ Energy in/out by day and source. Chat unit price changed twice on 10-28/10-29; the msgs column normalizes for it.")),
    ("energy_wallet_layers", "能量钱包三层 · Energy Wallet Layers", "table",
        # 2026-10-29 新建(Metabase 卡 452)。出处:产品玩法 §15.2。
        # 🛑 三层**不是上下级,是三种过期规则**,所以必须按层出行、不能合计成一个余额。
@@ -1118,7 +1145,7 @@ SECTIONS = [
                   ("events","次数 Events","int"),
                   ("users","人数 Users","int")],
             bar=["users"],
-            note="🔴 **2026-10-29 两条链各加了一个 ⓪ 级**,用服务端 `cancel_reason` 给出分母 —— 改之前卡里只有客户端漏斗的绝对量,读的人不知道「保留期弹窗曝光 28 人」是 28 分之几。实测近 30 天(已剔 CityPLX / 四个测试号 / 两个沙盒号):**扣款失败 `BILLING_ERROR` 265 人**、**主动退订 `UNSUBSCRIBE` 241 人**、客服与后台取消 4 人。🔴 **「退订」里扣款失败比主动退订还多**(265 vs 241),而且 **221/265 = 83% 发生在免费试用期**、0.99 一次都没有 —— 这就是下面「扣款失败≠流失」那条的量化版本。⚠️ **本卡原来的预测被实测推翻**:卡头原写「0.99 首批 10-22 到期后大部分会走到扣款失败,这条链马上变主战场」,实测到 10-29 为止 **0.99 的 35 次取消全是主动退订、扣款失败 0 次** —— 🛑 **但不要据此下结论**,宽限期已改 0 天,到期可能直接走 `EXPIRATION` 而不记 `CANCELLATION`,要判断得查 0.99 到期那批人的终态(卡 429)。🛑 **⓪ 和 ① 是两个数据源**(服务端账本 vs 客户端埋点)、**不是嵌套关系,`①÷⓪` 不是「弹窗覆盖率」** —— ⓪ 的唯一作用是给量级参照。🛑 **和客户端那个取消理由不是一回事**:`payload->>'$.reason'`(太贵 15 / 其它 5 / …,共 28 条)是**用户自己选的理由**,这里的 `cancel_reason` 是**服务端判定的类型**(510 人),两者互补,不要混用也不要相加。两条链:**A 扣款失败挽回**(保留期弹窗→点更新→恢复扣款)、**B 主动取消挽回**(取消弹窗→问原因→填/跳过→重新订阅/稍后→撤销取消)。🛑 **不是严格嵌套漏斗**,相邻两级不要相除 —— 实测「问原因」60 人反而多于「取消弹窗曝光」58 人(两个入口不完全重合),**只读各级绝对量,看哪级掉得最狠**。🛑 **分子<10 的级别读不出**,不排名不算比率。🛑 banner 三步是**旁路不是主链**,45 次只来自 9 个人(每次进 App 都弹),**只读 users**。🛑 「扣款失败」≠「流失」:宽限期是 0 天但账户保留期有 60 天,期间仍可能恢复。🛑 和「0.99 到期逐人结果」(429)**分母不同,不要互相相除** —— 那张看到期终态,这张看挽回动作有没有人响应。｜ Two win-back chains; counts are single digits, read absolute levels only.")),
+            note="🔴 **2026-10-29 两条链各加了一个 ⓪ 级**,用服务端 `cancel_reason` 给出分母 —— 改之前卡里只有客户端漏斗的绝对量,读的人不知道「保留期弹窗曝光 28 人」是 28 分之几。实测近 30 天(已剔 CityPLX / 四个测试号 / 两个沙盒号):**扣款失败 `BILLING_ERROR` 266 人**、**主动退订 `UNSUBSCRIBE` 241 人**、客服与后台取消 4 人。🔴 **「退订」里扣款失败比主动退订还多** —— 这就是下面「扣款失败≠流失」那条的量化版本。🛑🛑 **不能用取消行上的 `period_type` 判断买家类型**:0.99 首期结束后订阅转入**全价周期**,续费失败发生在那个周期 ⇒ **0.99 买家的 `BILLING_ERROR` 取消行写的是 `NORMAL` 不是 `INTRO`**(实测 42 人全部如此)。判买家类型**必须回到 `INITIAL_PURCHASE` 那一行认人**。按买家类型重拆:`BILLING_ERROR` 266 人 = 0.99 买家 **42** + 免费试用起 **211** + 认不出 13;`UNSUBSCRIBE` 241 人 = 32 + 194 + 15。**「全价直购」两栏都是 0** —— 取消全部来自免费试用和 0.99 两个入口。✅ **本卡原来的预测被实测证实**:卡头原写「0.99 首批 10-22 到期后大部分会走到扣款失败,这条链马上变主战场」—— 0.99 买家里**已到期的 85 人**终态是:扣款失败 **42 人(49%)**、主动退订 **25 人(29%)**、没有任何取消事件 18 人(21%,其中 **8 人续上了全价**)。**扣款失败确实是 0.99 到期后的第一大去向。**🛑 **⓪ 和 ① 是两个数据源**(服务端账本 vs 客户端埋点)、**不是嵌套关系,`①÷⓪` 不是「弹窗覆盖率」** —— ⓪ 的唯一作用是给量级参照。🛑 **和客户端那个取消理由不是一回事**:`payload->>'$.reason'`(太贵 15 / 其它 5 / …,共 28 条)是**用户自己选的理由**,这里的 `cancel_reason` 是**服务端判定的类型**(510 人),两者互补,不要混用也不要相加。两条链:**A 扣款失败挽回**(保留期弹窗→点更新→恢复扣款)、**B 主动取消挽回**(取消弹窗→问原因→填/跳过→重新订阅/稍后→撤销取消)。🛑 **不是严格嵌套漏斗**,相邻两级不要相除 —— 实测「问原因」60 人反而多于「取消弹窗曝光」58 人(两个入口不完全重合),**只读各级绝对量,看哪级掉得最狠**。🛑 **分子<10 的级别读不出**,不排名不算比率。🛑 banner 三步是**旁路不是主链**,45 次只来自 9 个人(每次进 App 都弹),**只读 users**。🛑 「扣款失败」≠「流失」:宽限期是 0 天但账户保留期有 60 天,期间仍可能恢复。🛑 和「0.99 到期逐人结果」(429)**分母不同,不要互相相除** —— 那张看到期终态,这张看挽回动作有没有人响应。｜ Two win-back chains; counts are single digits, read absolute levels only.")),
    ("silence_nudge_by_tier", "沉默提醒按档位与角色类型 · Silence Nudge by Ladder & Class", "table",
        # 2026-10-22 新建(Metabase 卡 439)。起因:10-21 18:19 服务端上线、10-22 算法侧打开,
        #   B 类沉默提醒现在能走到 3h 档。原来 B 类在 3m 被算法拒 ⇒ 计数还是 0 ⇒ 永远到不了 3h。
@@ -1701,6 +1728,24 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
 .mv-all-cut{font-size:11.5px;color:var(--stalefg);background:var(--stalebg);border:1px solid var(--stalebd);
   border-radius:6px;padding:5px 9px;margin:0 0 7px;line-height:1.45}
 .mv-empty{font-size:12px;color:var(--mut);padding:6px 0}
+/* ---- 最近改了什么 changelog ---- */
+.chg-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;
+  gap:4px 14px;align-items:baseline;padding:5px 0;border-top:1px solid var(--grid)}
+.chg-d{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chg-w{font-size:11px;color:var(--mut);white-space:nowrap}
+.chg-x{font-size:12.5px;color:var(--tp);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 🛑 状态不用红绿:「开关关着」不是坏事,只是还没生效。用底色区分「生效 / 没生效」即可。 */
+.chg-s{font-size:11px;white-space:nowrap;border-radius:5px;padding:1px 7px;
+  color:var(--mut);background:var(--grid)}
+.chg-s.off{color:var(--stalefg);background:var(--stalebg);border:1px solid var(--stalebd)}
+.chg-cut{color:var(--stalefg);font-weight:700;padding-right:3px}
+.chg-x code{font-size:11.5px;background:var(--grid);border-radius:4px;padding:0 4px}
+.chg-src{font-size:11px;color:var(--mut);padding:7px 0 0;line-height:1.45}
+@media (max-width:720px){
+  .chg-row{grid-template-columns:auto 1fr}
+  .chg-x{grid-column:1/-1;white-space:normal}
+  .chg-s{grid-column:1/-1;justify-self:start}
+}
 @media (max-width:720px){
   .movers{margin:10px 14px 2px}
   .mv-row{grid-template-columns:auto auto 1fr}
@@ -1910,6 +1955,26 @@ def _mvdelta(m):
     return f'{"▲" if m["delta"] > 0 else "▼"} {core} ({m["rel"] * 100:.0f}%)'
 
 
+def _changelog_html():
+    """页头「最近改了什么」。纯常量渲染,不读数据 —— 它记的是别人告诉我们的改动,
+    不是我们从库里算出来的东西,所以不该有任何查询逻辑。"""
+    head = ('<div class="mv-h">最近改了什么 · Recent Changes</div>'
+            '<div class="mv-sub">各方每周交的改动清单里<b>挑出影响读数的</b>,不是全量 '
+            '｜ <b>🛑 上线时间 ≠ 生效时间</b> —— 带「代码在生产·未生效」「开关关着」的项'
+            '现在读不出数,<b>那不是漏数</b> ｜ <b>⚑</b> = 读数切点,'
+            '跨这个时刻的前后对比要当成两段读</div>')
+    rows = []
+    for when, team, what, status, is_cut in CHANGELOG:
+        off = "" if status == "已生效" else " off"
+        cut = '<span class="chg-cut">⚑</span>' if is_cut else ''
+        rows.append(f'<div class="chg-row"><div class="chg-d">{when}</div>'
+                    f'<div class="chg-w">{team}</div>'
+                    f'<div class="chg-x">{cut}{what}</div>'
+                    f'<div class="chg-s{off}">{status}</div></div>')
+    src = f'<div class="chg-src">全量清单:{CHANGELOG_SRC}</div>'
+    return '<div class="movers">' + head + "".join(rows) + src + '</div>'
+
+
 def _movers_html(movers):
     head = ('<div class="mv-h">今天变化最大的 '
             f'{len(movers) or MOVERS_TOP} 个数 · Biggest Movers</div>'
@@ -2000,7 +2065,10 @@ def render(raw_path: Path, out_path: Path):
            # 2026-10-28:「今天变化最大的 5 个数」放在横幅之后、卡片之前 ——
            # Michael 要的是「看板顶部」,但它不能盖住上面那条新鲜度说明,
            # 因为这张榜的第一条口径(只比完整的天)正是从那条说明来的。
-           + _movers_html(_movers(metrics, meta.get("run_date"))))
+           + _movers_html(_movers(metrics, meta.get("run_date")))
+           # 2026-10-30:changelog 放在 Movers **之后** —— Movers 是「今天的数怎么变的」,
+           # changelog 是「为什么会这么变」,先看现象再看原因。
+           + _changelog_html())
     doc = f"""<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · SoulMap Dashboard</title>
 <style>{CSS}</style></head><body>{hdr}<div id="root"></div>
