@@ -123,13 +123,19 @@ KEY_OVERRIDE = {
     450: "chat_quality_lang_mismatch",        # 2026-10-28 新建(埋点需求 §7 语言错配)
     # 2026-10-29 新建四张,出处:埋点需求 §3「能量从哪来、花到哪」+ 产品玩法 §15。
     #   能量系统 2026-10-28 14:32:20 上线,此前九张 soulmap_energy_* 表除影子计费外全是 0 行。
-    #   🛑 四张共用同一套剔除:CityPLX + 四个测试号 + **两个沙盒号 74377 / 74592**。
+    #   🛑 四张共用同一套剔除:CityPLX + **9 个测试 / 沙盒号**(2026-11-02 统一,见下)。
     #   🛑 451 的 chat_msgs_equiv 按**当时**的聊天单价折算(2 → 4 → 1 三段),
-    #      第三段切点 `energy.unit_v2_at` 还没配,配上当天必须回去加一段。
+    #      🔴 2026-11-02:第三段已于 **10-30 18:43** 切换并补进 SQL。补之前切换后的
+    #      聊天流水仍按 4 折算,条数被低估到四分之一(11-01 显示 1,704.5,真值 6,818)。
     451: "energy_ledger",                     # 2026-10-29 新建(埋点需求 §3 能量流水)
     452: "energy_wallet_layers",              # 2026-10-29 新建(产品玩法 §15.2 钱包三层)
     453: "energy_winback_list",               # 2026-10-29 新建(倡议书 §四 付费流失召回)
     454: "energy_free_voice_trial",           # 2026-10-29 新建(产品玩法 §15.5 免费语音体验)
+    # 🔴 2026-11-02:内部测试 / 沙盒号名单统一为 9 个 —— 62412 / 72048 / 72382 / 72462 / 74640
+    #    (184)+ 74377 / 74592 / 71693 / 71826(康 247 自报的商店沙盒号)。
+    #    后两个在 subscription_event_log 里全是 SANDBOX,收入卡本来就排掉了;
+    #    但在 soulmap_interaction_event 里有数(含 8 次 paywall_shown),读那张表的卡必须显式剔。
+    455: "ad_register_to_paywall",            # 2026-11-02 新建(WW47 团队包 T12 广告/host 主指标)
 }
 
 HERE = Path(__file__).resolve().parent
@@ -205,12 +211,38 @@ def safe_metric_id(name: str, card_id: int | None = None) -> str:
             .replace(" ", "_").replace("-", "_").replace("/", "_"))
 
 
-def run_card_with_retry(tok: str, card_id: int, timeout=180, max_retries=4, backoff=1.6):
-    """POST /api/card/{id}/query/json,带指数退避重试(治连接抖动/5xx)。"""
+# 🔴 2026-11-03:单卡**总墙上时间**上限。
+#    起因:11-03 这一轮抓数里有 4 张卡各自卡了约 **4,228 秒**(70 分钟),
+#    把本来 12 分钟的 run 拖成 79 分钟还没跑完第一轮。
+#    根因:`urlopen(timeout=)` 是**每次 socket 读**的超时,不是整个请求的总时长 ——
+#    Metabase 慢慢往外吐字节时,每次 read 都没超过 180 秒,所以 180 秒的超时**永远不触发**,
+#    4 次重试叠起来就是一小时。网关自己 60 秒就该 504,能活过 60 秒的都是这种涓流响应。
+#    ⇒ 这里加一个真正的墙上时钟闸门:单张卡(含所有重试)最多 CARD_DEADLINE 秒,到点就跳过。
+#    合管线兜底原则:一张卡坏掉只能少一张卡,不能拖垮整条产出。
+CARD_DEADLINE = 240
+
+
+def run_card_with_retry(tok: str, card_id: int, timeout=90, max_retries=4, backoff=1.6):
+    """POST /api/card/{id}/query/json,带指数退避重试(治连接抖动/5xx)。
+
+    🔴 2026-11-03:每次尝试都丢进一个一次性线程里跑,用 `future.result(timeout=…)`
+    做硬墙上时钟超时 —— 见 CARD_DEADLINE 的说明,socket 超时治不了涓流响应。
+    线程 shutdown(wait=False),不等它自己结束,进程退出时一起收。
+    """
     path = f"/api/card/{card_id}/query/json"
+    t_start = time.time()
     for attempt in range(max_retries + 1):
+        left = CARD_DEADLINE - (time.time() - t_start)
+        if left <= 5:
+            print(f"   ⏱ card={card_id} 超过单卡总时限 {CARD_DEADLINE}s,跳过")
+            return None
         try:
-            rows = _req(path, "POST", {}, tok=tok, timeout=timeout)
+            _ex1 = ThreadPoolExecutor(max_workers=1)
+            try:
+                _fut = _ex1.submit(_req, path, "POST", {}, tok, min(timeout, left))
+                rows = _fut.result(timeout=left)
+            finally:
+                _ex1.shutdown(wait=False)
             # 🛑 2026-10-21:必须检查类型。Metabase 查询出错时会返回 **HTTP 200 + 一个错误
             #    对象(dict)**,不是行数组 —— 例如 {"status":"failed","error":"..."}。
             #    原来直接 return,这种响应会被当成抓取成功存进 raw_metrics.json,
