@@ -78,7 +78,7 @@ KEY_OVERRIDE = {
     417: "snapshot_country_depth",      418: "snapshot_voice_text_share",
     420: "intro_by_client_version",     421: "intro_by_country",
     422: "intro_rollout_coverage",
-    406: "paywall_trial_outcome_by_arm", 409: "paywall_tpc_by_country",
+    409: "paywall_tpc_by_country",   # 406 试用结局分臂 2026-11-04 归档(A/B/C 自 10-05 起只剩 C)
     410: "paywall_tpc_by_creative",     404: "paywall_arm_funnel",
     407: "paywall_writeback_by_version", 403: "paywall_free_quota_line",
     402: "paywall_arm_split_hourly",    408: "paywall_retention_by_arm",
@@ -136,6 +136,11 @@ KEY_OVERRIDE = {
     #    后两个在 subscription_event_log 里全是 SANDBOX,收入卡本来就排掉了;
     #    但在 soulmap_interaction_event 里有数(含 8 次 paywall_shown),读那张表的卡必须显式剔。
     455: "ad_register_to_paywall",            # 2026-11-02 新建(WW47 团队包 T12 广告/host 主指标)
+    # 🔴 2026-11-04 新建四张,对照《产品玩法》§15 逐条补的缺口:
+    456: "energy_legacy_migration",          # §15.7 老订阅迁移(11-05 起切,无限 → 每月 950)
+    457: "revenue_by_product",               # §6.1/§15.3 商店同时在卖 9 个商品,没卡拆得开收入
+    458: "energy_ladder_progression",        # §15.4 ② 聊天内阶梯优惠 L1→L5 的推进
+    459: "energy_arm_comparison",            # §15.6/§十一 energy_v1 两臂,此前没卡在比
 }
 
 HERE = Path(__file__).resolve().parent
