@@ -66,6 +66,7 @@ SKIP_CARDS = {
     394: "Model_provider daily —— 同上,自 10-10 起一直沿用旧值",
     # ↓ 瓶颈是 firebase_event(1,077 万行/5.5GB)缺 (uid,event_date) 复合索引,SQL 改不动,等 DDL。
     #   在那之前每天被抓 5 次 × 3 轮 = 15 次注定 60 秒超时的重查询,是压 Metabase 的那类负载。
+    #   (🔴 2026-11-05 起定时改为一天 1 次,这类负载同步降到五分之一。)
     404: "付费墙实验_分臂漏斗 —— day0 62.8s + events_day0 82s,必定超时;等 firebase_event 加 (uid,event_date) 索引后恢复",
     # ↓ 2026-10-21 下线(用户决定)。不是性能问题,是这两张本身已经没用了。
     344: "Module_locked tab tap —— 锁定 Tab 点击率,数据停在 10-17,且不服务「聊深·回来·不退订」",
