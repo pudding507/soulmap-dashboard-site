@@ -1,0 +1,9 @@
+# 抓数产物 / 本地测试文件,不进仓库
+raw_metrics.json
+raw_mock.json
+soulmap-online.html
+soulmap-online-mock.html
+preview_artifact.html
+__pycache__/
+CLAUDE.md
+.DS_Store
