@@ -143,6 +143,8 @@ KEY_OVERRIDE = {
     457: "revenue_daily_by_type",           # 每天付费四类拆分(与现用表逐日逐格对齐)
     458: "energy_ladder_progression",        # §15.4 ② 聊天内阶梯优惠 L1→L5 的推进
     459: "energy_arm_comparison",            # §15.6/§十一 energy_v1 两臂,此前没卡在比
+    # 🔴 2026-11-12 新建(需求文档 §4.4 团队包看板 5):
+    461: "legacy_unlimited_status",         # 老的不限量订阅:还在不在卖 / 过渡月开没开 / 服务成本
 }
 
 HERE = Path(__file__).resolve().parent

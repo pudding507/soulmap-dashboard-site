@@ -863,6 +863,31 @@ SECTIONS = [
                   ("wallet_remaining","钱包余额 Wallet","int")],
             note='一人一行,队列是在册且自动续费、到期日在今天之后的订阅。老订阅切换前不限量,切换后每月 950 能量,切换点是 3.9.0 上架满 7 天后的第一个续费日。首购价、试用、促销这三类没有换算规则,最该盯,0.99 的人若照常发 950 会非常划算。｜ Legacy subscribers due to switch to 950 energy/month.'
             )),
+   ("legacy_unlimited_status", "老的不限量订阅 · Legacy Unlimited — Status & Migration", "table",
+       # 2026-11-12 新建(Metabase 卡 461)。出处:需求文档 §4.4 / 团队包看板 5。
+       # 🔴 建卡当天两个结论:①「老商品新开数」目标是 0,实际每天还有 1~12 笔(最近 11-10);
+       #   ② 过渡月一个人都还没进 —— soulmap_energy_daily_plan 实际 0 行,
+       #      141 人里 migrated_at 非空的是 0,点过「Got it」的只有 1 人。
+       # 🛑 `shadow_energy` 是**能量单位不是美元**:折美元要一个「每能量多少钱」的汇率,
+       #   定稿里没给(§4.1 那个 $0.0066 是看广告送出的 coin 成本,不是服务成本)。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("new_legacy_buys","老商品新开 New (目标0)","int"),
+                  ("renewed_users","续上 Renewed","int"),
+                  ("expired_users","到期没续 Expired","int"),
+                  ("billing_issue_users","扣款失败 Billing Issue","int"),
+                  ("renew_pct","续费率 %","d1"),
+                  ("revenue_usd","收入 USD","d1"),
+                  ("entered_transition","进过渡月 Transition","int"),
+                  ("acked_notice","点过 Got it","int"),
+                  ("active_legacy_users","当天在用 Active","int"),
+                  ("hit_daily_cap_users","碰到每日额度 ≥100","int"),
+                  ("shadow_energy","影子消耗 Energy","int"),
+                  ("shadow_energy_per_user","人均影子消耗","d1")],
+            bar=["new_legacy_buys","shadow_energy"],
+            note='老的不限量订阅现在是什么状态,一行一天。老商品新开数目标是 0,不是 0 就说明商店里还买得到。进过渡月那一列现在必然是 0,服务端的过渡月计划表一行都没有,要等 3.9.5 上架约 30 天后才会有人,这个 0 不是漏数。影子消耗是按能量制算出来的服务成本,但不真的扣,单位是能量不是美元,要折美元得另外定汇率。｜ Legacy unlimited subscriptions: still on sale, transition not started.'
+            )),
    ("energy_ladder_progression", "能量阶梯推进 · Energy Offer Ladder", "table",
        # 2026-11-04 新建(Metabase 卡 458)。出处:产品玩法 §15.4 ②「聊天内阶梯优惠」。
        dict(cols=[("app_line","业务线 Line","text"),
