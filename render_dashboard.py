@@ -1939,7 +1939,8 @@ def _load_prev(out_path: Path) -> tuple[dict, str | None]:
         return {}, None
 
 
-def _carry(prev_cards: dict, mid: str, prev_date: str | None):
+def _carry(prev_cards: dict, mid: str, prev_date: str | None,
+           title: str | None = None, note: str | None = None):
     """这次没抓到 → 沿用上一次的卡。stale 记的是数据真正的日期,沿用链上不刷新,
     否则一张永久超时的卡会天天显示"昨天",永远不过期。"""
     card = prev_cards.get(mid)
@@ -1959,6 +1960,14 @@ def _carry(prev_cards: dict, mid: str, prev_date: str | None):
         return None
     if age > STALE_MAX_DAYS: return None
     out = dict(card); out["stale"] = stale
+    # 🛑 2026-11-12:只沿用数字,不沿用口径说明 —— title / note 永远跟当前代码走。
+    #   原来是整个 dict(card) 搬过来,于是一张常年超时的卡会把**它最后一次抓成功那天**
+    #   的 note 一直顶在页面上。实测 11-12 全量改写 note 之后,8 张沿用旧值的卡里
+    #   仍挂着旧的长版 note(还带着已经清掉的基建内部话),其余 77 张已是新版。
+    #   🛑 cols / steps / matrix **不换** —— 它们和沿用下来的那批数字是配套的,
+    #      换成新列会对不上数(比如新加的「业务线」列在旧数据里压根没有这一项)。
+    if title is not None: out["title"] = title
+    if note  is not None: out["note"]  = note
     return out
 
 
@@ -2131,7 +2140,10 @@ def render(raw_path: Path, out_path: Path):
         for spec in cards:
             card = build_card(metrics, *spec)
             if card is None:                       # 抓失败 / 无数据 → 沿用上一次
-                card = _carry(prev_cards, spec[0], prev_date)
+                card = _carry(prev_cards, spec[0], prev_date,
+                              title=spec[1],
+                              note=(spec[3].get("note") if len(spec) > 3
+                                    and isinstance(spec[3], dict) else None))
                 if card: carried.append(card["title"])
             if card: built.append(card)
         if built: sections.append({"title": sec, "cards": built})
