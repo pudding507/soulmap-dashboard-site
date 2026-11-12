@@ -863,6 +863,24 @@ SECTIONS = [
                   ("wallet_remaining","钱包余额 Wallet","int")],
             note='一人一行,队列是在册且自动续费、到期日在今天之后的订阅。老订阅切换前不限量,切换后每月 950 能量,切换点是 3.9.0 上架满 7 天后的第一个续费日。首购价、试用、促销这三类没有换算规则,最该盯,0.99 的人若照常发 950 会非常划算。｜ Legacy subscribers due to switch to 950 energy/month.'
             )),
+   ("energy_repeat_and_monthly", "复购与月卡 · Repeat Purchase & Monthly Card", "table",
+       # 2026-11-12 新建(Metabase 卡 462)。出处:需求文档 §4.5 / 团队包看板 4。
+       # 🛑 一张卡四块,靠 `section` 列分开 —— 三块的量纲不同(人数 / 能量 / 美元),
+       #   不要跨块相加,也不要把整表画成一张图。
+       # 🛑 ③ 的消耗是**按 lotId 精确归属到月卡那一笔**的(txn.detail 是
+       #   [{"lotId":..,"amount":..}] 数组,JSON_TABLE 拆开再 join)。
+       #   不这么做会把同期从赠送层/购买层扣的能量算进来,第 0 天会虚高到到账额本身。
+       # 🔴 月卡至今只有 6 人 8 笔:两种自动续费拼法 (:monthly / .monthly) 还是 0 行,
+       #   商品类型没切。月卡那几块现在只读绝对人数。
+       dict(top=40,
+            cols=[("section","分块 Section","text"),
+                  ("item","项 Item","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("users","人数 Users","int"),
+                  ("pct_of_buyers","占买过的人 %","d1"),
+                  ("energy","能量 Energy","int")],
+            note='一张卡四块:买过的人里第几次购买各有多少人、买的是能量包还是月卡、月卡到手之后每天花掉多少、到期有没有再买。第 2 次购买率 44.2%、第 3 次 26.7%。月卡到手是一次性 950 不是每天 80,所以第三块看的是花掉的速度,不是每天领了多少。月卡至今只有 6 个人,那几块只读绝对人数不要算比率。｜ Repeat purchase and monthly card; monthly card n=6.'
+            )),
    ("legacy_unlimited_status", "老的不限量订阅 · Legacy Unlimited — Status & Migration", "table",
        # 2026-11-12 新建(Metabase 卡 461)。出处:需求文档 §4.4 / 团队包看板 5。
        # 🔴 建卡当天两个结论:①「老商品新开数」目标是 0,实际每天还有 1~12 笔(最近 11-10);

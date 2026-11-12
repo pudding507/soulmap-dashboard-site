@@ -145,6 +145,7 @@ KEY_OVERRIDE = {
     459: "energy_arm_comparison",            # §15.6/§十一 energy_v1 两臂,此前没卡在比
     # 🔴 2026-11-12 新建(需求文档 §4.4 团队包看板 5):
     461: "legacy_unlimited_status",         # 老的不限量订阅:还在不在卖 / 过渡月开没开 / 服务成本
+    462: "energy_repeat_and_monthly",       # §4.5 复购次序 / 月卡占比 / 月卡到手后逐日消耗
 }
 
 HERE = Path(__file__).resolve().parent
