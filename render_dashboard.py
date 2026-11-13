@@ -509,7 +509,57 @@ SECTIONS = [
                   ("paywall_rate","撞墙率 % Register→Paywall","d1"),
                   ("last_reg_date","最后注册日 Last Reg","text")],
             bar=["registered","paywall_rate"],
-            note='一行 = 计费体系 × 渠道 × 国家 × 素材,只统计注册满 72 小时的人,分母不足 30 整行不出。只在同一个计费体系内横比。撞墙按 paywall_shown 判,不是能量归零。国家取 IP 地理,和账号填的国家差近一倍。｜ Register-to-paywall within a fixed 72h window.'))
+            note='一行 = 计费体系 × 渠道 × 国家 × 素材,只统计注册满 72 小时的人,分母不足 30 整行不出。只在同一个计费体系内横比。撞墙按 paywall_shown 判,不是能量归零。国家取 IP 地理,和账号填的国家差近一倍。｜ Register-to-paywall within a fixed 72h window.')),
+   ("attribution_ad_source_coverage", "广告来源覆盖率 · Attribution — Ad Source Coverage", "table",
+       # 2026-11-13 新建(Metabase 卡 463)。出处:需求文档 §4.3 / 团队包看板 8。
+       # 🛑 **分母必须按 app_line 拆**。CityPLX 在 soulmap_app_launch 里一行都没有,
+       #   它走自己的客户端;11-06 那天 CityPLX 注册 2,169 人,不拆业务线算出来就是 4.2%,
+       #   正是需求文档里写的「现值 1~4%」—— 那个数量的是「当天有多少 CityPLX 注册」,
+       #   不是归因覆盖率。SoulMap 这条线稳定在 74~82%。
+       # 🛑 **account_coverage_rate 只有 2026-11-08 以后的注册用户能读**:
+       #   soulmap_user_attribution 表 11-10 11:57 才建,往回只回填到 11-08。
+       #   11-07 及之前的低值是「这些人根本没进这张表」,不是归因崩了。
+       # 🛑 跨 2026-11-02 不可比:attr_backfilled_at 占比从 5% 跳到 23% 再到 97%,
+       #   归因基本换了一套来源。backfilled_share 这一列就是给这件事留的证据。
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("new_users","新注册 New Users","int"),
+                  ("users_with_launch_record","有启动记录 Launch Rows","int"),
+                  ("users_with_campaign","有系列 Campaign","int"),
+                  ("users_with_adgroup","有广告组 Ad Group","int"),
+                  ("users_with_creative","有素材 Creative","int"),
+                  ("launch_coverage_rate","设备口径覆盖率 %","d1"),
+                  ("backfilled_share","其中事后回填 %","d1"),
+                  ("users_in_attribution_table","进归因表 In Table","int"),
+                  ("users_with_campaign_on_account","账号有系列 On Account","int"),
+                  ("users_with_campaign_id","账号有系列 ID","int"),
+                  ("users_with_creative_id","账号有素材 ID","int"),
+                  ("account_coverage_rate","账号口径覆盖率 %","d1")],
+            bar=["new_users","launch_coverage_rate"],
+            note='每天新注册的人里有多少查得到是从哪条广告来的。两个口径对着看:设备口径走启动记录,有完整历史;账号口径是正式验收口径,但只有 11-08 以后的注册用户能读,之前的低值是没进那张表不是归因失败。分母按业务线拆,CityPLX 走自己的客户端不写启动记录,那一行的 0 不是缺口。跨 11-02 归因换了来源,覆盖率变化不能读成投放质量变化。｜ Ad attribution coverage, device vs account.')),
+   ("acceptance_ad_host_landing", "广告用户落地角色 · Ad User Lands on Ad Host", "table",
+       # 2026-11-13 新建(Metabase 卡 464)。出处:WW48 定稿 〇.8 待办 1(D-559 / D-560),
+       #   验收「落地率 49% → 80%」。
+       # 🛑 **分母只算角色系列**。投放的 campaign 有带角色的和不带的两类,不带角色的
+       #   没有「广告角色」可落,算进分母永远匹配不上,会把落地率压到 6~13%。
+       #   角色命名 2026-10-26 才开始用,之前那几天的角色系列用户数是 0。
+       # 🛑 **两个分母差约 10 个点**:landing_rate_of_spoke 只算发过第一条消息的人,
+       #   landing_rate_of_all 算全部。定稿那个 49% 没写分母,近三天 of_all 是 49.0 /
+       #   50.2 / 51.1,大概率是 of_all,但这是推断、没有出处佐证。
+       # 🛑 角色靠 campaign 下划线第 4 段解析,是启发式,投放改命名就会静默失准
+       #   ⇒ 盯 ad_users,某个角色的量突然掉就要回去核命名。
+       # 🛑 **整体数不能代表全部**:Lucien 已到 75%,Sander 只有 29%,差 46 个点。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("advertised_host","广告角色 Ad Host","text"),
+                  ("ad_users","广告新用户 Ad Users","int"),
+                  ("users_who_spoke","说过话 Spoke","int"),
+                  ("landed_on_ad_host","落到广告角色 Landed","int"),
+                  ("landing_rate_of_spoke","落地率(说过话的)%","d1"),
+                  ("landing_rate_of_all","落地率(全部)%","d1")],
+            bar=["ad_users","landing_rate_of_all"],
+            note='从角色广告进来的新用户,第一条消息是不是发给了广告里那个角色。两个分母差约十个点,说过话的那个分母小、率高,全部那个分母大、率低,引用时必须说清用的哪个。目标 80 不要只看整体,按角色差很多,最高的已经到 75,最低的还在 29。单日单角色分子常常不到十个,按角色或按周汇总了再读。｜ Do ad-sourced users message the advertised character first.'))
  ]),
  ("② 激活 · Activation", [
    ("activation_funnel_by_adgroup", "激活漏斗分广告组 · Activation Funnel by Ad Group", "funnel",
@@ -883,9 +933,18 @@ SECTIONS = [
             )),
    ("legacy_unlimited_status", "老的不限量订阅 · Legacy Unlimited — Status & Migration", "table",
        # 2026-11-12 新建(Metabase 卡 461)。出处:需求文档 §4.4 / 团队包看板 5。
-       # 🔴 建卡当天两个结论:①「老商品新开数」目标是 0,实际每天还有 1~12 笔(最近 11-10);
-       #   ② 过渡月一个人都还没进 —— soulmap_energy_daily_plan 实际 0 行,
-       #      141 人里 migrated_at 非空的是 0,点过「Got it」的只有 1 人。
+       # 🔴 ①「老商品新开数」目标是 0,实际每天还有 1~12 笔。
+       # 🔴 ② 【2026-11-13 改】**迁移已经发生,建卡当天写的「一个人都还没进」已经过期。**
+       #   当天分两批:12:07:42 九人(energy_txn.source='oldplus_multi')、
+       #   17:33:15 七十九人(source='oldplus_switch',每人 950)。
+       #   soulmap_energy_legacy 已从 141 人涨到 158 人,其中 88 人 migrated_at 非空。
+       #   🛑 **走的不是「每天 100 的过渡月」,是直接切每月 950** —— soulmap_energy_daily_plan
+       #      到现在仍是 0 行 ⇒ entered_transition 读到的是「当天切过去的人数」,
+       #      不是「当天在过渡月里的人数」。
+       #   🛑 点过「Got it」的只有 2 人 ⇒ **它不是迁移的前置条件**,建卡当天推断的
+       #      「先点 Got it、再等满 30 天后第一次续费」那条链路不成立。
+       #   🛑 hit_daily_cap_users 那一列因此暂时读不出业务含义,只当「当天影子消耗 ≥100
+       #      的人数」看,不要读成「被额度挡住的人」。
        # 🛑 `shadow_energy` 是**能量单位不是美元**:折美元要一个「每能量多少钱」的汇率,
        #   定稿里没给(§4.1 那个 $0.0066 是看广告送出的 coin 成本,不是服务成本)。
        dict(top=30,
@@ -904,7 +963,7 @@ SECTIONS = [
                   ("shadow_energy","影子消耗 Energy","int"),
                   ("shadow_energy_per_user","人均影子消耗","d1")],
             bar=["new_legacy_buys","shadow_energy"],
-            note='老的不限量订阅现在是什么状态,一行一天。老商品新开数目标是 0,不是 0 就说明商店里还买得到。进过渡月那一列现在必然是 0,服务端的过渡月计划表一行都没有,要等 3.9.5 上架约 30 天后才会有人,这个 0 不是漏数。影子消耗是按能量制算出来的服务成本,但不真的扣,单位是能量不是美元,要折美元得另外定汇率。｜ Legacy unlimited subscriptions: still on sale, transition not started.'
+            note='老的不限量订阅现在是什么状态,一行一天。老商品新开数目标是 0,不是 0 就说明商店里还买得到。迁移在 2026-11-13 当天跑完两批,名单 158 人里 88 人已经切过去,走的是直接切每月 950,不是每天 100 的过渡月,所以那一列读到的是当天切过去的人数。影子消耗是按能量制算出来的服务成本,但不真的扣,单位是能量不是美元,要折美元得另外定汇率。｜ Legacy unlimited: 88 of 158 switched on 2026-11-13.'
             )),
    ("energy_ladder_progression", "能量阶梯推进 · Energy Offer Ladder", "table",
        # 2026-11-04 新建(Metabase 卡 458)。出处:产品玩法 §15.4 ②「聊天内阶梯优惠」。
@@ -1449,6 +1508,24 @@ SECTIONS = [
                   ("more_tap_devices","点更多 More","int")],
             bar=["entry_tap_devices","nonempty_rate"],
             note='有内容率低是正常的,不是故障:入口对所有角色显示,大部分人的回忆本来就是空的。三级不是严格嵌套,加载完可能多于页面打开,不要相除当转化率,只看量级是否匹配。埋点次日入库,最后一天通常偏低。｜ A low non-empty rate is expected; the three steps are NOT a nested funnel.')),
+   ("acceptance_power_charges", "Super Power 扣费验收 · Super Power Charges", "table",
+       # 2026-11-13 新建(Metabase 卡 465)。出处:WW48 定稿 〇.8 待办 8(D-564)。
+       # 🔴 定稿要三档都扣(活动每条 2、研究 10 / 50),实测**只上了活动这一档**:
+       #   2026-11-10 14:08:56 第一笔,到 11-13 共 70 笔 / 18 人;研究两档 0 笔。
+       #   🛑 定稿 〇.8 把待办 8 写成「未开始」、第一节写「现在线上没扣」——
+       #      这两句到 11-10 14:08 就过期了,引用定稿要带上这个时点。
+       # 🛑 档位靠 ABS(amount) 认,**没有单独的「活动/研究」列**。以后两种价格要是撞到
+       #   一起(比如研究也改成 2),这张卡就分不开了,届时要让服务端加一列。
+       # 🛑 没有扣费的那一天不出行(不是补 0),量只有 18 个人,单日别单独下结论。
+       dict(top=40,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("charge_tier","档位 Tier","text"),
+                  ("charges","扣费笔数 Charges","int"),
+                  ("users","人数 Users","int"),
+                  ("energy_spent","扣掉能量 Energy","int")],
+            bar=["charges","users"],
+            note='Super Power 按档位逐日数扣费。定稿要活动每条扣 2、研究扣 10 和 50 三档,现在只有活动这一档在扣,研究两档一笔都没有,哪一档不出现就是还没上。档位靠扣费金额认,没有单独的类型列,以后两种价格撞到一起就分不开。没有扣费的日子不出行,不是补零。总共只有十八个人用过,单日的数不要单独下结论。｜ Super Power charges by tier; research tiers still zero.'))
  ]),
  ("⑬ 附录 · Appendix", [
    ("search_zero_result_by_length", "搜索零结果 × 词长 · Zero-Result by Query Length", "table",

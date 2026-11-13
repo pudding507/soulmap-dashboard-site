@@ -146,6 +146,10 @@ KEY_OVERRIDE = {
     # 🔴 2026-11-12 新建(需求文档 §4.4 团队包看板 5):
     461: "legacy_unlimited_status",         # 老的不限量订阅:还在不在卖 / 过渡月开没开 / 服务成本
     462: "energy_repeat_and_monthly",       # §4.5 复购次序 / 月卡占比 / 月卡到手后逐日消耗
+    # 🔴 2026-11-13 新建三张:
+    463: "attribution_ad_source_coverage",  # §4.3 归因覆盖率,设备口径 + D-565 账号口径对照
+    464: "acceptance_ad_host_landing",      # WW48 待办 1:广告用户第一条消息有没有发给广告里那个角色
+    465: "acceptance_power_charges",        # WW48 待办 8:Super Power 三档扣费上没上
 }
 
 HERE = Path(__file__).resolve().parent
