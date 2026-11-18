@@ -71,7 +71,7 @@ jobs:
         run: |
           python3 -W error::SyntaxWarning -c "
           import ast, sys
-          for f in ['fetch_metabase.py', 'render_dashboard.py']:
+          for f in ['fetch_metabase.py', 'render_dashboard.py', 'render_energy_ab.py']:
               src = open(f).read()
               ast.parse(src)
               compile(src, f, 'exec')
@@ -97,11 +97,32 @@ jobs:
           if [ "$n" -lt 35 ]; then echo "太少($n),跳过发布、保留上一版"; exit 1; fi
       - name: render
         run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
+      # ---- 能量定价实验页(Metabase 看板 25)----
+      # 2026-11-18 接入。它是独立的一页 site/energy-ab.html,不混进主看板的 index.html。
+      # 🛑 两步都 continue-on-error:这一页抓砸了也**不能**拖垮主看板的发布 ——
+      #    主看板已经 render 完了,下面的 push 照常推 site/index.html,
+      #    实验页保留上一版(git add -A site/ 对没变的文件是空操作)。
+      # 🛑 它走**自己的一轮 fetch**,不跟主看板共用 raw_metrics.json:
+      #    混进去会让主看板页头「今天变化最大的 5 个数」把实验卡也算进来。
+      - name: fetch energy A/B
+        continue-on-error: true
+        env:
+          METABASE_USER: ${{ secrets.METABASE_USER }}
+          METABASE_PASSWORD: ${{ secrets.METABASE_PASSWORD }}
+        run: python3 fetch_metabase.py --dashboard-ids 25 --out raw_energy_ab.json
+      - name: render energy A/B
+        continue-on-error: true
+        run: |
+          n=$(python3 -c "import json;print(len(json.load(open('raw_energy_ab.json')).get('metrics',{})))" 2>/dev/null || echo 0)
+          echo "实验页抓到 $n 张卡"
+          # 10 张里抓到不足 6 张就不渲染,保留上一版 —— 半截页面比旧页面更糟。
+          if [ "$n" -lt 6 ]; then echo "太少($n),跳过,保留上一版实验页"; exit 1; fi
+          python3 render_energy_ab.py --raw raw_energy_ab.json --out site/energy-ab.html
       - name: push
         run: |
           git config user.name  "soulmap-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add site/index.html
+          git add -A site/
           git commit -m "dashboard $(date -u +%F_%H%M)" || { echo "no change"; exit 0; }
           for i in 1 2 3; do
             git pull --rebase --autostash -X theirs origin main && git push && exit 0

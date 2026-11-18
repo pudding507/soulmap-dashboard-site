@@ -8,5 +8,4 @@ __pycache__/
 CLAUDE.md
 .DS_Store
 raw_energy_ab.json
-site/energy-ab.html
 site/energy-ab-artifact.html
