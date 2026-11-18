@@ -36,4 +36,8 @@ python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
 
 ## 加卡 / 改图
 
-只改 `render_dashboard.py` 里的 `SECTIONS` 注册表(每卡一行)。
+🛑 **动手之前先读 [`DASHBOARD_RULES.md`](DASHBOARD_RULES.md)** —— 写卡的规矩和踩过的陷阱都在那里。
+里面的东西几乎都有一个共同点:**出错的时候不报错**,卡照常显示,只是数字错了或者卡悄悄不见了。
+
+一张卡要在三个地方登记,漏一处就静默消失:
+Metabase 建卡 → `fetch_metabase.py` 的 `KEY_OVERRIDE` → `render_dashboard.py` 的 `SECTIONS`。

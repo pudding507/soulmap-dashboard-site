@@ -53,13 +53,11 @@ SECTIONS = [
                 ("messages_per_user", T("人均消息 Msgs/User", "Msgs / user"), "d1"),
                 ("energy_spent_per_user", T("人均耗能量 Energy/User", "Energy / user"), "d1")],
           bar=["users_assigned", "messages_per_user"],
-          note=T("先看两组人数差多少。50/50 分组下相差超过 5% 就是分组偏了,后面九张卡的对比都不成立。"
-                 "实验上线前所有人落在 unassigned 一行,这是空跑对账用的,不是出错。"
-                 "分母已排掉 CityPLX(VivoCity 游戏账号,近 14 天 2,659 个,全在 SG)。",
-                 "Check the headcount gap first. Under a 50/50 split, more than 5% apart means the "
-                 "assignment is skewed and none of the other nine cards can be compared. Before the "
-                 "experiment starts everyone sits in a single unassigned row — that is the dry run, not a "
-                 "fault. CityPLX accounts (2,659 in the last 14 days, all in SG) are excluded."))),
+          note=T("分母是实验开始后注册的新用户,已排掉 CityPLX 的游戏账号。先看两组人数差多少,"
+                 "50/50 分组下相差超过 5% 说明分组偏了,后面几张卡的对比都不成立。"
+                 "实验开始前所有人显示在 unassigned 一行。",
+                 "New users who signed up after the start, excluding CityPLX accounts. "
+                 "A headcount gap above 5% under a 50/50 split means the split is skewed."))),
  ]),
  (T("② 钱 · Money", "② Money"), [
    ("energy_ab_net_revenue", T("主指标:每新用户 14 天净收入 · Net Revenue per User (14d)",
@@ -71,18 +69,15 @@ SECTIONS = [
                 ("takehome_usd", T("到手 Takehome $", "Takehome $"), "d2"),
                 ("cost_usd", T("服务成本 Cost $", "Serving cost $"), "d2"),
                 ("net_usd", T("净额 Net $", "Net $"), "d2"),
-                ("net_usd_per_user_capped50", T("人均净额(封顶$50)Net/User", "Net / user (capped $50)"), "d4"),
-                ("net_usd_per_user", T("人均净额(不封顶)Uncapped", "Net / user (uncapped)"), "d4"),
+                ("net_usd_per_user_capped50", T("人均净额 封顶 Net/User capped", "Net / user (capped $50)"), "d4"),
+                ("net_usd_per_user", T("人均净额 不封顶 Net/User uncapped", "Net / user (uncapped)"), "d4"),
                 ("buyers", T("买过的人 Buyers", "Buyers"), "int")],
           bar=["users", "net_usd_per_user_capped50"],
-          note=T("判定主指标,用封顶 $50 那一列,不封顶的并列只作参考。"
-                 "🔴 14 天那一档今天是空的,不是 bug —— 成本表 11-06 中午才全部开始记,"
-                 "第一个满 14 天的完整队列要到 11-20 才出现;在那之前只有 7 天那一列能读。"
+          note=T("分母是注册满 14 天的新用户,判定用封顶 50 美元那一列。成本从 11-06 中午才记齐,"
+                 "第一个完整的 14 天队列要到 11-20 才出现,在那之前只有 7 天那一列能读。"
                  "净额不含广告花费。",
-                 "The decision metric is the $50-capped column; the uncapped one is listed for reference "
-                 "only. The 14-day row is empty today by design — cost logging only became complete at "
-                 "midday on 11-06, so the first full 14-day cohort appears on 11-20. Until then read the "
-                 "7-day column. Net excludes ad spend."))),
+                 "New users whose first 14 days are complete. The decision uses the capped column. "
+                 "Cost logging is complete only from 11-06, so read the 7-day column until 11-20."))),
    ("energy_ab_purchase", T("首购与再购 · Purchase Funnel", "Purchase funnel"), "table",
      dict(top=10,
           cols=[("arm", T("组 Arm", "Arm"), "text"),
@@ -95,13 +90,10 @@ SECTIONS = [
                 ("repeat_buyers", T("又买过 Repeat", "Repeat buyers"), "int"),
                 ("repeat_purchase_pct", T("又买比例 %", "Repeat %"), "d2")],
           bar=["buyers", "first_purchase_pct"],
-          note=T("早停规则看的就是首购率和又买比例:B 组比 A 组低 30% 以上且有 95% 把握就停。"
-                 "「买」取服务端成交记录(有金额的那一类),不取订单表 —— 订单表的金额和国家列是空的。"
-                 "「用完后买」现在分子只有 12,读不出,等量起来。",
-                 "The early-stop rule watches first-purchase and repeat-purchase rates: stop if arm B is "
-                 "more than 30% below arm A at 95% confidence. A purchase is taken from the server-side "
-                 "billing log, not the order table, whose price and country columns are empty. "
-                 "Bought-after-runout has a numerator of 12 — too small to read yet."))),
+          note=T("分母是实验期注册的新用户。买的定义是服务端有金额的成交记录,订单表的金额和国家列是空的,"
+                 "用不了。又买比例的分母是买过的人,不是全部用户。用完后买这一列分子只有 12,现在读不出。",
+                 "Denominator is new users in the experiment window. Purchases come from the "
+                 "server-side billing log. The repeat rate is over buyers, not over all users."))),
    ("energy_ab_margin_band", T("按条数分段的每条毛利 · Margin by Message Number",
                                "Margin by message number"), "table",
      dict(top=20,
@@ -115,17 +107,11 @@ SECTIONS = [
                 ("avg_energy_if_d594", T("D-594 每条能量 Energy", "Energy / msg under D-594"), "d2"),
                 ("margin_pct_if_d594", T("毛利率(D-594)%", "Margin % under D-594"), "d1")],
           bar=["messages", "margin_pct_now"],
-          note=T("这是 D-594 涨价理由的直接验证:聊得越久,每条成本越高、毛利率越低 —— "
-                 "实测从前 10 条的 39% 一路降到第 101 条以后的 4.5%。"
-                 "🛑 右边两列是静态模拟:按现在这批消息,如果改用 D-594 曲线会收多少能量。"
-                 "它假设用户行为完全不变,而涨价本来就会让人少聊,"
-                 "所以不能当成「改了就能赚这么多」,它只说明曲线本身的形状。",
-                 "This is the direct check on the case for D-594: the longer a conversation runs, the more "
-                 "each message costs and the thinner the margin — measured at 39% for the first ten "
-                 "messages, falling to 4.5% beyond message 101. The two right-hand columns are a static "
-                 "simulation of what the same messages would have been charged under the D-594 curve. It "
-                 "assumes behaviour does not change, whereas a price rise is exactly what makes people "
-                 "chat less, so read it as the shape of the curve, not as expected earnings."))),
+          note=T("一行一个条数档,分母是该档内的消息数。聊得越久每条成本越高,毛利率从前 10 条的 39% "
+                 "降到第 101 条以后的 4.5%。右边两列是静态模拟,同样这批消息按 D-594 曲线会收多少能量,"
+                 "它假设用户行为不变,而涨价本身会让人少聊,不能当成改价后的预期收入。",
+                 "One row per message band. The right-hand columns simulate the D-594 curve on the "
+                 "same messages, assuming behaviour does not change."))),
    ("energy_ab_country", T("分国家每能量到手 · Revenue per Energy by Country",
                            "Revenue per energy by country"), "table",
      dict(top=25,
@@ -139,16 +125,11 @@ SECTIONS = [
                 ("numerator_over_denominator", T("分子/分母 Numerator", "Numerator / denominator"), "text"),
                 ("net_usd", T("净额 Net $", "Net $"), "d2")],
           bar=["energy_consumed", "takehome_usd_per_energy"],
-          note=T("同样消耗 1 能量,各国贡献的钱差 2 倍以上 —— 实测印度 $0.0053、美国 $0.0031、英国 $0.0023。"
-                 "国家取注册国家,不是商店国家:订单表的商店国家列是空的,"
-                 "而成交记录里的国家只有买过的人才有,拿它当分母会把没买的人全漏掉。"
-                 "消耗不足 100 能量的国家标「读不出」。净额不含广告花费。",
-                 "The same unit of energy is worth more than twice as much in one market as another: "
-                 "$0.0053 in India, $0.0031 in the US, $0.0023 in the UK. Country is the signup country, "
-                 "not the store country — the order table's store country is empty, and the country on a "
-                 "billing record exists only for people who bought, which would drop everyone else from "
-                 "the denominator. Countries under 100 energy spent are marked unreadable. Net excludes "
-                 "ad spend."))),
+          note=T("一行一个国家,国家取注册国家不是商店国家。每能量到手等于该国到手收入除以该国消耗的能量,"
+                 "同样 1 能量印度值 0.0053 美元、美国 0.0031、英国 0.0023。消耗不足 100 能量的标读不出,"
+                 "净额不含广告花费。",
+                 "One row per signup country. Revenue per energy is that country's takehome divided by "
+                 "its energy spent. Under 100 energy spent is marked unreadable."))),
  ]),
  (T("③ 用户还聊不聊 · Do they keep chatting", "③ Do they keep chatting"), [
    ("energy_ab_engagement", T("参与度与留存 · Engagement & Retention", "Engagement & retention"), "table",
@@ -163,17 +144,11 @@ SECTIONS = [
                 ("day7_denominator", T("第7天分母 D7 Denom", "D7 denominator"), "int"),
                 ("still_messaging_day7_pct", T("第7天还在聊 %", "Still chatting on D7 %"), "d1")],
           bar=["users_total", "sent_30_plus_pct"],
-          note=T("涨价最直接的副作用是「用户少聊了」,这张卡就是看这个。"
-                 "🛑 这里的第 7 天不是主看板那张留存卡的口径,两张卡的数不要互相对:"
-                 "主看板按设备算(要和装机对齐),这里按账号算(实验是按账号分组的),"
-                 "用的是「注册后第 7 天还在发消息」。"
-                 "人均活跃天数实测只有 1.3 天,大多数新用户只来一天,第 7 天的数低是这个结构决定的。",
-                 "The most direct side effect of a price rise is that people chat less; this card watches "
-                 "that. The day-7 figure here is not the main dashboard's retention definition and the two "
-                 "should not be compared: the main dashboard counts devices to line up with installs, "
-                 "while this one counts accounts, because that is how the experiment assigns people, and "
-                 "asks whether they were still sending messages on day 7. Average active days is 1.3 — "
-                 "most new users come once, which is why the day-7 number is low."))),
+          note=T("分母是实验期注册的新用户。第 7 天这一列按账号算,口径是注册后第 7 天还在发消息,"
+                 "和主看板那张按设备算的留存卡不是一回事,两边的数不要互相对。"
+                 "人均活跃天数只有 1.3 天,多数新用户只来一天,第 7 天的数低是这个结构决定的。",
+                 "Day 7 here counts accounts still sending messages, not devices. It is a different "
+                 "definition from the main dashboard's retention card."))),
    ("energy_ab_conversation_length", T("对话长度与第30条附近换角色 · Conversation Length",
                                        "Conversation length & switching"), "table",
      dict(top=20,
@@ -183,19 +158,11 @@ SECTIONS = [
                 ("pct_of_conversations", T("占比 %", "Share %"), "d1"),
                 ("users", T("人数 Users", "Users"), "int")],
           bar=["conversations", "pct_of_conversations"],
-          note=T("D-594 从第 30 条开始涨价,而换角色会让条数从第 1 条重新数 ⇒ "
-                 "用户可能在第 30 条附近换角色避价。看 26-30 这一档有没有异常堆积。"
-                 "🔴 现在还没有任何涨价,26-30 档就已经高于两边(21-25 档 4.2%、26-30 档 5.1%、31-35 档 2.4%),"
-                 "原因几乎可以肯定是免费额度正好是 30 条(注册送 20 + 第一次用完送 10)。"
-                 "⇒ D-594 的涨价点和免费额度耗尽点落在同一条消息上,"
-                 "这张卡读出的堆积分不清是哪一件造成的,只能靠和 A 组比同一档位的占比差。",
-                 "D-594 starts raising the price at message 30, and switching character restarts the count "
-                 "at one, so people may switch around message 30 to avoid the rise. Watch the 26-30 band "
-                 "for a pile-up. Note that with no price rise in place at all, 26-30 already stands above "
-                 "both neighbours (4.2% / 5.1% / 2.4%), almost certainly because the free allowance is "
-                 "exactly 30 messages (20 at signup plus 10 at first run-out). The price step and the "
-                 "allowance running out therefore land on the same message, and this card alone cannot "
-                 "separate them — only the gap against arm A in the same band can."))),
+          note=T("一行一个档位,分母是对话数不是人数,一个人可以有多个角色对话。免费额度正好 30 条,"
+                 "所以 26 到 30 这一档本来就偏高;D-594 的涨价点也在第 30 条,两件事落在同一条消息上,"
+                 "单看一组分不清堆积是哪一件造成的,只能比两组在同一档的占比差。",
+                 "One row per final-length band; the denominator is conversations, not people. "
+                 "The free allowance and the D-594 price step both fall on message 30."))),
  ]),
  (T("④ 成本与大客户 · Cost and top users", "④ Cost and top users"), [
    ("energy_voice_per_charge", T("语音生成 ÷ 扣费 · Voice Generations per Charge",
@@ -210,19 +177,11 @@ SECTIONS = [
                 ("numerator_over_denominator", T("分子/分母 Numerator", "Numerator / denominator"), "text"),
                 ("vendor_cost_usd", T("厂商成本 Cost $", "Vendor cost $"), "d2")],
           bar=["vendor_calls", "vendor_calls_per_charge"],
-          note=T("Javier 要查的那个比值:每扣一次能量,背后约 1.7 次语音生成,多出来的那 0.7 次没扣到费。"
-                 "🔴 实测可以定位到原因:「生成时记账」和「厂商调用」两列几乎逐日完全相等"
-                 "(11-18 是 255/255、11-16 是 733/733),而「实际扣费」比它们少四成 —— "
-                 "⇒ 语音是在检查能量之前就已经生成了,能量不够的用户也触发了生成。"
-                 "🛑 只读 11-14 起的行:老 Plus 用户 11-13 17:33 才转能量,在那之前他们无限畅聊不扣费,"
-                 "分母几乎是 0,比值会高到几十上百倍。",
-                 "The ratio Javier asked about: roughly 1.7 voice generations behind every energy charge, "
-                 "with the extra 0.7 never charged for. The cause is visible here — the generation-time "
-                 "log and the vendor call count match almost exactly day by day (255/255 on 11-18, 733/733 "
-                 "on 11-16) while the actual charges run about 40% below both, which means the audio is "
-                 "generated before the energy check, so users without enough energy still trigger it. Read "
-                 "only from 11-14 onward: legacy Plus users moved onto energy at 17:33 on 11-13, and "
-                 "before that they chatted without being charged, leaving a near-zero denominator."))),
+          note=T("一行一天,分母是当天的扣费次数。生成时记账和厂商调用两列几乎逐日相等,"
+                 "而实际扣费比它们低四成,说明语音在检查能量之前就已经生成了。"
+                 "11-13 之前老 Plus 用户不扣费,分母接近 0,那几天的比值读不出。",
+                 "One row per day; the denominator is that day's charges. Generations run about 40% "
+                 "above charges, so audio is produced before the energy check."))),
    ("energy_company_margin", T("全公司逐日毛利 · Company Margin Daily", "Company margin, daily"), "table",
      dict(top=21,
           cols=[("activity_date", T("日期 Date", "Date"), "text"),
@@ -235,16 +194,10 @@ SECTIONS = [
                 ("margin_usd", T("毛利 Margin $", "Margin $"), "d2"),
                 ("margin_pct", T("毛利率 %", "Margin %"), "d1")],
           bar=["takehome_usd", "margin_usd"],
-          note=T("毛利 = 到手收入减服务成本,不含广告花费、不含人力 —— 它只回答「这些对话本身赚不赚」。"
-                 "实测 11-12 到 11-18 的七天里有六天是负的。这是现价下的基线,D-594 要改的就是这个。"
-                 "成本从 11-06 中午起才全部记齐,更早的日子毛利率会虚高。"
-                 "当天没有成交的日子照样出一行(收入 0),不跳过 —— 跳过会让趋势看起来比实际好。",
-                 "Margin is takehome revenue less serving cost; it excludes ad spend and salaries, so it "
-                 "answers only whether the conversations themselves pay for themselves. Six of the seven "
-                 "days from 11-12 to 11-18 were negative. That is the baseline under current pricing and "
-                 "what D-594 sets out to change. Cost logging is only complete from midday on 11-06, so "
-                 "earlier days show a flattering margin. Days with no sales still get a row rather than "
-                 "being skipped, which would make the trend look better than it is."))),
+          note=T("一行一天。毛利等于到手收入减服务成本,不含广告花费和人力。成本从 11-06 中午起才记齐,"
+                 "更早的日子毛利率会偏高。当天没有成交也照样出一行,跳过会让趋势看起来比实际好。",
+                 "One row per day. Margin is takehome less serving cost, excluding ad spend. "
+                 "Days with no sales still get a row."))),
    ("energy_top_spenders", T("大客户与取消 · Top Spenders & Cancellations",
                              "Top spenders & cancellations"), "table",
      dict(top=20,
@@ -260,18 +213,11 @@ SECTIONS = [
                 ("last_message_date", T("最后一次聊 Last Chat", "Last chat"), "text"),
                 ("cancellations", T("取消续费 Cancellations", "Cancellations"), "int")],
           bar=["takehome_usd", "net_usd"],
-          note=T("计划第 2 节:这次改价最坏的情况不是少赚,是丢掉现在的大客户,所以前几名要每周单独看。"
-                 "🔴 净额会出现负数,那不是算错 —— 实测排第 3 的大客户 30 天聊了 18,931 条,"
-                 "服务成本高于他付的钱,净 −$15.79。这正是 D-594 针对的那类人:买得不少,但聊得更多。"
-                 "🛑 「取消续费」不是退款 —— 用户关掉自动续费时这一期的钱并没有退回去。"
-                 "真正的退款和「骂价格」现在都没有数据源,这张卡做不了。",
-                 "Section 2 of the plan: the worst case of this change is not earning less but losing the "
-                 "current top users, so the leaders are reviewed individually each week. Negative net is "
-                 "not an error — the third-ranked user sent 18,931 messages in 30 days and cost more to "
-                 "serve than they paid, netting −$15.79. That is exactly who D-594 is aimed at: buys a "
-                 "fair amount, chats a great deal more. Cancellations are not refunds; turning off "
-                 "auto-renewal does not return the current period's money. Actual refunds and price "
-                 "complaints have no data source today, so this card cannot show them."))),
+          note=T("一行一个人,近 30 天按到手收入排序,占比的分母是全部到手收入,不是前 20 名的和。"
+                 "净额出现负数不是算错,聊得多的人服务成本会高过他付的钱。取消续费不是退款,"
+                 "关掉自动续费时这一期的钱并没有退回去,真正的退款现在没有数据源。",
+                 "One row per person, ranked by takehome over 30 days. Negative net is not an error. "
+                 "Cancellations are not refunds."))),
  ]),
 ]
 
@@ -398,7 +344,7 @@ def render(raw_path: Path, out_path: Path, artifact: bool = False):
                   "Arm A is the current price, 1 energy per message. Arm B is D-594: 1 per message for the "
                   "first 30, then 1 + 2.5 × (1 − e^(−(n−30)/30)), capped near 3.5. Voice stays at 5 energy "
                   "per message in both arms, and the free allowance is the same in both.")
-    dry_run = T("🛑 实验还没上线 —— 所有人现在落在 unassigned 一行,这就是计划里说的「看板空跑对账」。"
+    dry_run = T("实验还没上线, 所有人现在落在 unassigned 一行,这就是计划里说的「看板空跑对账」。"
                 "分组一旦开始写入,每张卡会自动分成两行,不用改 SQL;"
                 "但分组用的实验名现在是占位 energy_curve_d594_v1,Kang / Liwen 定下真名后十张卡都要改。",
                 "The experiment has not started: everyone currently sits in a single unassigned row, which "
@@ -409,7 +355,7 @@ def render(raw_path: Path, out_path: Path, artifact: bool = False):
     if artifact:
         # 🛑 Artifact 是**静态快照**,不会自己刷新 —— 不写清楚的话,过几天看的人
         #    会把旧数当当天的数读。线上那版才是每天刷 4 次的。
-        freshness = T(f"🛑 这一页是 {meta.get('run_date', '?')} 抓的**静态快照,不会自动更新** —— "
+        freshness = T(f"这一页是 {meta.get('run_date', '?')} 抓的静态快照,不会自动更新。"
                       "要最新的数,让 Chris 重跑一次管线重新发布。",
                       f"This page is a static snapshot taken on {meta.get('run_date', '?')} and does not "
                       "refresh on its own. Ask Chris to re-run the pipeline and republish for current numbers.")
