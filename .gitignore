@@ -7,3 +7,4 @@ preview_artifact.html
 __pycache__/
 CLAUDE.md
 .DS_Store
+raw_energy_ab.json

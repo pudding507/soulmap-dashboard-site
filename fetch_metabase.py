@@ -88,6 +88,15 @@ KEY_OVERRIDE = {
     413: "invite_reward_grants",        419: "invite_redeem_by_source",
     423: "invite_bonus_30msg",
     466: "invite_funnel_guards",      # 2026-11-17 新建;新链路(11-13 起)六步漏斗 + 四项防刷
+    # 2026-11-18 新建:Metabase 看板 **25**(能量定价实验)。这十张**不进主看板** ——
+    # 它们由 render_energy_ab.py 渲染成单独的一页 site/energy-ab.html,
+    # 抓数也走单独一轮(`--dashboard-ids 25 --out raw_energy_ab.json`),和 18/24 完全隔离。
+    # 🛑 混进主看板的 raw_metrics.json 会让页头「今天变化最大的 5 个数」把实验卡也算进去。
+    467: "energy_ab_arms",             468: "energy_ab_purchase",
+    469: "energy_ab_net_revenue",      470: "energy_ab_margin_band",
+    471: "energy_ab_engagement",       472: "energy_ab_conversation_length",
+    473: "energy_voice_per_charge",    474: "energy_ab_country",
+    475: "energy_company_margin",      476: "energy_top_spenders",
     414: "voice_arm_comparison",        415: "voice_latency_miss",
     416: "voice_playback_reasons",
     425: "paywall_triggers_side_by_side",   # 2026-10-20 新建

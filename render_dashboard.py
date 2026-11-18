@@ -2338,6 +2338,11 @@ def render(raw_path: Path, out_path: Path):
            + (f' · 缺 {len(failed)}' if failed else '')
            + (f' · 沿用旧值 {len(carried)}' if carried else '') +
            f'</div><div class="meta lag">{lag_note}</div>'
+           # 2026-11-18:能量定价实验是独立的一页(site/energy-ab.html,Metabase 看板 25)。
+           # 不放链接的话 Pages 站点只有首页会被打开,那一页等于没人知道。
+           f'<div class="meta"><a href="energy-ab.html" style="color:var(--acc);font-weight:600">'
+           f'→ 能量定价实验 · Energy Pricing A/B</a>'
+           f'<span style="opacity:.7"> ——  A 组现价 vs B 组 D-594,带中英切换</span></div>'
            f'<div class="meta src">{source_note}</div></header>'
            + (f'<div class="banner">{BANNER}</div>' if BANNER else '')
            # 2026-10-28:「今天变化最大的 5 个数」放在横幅之后、卡片之前 ——
