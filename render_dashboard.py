@@ -1134,7 +1134,7 @@ SECTIONS = [
                   ("total_min","最小 Min","int"),
                   ("total_avg","均值 Avg","d1"),
                   ("total_max","最大 Max","int")],
-            note='只回答当前免费额度线是多少、这两三天有没有变,窗口是近 3 天滚动,不看历史。正常只有两个取值,出现第三个就是有人改了配置;空值是正常的,它来自两条不算额度的代码路径。配置改了和数据里旧值消失差约一天。｜ Current free-quota line only; 3-day rolling window.')),
+            note='只回答当前免费额度线是多少、这两三天有没有变,窗口是近 3 天滚动,不看历史。🔴 2026-11-17 14:45:56 起只应有一个取值 20:free_total_10v20_v1 实验结束,两臂都定成 20,此前 f10 臂只有 10 条。出现 10 就是还有旧分组的残留;空值是正常的,它来自两条不算额度的代码路径。配置改了和数据里旧值消失差约一天。｜ Since 2026-11-17 14:45 everyone is on 20; the 10-vs-20 experiment ended.')),
    ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
        # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
        #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。
@@ -1182,7 +1182,7 @@ SECTIONS = [
                   ("canceled_at_sgt","关续费时刻 Canceled At","text"),
                   ("cancel_reason","原因 Reason","text"),
                   ("was_extended","被推迟过 Extended","int")],
-            note='首购价买家逐人一行,结果按终态优先级判。到期取订阅表里的最大到期时间,不是首购加 7 天,周期实测不到 7 天,而且扣款失败时商店会把到期往后推。首购价的新增已经基本停了,本卡此后只处理存量,不要把到期结局的比率跨 10-30 读。｜ Outcome resolved by terminal state.')),
+            note='首购价买家逐人一行,结果按终态优先级判。到期取订阅表里的最大到期时间,不是首购加 7 天,周期实测不到 7 天,而且扣款失败时商店会把到期往后推。首购价的新增已经基本停了,本卡此后只处理存量,不要把到期结局的比率跨 10-30 读。🔴 2026-11-17 14:45:56 paid_intro_v1 实验结束,所有人都走 paid,澳大利亚从完全不要求预付变成 100% 走首购价 ⇒ 跨这一刻任何首购相关的比率都不可比,澳大利亚尤其不能跨读。｜ Outcome resolved by terminal state; the intro experiment ended 2026-11-17 14:45 and AU went from 0% to 100%.')),
    # 🛑 2026-10-28 摘牌(用户决定):这里原有三张 0.99 放量期的监控卡 ——
    #     「0.99首月_首购按客户端版本 · Intro Purchase by Client Version」(Metabase 卡 420)
    #     「0.99首月_首购按国家 · Intro Purchase by Country」(卡 421)
@@ -1281,7 +1281,7 @@ SECTIONS = [
                   ("succeeded_trial","其中 免费试用 Trial","int"),
                   ("succeeded_rate","成交率 Done %","pct1")],
             bar=["shown_users","tapped_rate"],
-            note='一行 = 一天 × 触发位置,只覆盖服务端那一路。现在最大的那道墙不在这张卡里:能量用完卡走另一套事件,要看它请用撞墙与撞墙之后。首条消息墙已经停了,最后一次 10-29。一个用户一天可能撞多道墙,各行不能相加。成交必须分两段读,10-19 前后卖的不是同一个东西。｜ Server-side paywall only.')),
+            note='一行 = 一天 × 触发位置,只覆盖服务端那一路。现在最大的那道墙不在这张卡里:能量用完卡走另一套事件,要看它请用撞墙与撞墙之后。首条消息墙已经停了,最后一次 10-29。一个用户一天可能撞多道墙,各行不能相加。成交必须分两段读,10-19 前后卖的不是同一个东西。🔴 2026-11-17 14:45:56 paywall_placement_v1 实验结束,所有人统一走 C 臂,此后不再有分臂 ⇒ 跨这一刻比各道墙的曝光和成交都不可比。｜ Server-side paywall only; the placement experiment ended 2026-11-17 14:45 and everyone is on arm C.')),
    ("paywall_writeback_by_version", "回写率分客户端版本 · Writeback Rate by Client Version", "table",
        dict(top=40,
             cols=[("date","日期 Date","text"),
@@ -1320,15 +1320,18 @@ SECTIONS = [
             note='一行 = 一天 × 墙的种类,旧的免费额度墙和能量用完卡各一行,下游三级都是撞墙后 24 小时内。两行绝不能相加,同一个人在迁移前后可能两边都出现,而且分母不是同一批人。比率的分母是当天撞墙人数,每天都在动,读比率时要同时看第一列。｜ One row per day × wall type; never sum the two.')),
  ]),
  ("⑨ 邀请 · Invite", [
-   ("invite_inviter_side", "邀请人侧 · Invite — Inviter Side", "table",
-       dict(cols=[("seq","#","int"),
-                  ("step","环节 Step","text"),
-                  ("step_en","Step (EN)","text"),
-                  ("users","人数 Users","int"),
-                  ("events","次数 Events","int"),
-                  ("pct_of_code_holders","占持码人 %","d1")],
-            bar=["users"],
-            note='这六行不是嵌套漏斗,是六个各自独立的动作,把相邻两行相除当转化率会得到没有意义的数。｜ These six rows are independent actions, NOT a nested funnel.')),
+   ("invite_funnel_guards", "新链路漏斗与防刷 · Invite — Funnel and Abuse Guards", "table",
+       dict(cols=[("step_no","#","int"),
+                  ("step_name","环节 Step","text"),
+                  ("step_count","数量 Count","int"),
+                  ("pct_of_previous","占上一步 %","d1"),
+                  ("numerator_over_denominator","分子/分母 Num/Den","text"),
+                  ("step_note","备注 Note","text")],
+            bar=["step_count"],
+            note='2026-11-13 起的新邀请链路。① ② 之间不是转化关系(一人可建多卡、一卡可发多条),比例从 ③ 起才有意义。'
+                 '③ 的点开数只从 11-16 18:18 落地页修好之后才可信,此前点击一次也没记。'
+                 '表里的 opened_at 是邀请人自己点「发送」时写的,不是朋友点开,不能当点开率。'
+                 '｜ New invite flow since 2026-11-13. Clicks are only reliable after the landing page was fixed on 11-16 18:18.')),
    ("invite_invitee_side", "被邀请人侧 · Invite — Invitee Side", "table",
        dict(cols=[("seq","#","int"),
                   ("step","环节 Step","text"),
@@ -1352,7 +1355,7 @@ SECTIONS = [
                   ("sandbox_invitee","沙盒 Sandbox","int"),
                   ("note","备注 Note","text")],
             bar=["bindings","granted_pct"],
-            note='发放与否看绑定表里的发放时间字段,不看奖励状态。延迟同时给中位数和最大值,实测逐条从 0 分钟到两千多分钟都有,只看均值会被极值带偏。｜ Median and max are both shown because the tail is extreme.')),
+            note='发放与否看绑定表里的发放时间字段,不看奖励状态。延迟同时给中位数和最大值,实测逐条从 0 分钟到两千多分钟都有,只看均值会被极值带偏。🔴 2026-11-17 14:45:56 输码这条路的门槛从朋友发 1 条改成发 5 条(邀请卡那条路一直是 5),跨这一刻比发放率不可比。｜ The redeem path threshold went from 1 to 5 friend messages on 2026-11-17 14:45.')),
    ("invite_redeem_by_source", "兑换结果按来源 · Redeem by Source & Reason", "table",
        dict(top=25,
             cols=[("via_cn","来源 Source","text"),
@@ -1364,16 +1367,6 @@ SECTIONS = [
                   ("users","人数 Users","int")],
             bar=["attempts"],
             note="兑换失败的原因分布,按来源(链接 / 手动输码)拆。｜ Redemption outcomes split by entry path and failure reason.")),
-   ("invite_reward_grants", "奖励发放明细 · Reward Grants", "table",
-       dict(top=40,
-            cols=[("granted_date","发放日 Date","text"),
-                  ("kind","类型 Kind","text"),
-                  ("inviter_user_id","邀请人 Inviter","text"),
-                  ("invitee_user_id","被邀请人 Invitee","text"),
-                  ("invitee_env","环境 Env","text"),
-                  ("is_real","真实? Real","int"),
-                  ("month_index","月序 Month","int")],
-            note='逐条明细,先用是否真实和被邀请人环境两列筛掉沙盒数据再数。｜ Row-level grants; filter sandbox rows before counting.')),
  ]),
  ("⑩ 后端 · Backend", [
    ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
@@ -1652,6 +1645,31 @@ SECTIONS = [
    #   要用到试用结局的历史数据。移到这里只是让它们不占主位。
    # 🛑 `paywall_writeback_by_version` **没有跟着搬** —— 它的维度是客户端版本、没有 arm 列,
    #   测的是「服务端说该弹、客户端有没有回写」,和分臂塌不塌无关,留在 ⑧。
+   # 🛑 2026-11-17 从「⑨ 邀请」移来的两张 —— 同样是「描述的那个世界过去了」,不是卡坏了:
+   #   · 邀请人侧:数据源 `soulmap_invite_code`(老邀请码)**最后一条 2026-10-24**,停了三周多。
+   #   · 奖励发放明细:`soulmap_invite_reward_grant` **全表只有 4 行**,最后 2026-10-27。
+   #   新邀请链路 2026-11-13 起走 `soulmap_invite_card` / `_send` / `_click` 三张表,
+   #   由 ⑨ 里的「新链路漏斗与防刷」(card 466)覆盖。
+   # 🛑 **这两张同样不要删** —— 旧链路的历史结局还要用来和新链路对比。
+   ("invite_inviter_side", "邀请人侧 · Invite — Inviter Side", "table",
+       dict(cols=[("seq","#","int"),
+                  ("step","环节 Step","text"),
+                  ("step_en","Step (EN)","text"),
+                  ("users","人数 Users","int"),
+                  ("events","次数 Events","int"),
+                  ("pct_of_code_holders","占持码人 %","d1")],
+            bar=["users"],
+            note='这六行不是嵌套漏斗,是六个各自独立的动作,把相邻两行相除当转化率会得到没有意义的数。｜ These six rows are independent actions, NOT a nested funnel.')),
+   ("invite_reward_grants", "奖励发放明细 · Reward Grants", "table",
+       dict(top=40,
+            cols=[("granted_date","发放日 Date","text"),
+                  ("kind","类型 Kind","text"),
+                  ("inviter_user_id","邀请人 Inviter","text"),
+                  ("invitee_user_id","被邀请人 Invitee","text"),
+                  ("invitee_env","环境 Env","text"),
+                  ("is_real","真实? Real","int"),
+                  ("month_index","月序 Month","int")],
+            note='逐条明细,先用是否真实和被邀请人环境两列筛掉沙盒数据再数。｜ Row-level grants; filter sandbox rows before counting.')),
    ("paywall_tpc_by_country", "试用付费取消 · 按国家 · Trial-Paid-Cancel by Country", "table",
        dict(top=25,
             cols=[("country","国家 Country","text"),

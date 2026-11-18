@@ -87,6 +87,7 @@ KEY_OVERRIDE = {
     411: "invite_inviter_side",         412: "invite_invitee_side",
     413: "invite_reward_grants",        419: "invite_redeem_by_source",
     423: "invite_bonus_30msg",
+    466: "invite_funnel_guards",      # 2026-11-17 新建;新链路(11-13 起)六步漏斗 + 四项防刷
     414: "voice_arm_comparison",        415: "voice_latency_miss",
     416: "voice_playback_reasons",
     425: "paywall_triggers_side_by_side",   # 2026-10-20 新建
