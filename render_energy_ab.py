@@ -335,7 +335,7 @@ LANG_JS = r"""
     apply();
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  function init() {
     const btn = document.getElementById('langToggle');
     if (btn) btn.addEventListener('click', toggle);
     apply();
@@ -344,11 +344,19 @@ LANG_JS = r"""
       new MutationObserver(function () { if (!applying) apply(); })
         .observe(root, { childList: true, subtree: true });
     }
-  });
+  }
+
+  // Artifact 把脚本放在正文之后,DOMContentLoaded 可能已经过了 —— 只挂监听会一次都不执行。
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 """
 
 EXTRA_CSS = """
+/* Artifact 的外壳在 :root 上钉了 color-scheme:light,不补这两段的话
+   暗色主题下滚动条和表单控件仍然是亮的。本地那版多写这两行也无害。 */
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark}}
+:root[data-theme=dark]{color-scheme:dark}
 #langToggle{position:fixed;top:12px;right:14px;z-index:99;cursor:pointer;
   padding:6px 14px;border-radius:999px;border:1px solid var(--bd,#d0d5dd);
   background:var(--surface,#fff);color:var(--tp,#222);font:600 13px/1 system-ui,sans-serif;}
@@ -357,7 +365,7 @@ header .plan{margin-top:6px;font-size:12px;opacity:.75;line-height:1.6;}
 """
 
 
-def render(raw_path: Path, out_path: Path):
+def render(raw_path: Path, out_path: Path, artifact: bool = False):
     D = json.loads(raw_path.read_text(encoding="utf-8"))
     meta = D.get("_meta", {})
     metrics = D.get("metrics", D)
@@ -398,9 +406,17 @@ def render(raw_path: Path, out_path: Path):
                 "each card splits into two rows on its own, with no SQL change — but the experiment key is "
                 "a placeholder, energy_curve_d594_v1, and all ten cards must be updated once Kang and "
                 "Liwen settle on the real name.")
-    freshness = T("数据直接查生产库,实时。每天跟主看板一起刷新 4 次(新加坡时间 12:20 / 14:20 / 17:20 / 21:20)。",
-                  "All cards query the production database live. Refreshed four times a day alongside the "
-                  "main dashboard (12:20 / 14:20 / 17:20 / 21:20 SGT).")
+    if artifact:
+        # 🛑 Artifact 是**静态快照**,不会自己刷新 —— 不写清楚的话,过几天看的人
+        #    会把旧数当当天的数读。线上那版才是每天刷 4 次的。
+        freshness = T(f"🛑 这一页是 {meta.get('run_date', '?')} 抓的**静态快照,不会自动更新** —— "
+                      "要最新的数,让 Chris 重跑一次管线重新发布。",
+                      f"This page is a static snapshot taken on {meta.get('run_date', '?')} and does not "
+                      "refresh on its own. Ask Chris to re-run the pipeline and republish for current numbers.")
+    else:
+        freshness = T("数据直接查生产库,实时。每天跟主看板一起刷新 4 次(新加坡时间 12:20 / 14:20 / 17:20 / 21:20)。",
+                      "All cards query the production database live. Refreshed four times a day alongside the "
+                      "main dashboard (12:20 / 14:20 / 17:20 / 21:20 SGT).")
 
     hdr = (f'<button id="langToggle" type="button">EN</button>'
            f'<header><h1>{title}</h1>'
@@ -412,14 +428,23 @@ def render(raw_path: Path, out_path: Path):
            f'<div class="meta lag">{freshness}</div>'
            f'</header>')
 
-    doc = f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
+    scripts = (f'<script>{chartjs}</script>\n'
+               f'<script>const DATA={payload};</script>\n'
+               f'<script>const I18N={json.dumps(I18N, ensure_ascii=False)};</script>\n'
+               f'<script>{RD.APP_JS}</script>\n'
+               f'<script>{LANG_JS}</script>')
+
+    if artifact:
+        # Artifact 发布时外面会套一层 <!doctype html><head>…</head><body>,
+        # 所以这里**不能**写 html / head / body 标签,直接从 <title> 开始。
+        doc = (f"<title>{title}</title>\n"
+               f"<style>{RD.CSS}{EXTRA_CSS}</style>\n"
+               f"{hdr}<div id=\"root\"></div>\n{scripts}")
+    else:
+        doc = f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title>
 <style>{RD.CSS}{EXTRA_CSS}</style></head><body>{hdr}<div id="root"></div>
-<script>{chartjs}</script>
-<script>const DATA={payload};</script>
-<script>const I18N={json.dumps(I18N, ensure_ascii=False)};</script>
-<script>{RD.APP_JS}</script>
-<script>{LANG_JS}</script></body></html>"""
+{scripts}</body></html>"""
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(doc, encoding="utf-8")
@@ -431,8 +456,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=str(HERE / "raw_energy_ab.json"))
     ap.add_argument("--out", default=str(HERE / "site" / "energy-ab.html"))
+    ap.add_argument("--artifact", action="store_true",
+                    help="输出 Claude Artifact 用的版本:不带 html/head/body 外壳,"
+                         "页头标注成静态快照")
     a = ap.parse_args()
-    render(Path(a.raw), Path(a.out))
+    render(Path(a.raw), Path(a.out), artifact=a.artifact)
 
 
 if __name__ == "__main__":
