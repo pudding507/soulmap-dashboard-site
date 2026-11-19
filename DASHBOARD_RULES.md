@@ -23,6 +23,13 @@
 否则它每轮都被抓一次再扔掉。`SKIP_CARDS` 里现存的条目大多已经是冗余记录(卡在 Metabase 那边已归档或摘牌),
 留着是为了记原因,别清理。
 
+🛑 **删卡要走到 Metabase 为止。** 只从 `SECTIONS` 删掉,卡还挂在 Metabase 看板上
+——打开 Metabase 的人照样看得到,而且显示的是停更的旧值,比没有更糟。
+完整的下线是三步:`SECTIONS` 删掉 → `SKIP_CARDS` 加一条写明原因 →
+**Metabase 里把卡归档**(`PUT /api/card/{id} {"archived": true}`)。
+归档前先确认这张卡没有挂在别的看板上 —— 归档会把它从**所有**看板移除。
+归档是可逆的,在 Metabase 的归档区能还原。
+
 🛑 **改 Metabase 卡名**会改变 key。要么同时改 ②③,要么在 `render_dashboard.py` 的
 `ALIAS`(第 1920 行)加一条「新 key → 权威 key」兜底。`ALIAS` 就是为这件事存在的 ——
 排查「卡怎么空了」之前先看这张表,否则会把兜底当成 bug。

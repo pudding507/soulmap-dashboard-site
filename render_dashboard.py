@@ -2262,41 +2262,60 @@ def _mvdelta(m):
 def _changelog_html():
     """页头「最近改了什么」。纯常量渲染,不读数据 —— 它记的是别人告诉我们的改动,
     不是我们从库里算出来的东西,所以不该有任何查询逻辑。"""
-    head = ('<div class="mv-h">最近改了什么 · Recent Changes</div>'
-            f'<div class="mv-sub">最近 {CHANGELOG_DAYS} 天、<b>挑出影响读数的</b>,不是全量 '
-            '｜ <b>🛑 上线时间 ≠ 生效时间</b> —— 带「代码在生产·未生效」「开关关着」的项'
-            '现在读不出数,<b>那不是漏数</b> ｜ <b>⚑</b> = 读数切点,'
-            '跨这个时刻的前后对比要当成两段读</div>')
+    head = ('<div class="mv-h">' + i18n.bi('最近改了什么 · Recent Changes', 'Recent Changes') + '</div>'
+            '<div class="mv-sub">' + i18n.bi(
+                f'最近 {CHANGELOG_DAYS} 天、<b>挑出影响读数的</b>,不是全量 '
+                '｜ <b>🛑 上线时间 ≠ 生效时间</b> —— 带「代码在生产·未生效」「开关关着」的项'
+                '现在读不出数,<b>那不是漏数</b> ｜ <b>⚑</b> = 读数切点,'
+                '跨这个时刻的前后对比要当成两段读',
+                f'Last {CHANGELOG_DAYS} days, <b>only changes that affect how numbers read</b> — not the '
+                'full list ｜ <b>🛑 Shipped is not the same as live</b>: items marked "in production, not '
+                'enabled" or "switch off" produce no data yet, and <b>that is not missing data</b> '
+                '｜ <b>⚑</b> = measurement cutover; comparisons across that moment must be read as two '
+                'separate stretches') + '</div>')
     rows = []
     for when, team, what, status, is_cut in _changelog_recent(CHANGELOG):
         off = "" if status == "已生效" else " off"
         cut = '<span class="chg-cut">⚑</span>' if is_cut else ''
         rows.append(f'<div class="chg-row"><div class="chg-d">{when}</div>'
-                    f'<div class="chg-w">{team}</div>'
-                    f'<div class="chg-x">{cut}{what}</div>'
-                    f'<div class="chg-s{off}">{status}</div></div>')
-    src = f'<div class="chg-src">全量清单:{CHANGELOG_SRC}</div>'
+                    f'<div class="chg-w">{i18n.team_en(team)}</div>'
+                    f'<div class="chg-x">{cut}{i18n.changelog_en(what)}</div>'
+                    f'<div class="chg-s{off}">{i18n.status_en(status)}</div></div>')
+    src = ('<div class="chg-src">'
+           + i18n.bi(f'全量清单:{CHANGELOG_SRC}', f'Full list: {CHANGELOG_SRC}') + '</div>')
     return '<div class="movers">' + head + "".join(rows) + src + '</div>'
 
 
 def _movers_html(movers):
-    head = ('<div class="mv-h">今天变化最大的 '
-            f'{len(movers) or MOVERS_TOP} 个数 · Biggest Movers</div>'
-            '<div class="mv-sub">口径:只比<b>已过完的整天</b>'
-            '(当天那条服务端只有半天、埋点还没入库)'
-            f' ｜ 分子两天都要 ≥ {MOVERS_MIN_N} ｜ 均值卡 / 表格卡 / 漏斗卡不进榜'
-            ' ｜ 一张卡只出一行,取整卡总体'
-            ' ｜ ⚠ = 比较窗口跨了切点,这一跳可能不是业务变化</div>')
+    _k = len(movers) or MOVERS_TOP
+    head = ('<div class="mv-h">'
+            + i18n.bi(f'今天变化最大的 {_k} 个数 · Biggest Movers', f'{_k} Biggest Movers Today')
+            + '</div><div class="mv-sub">' + i18n.bi(
+                '口径:只比<b>已过完的整天</b>'
+                '(当天那条服务端只有半天、埋点还没入库)'
+                f' ｜ 分子两天都要 ≥ {MOVERS_MIN_N} ｜ 均值卡 / 表格卡 / 漏斗卡不进榜'
+                ' ｜ 一张卡只出一行,取整卡总体'
+                ' ｜ ⚠ = 比较窗口跨了切点,这一跳可能不是业务变化',
+                'Method: only <b>complete days</b> are compared (today is half a day on the server side '
+                f'and client telemetry has not landed) ｜ the numerator must be ≥ {MOVERS_MIN_N} on both '
+                'days ｜ median, table and funnel cards are excluded ｜ one row per card, taken at the '
+                'card total ｜ ⚠ = the comparison window crosses a cutover, so the jump may not be a '
+                'business change') + '</div>')
     if not movers:
         return ('<div class="movers">' + head +
-                f'<div class="mv-empty">今天没有分子两天都 ≥ {MOVERS_MIN_N} '
-                '的指标 —— 是门槛拦住了,不是没有变化。</div></div>')
+                '<div class="mv-empty">' + i18n.bi(
+                    f'今天没有分子两天都 ≥ {MOVERS_MIN_N} 的指标 —— 是门槛拦住了,不是没有变化。',
+                    f'No metric had a numerator ≥ {MOVERS_MIN_N} on both days — that is the threshold '
+                    'filtering them out, not an absence of change.') + '</div></div>')
     # 切点落在窗口里的时候,**五行往往全中同一个切点**(比如 AN 关停那天)。
     # 逐行重复五遍只会把真正的差异盖掉 ⇒ 全员相同就提到表头说一次。
     cuts = {m["cut"] for m in movers}
     shared = cuts.pop() if len(cuts) == 1 and all(m["cut"] for m in movers) else None
     if shared:
-        head += f'<div class="mv-all-cut">⚠ 本榜全部 {len(movers)} 行都跨了同一个切点:{shared}</div>'
+        head += ('<div class="mv-all-cut">' + i18n.bi(
+            f'⚠ 本榜全部 {len(movers)} 行都跨了同一个切点:{shared}',
+            f'⚠ All {len(movers)} rows cross the same cutover: '
+            + i18n.CUTOVERS_EN.get(shared, shared)) + '</div>')
     rows = []
     for m in movers:
         rows.append(
@@ -2305,11 +2324,14 @@ def _movers_html(movers):
             f'<div class="mv-dt">{m["d0"][5:]} → {m["d1"][5:]}</div>'
             f'<div class="mv-n">{_mvval(m["v0"], m["unit"])} <span class="mv-ar">→</span> '
             f'<b>{_mvval(m["v1"], m["unit"])}</b>'
-            + (f'<span class="mv-s"> 分子 {_mvnum(m["n1"])}</span>' if m["unit"] != "int" else "")
+            + (('<span class="mv-s"> ' + i18n.bi(f'分子 {_mvnum(m["n1"])}',
+                                                   f'numerator {_mvnum(m["n1"])}') + '</span>')
+               if m["unit"] != "int" else "")
             + '</div>'
             f'<div class="mv-d">{_mvdelta(m)}</div>'
-            f'<div class="mv-c">{("⚠ " + m["cut"]) if (m["cut"] and not shared) else ""}</div>'
-            '</div>')
+            + ('<div class="mv-c">⚠ ' + i18n.cutover_html(m["cut"]) + '</div>'
+               if (m["cut"] and not shared) else '<div class="mv-c"></div>')
+            + '</div>')
     return '<div class="movers">' + head + "".join(rows) + '</div>'
 
 
@@ -2351,21 +2373,30 @@ def render(raw_path: Path, out_path: Path):
     #   385/386 虽然叫「Meta 素材全链路」,数据源也是 soulmap_app_launch 的归因字段,
     #   不是 Meta 导出的表格(那个在「战情室/素材级对账」本地管线里,不进看板)。
     # 不说清楚的话,同一页上把「服务端今天的数」和「客户端昨天的数」并排读会误判。
-    lag_note = (
-        '每天自动刷新 4 次(新加坡时间 12:20 / 14:20 / 17:20 / 21:20)'
-        ' ｜ Auto-refreshed 4x daily (12:20 / 14:20 / 17:20 / 21:20 SGT)')
-    source_note = (
+    lag_note = i18n.bi(
+        '每天自动刷新 4 次(新加坡时间 12:20 / 14:20 / 17:20 / 21:20)',
+        'Auto-refreshed 4x daily (12:20 / 14:20 / 17:20 / 21:20 SGT)')
+    source_note = i18n.bi(
         '🛑 本页全部来自生产库,但两类表的新鲜度差一天:'
         '<b>服务端表</b>(额度墙 / 付费墙 / 邀请 / 回传对账 / 参考照 / 推送发送)= <b>实时</b>;'
         '<b>客户端埋点表</b> host.firebase_event(版本覆盖 / 语音 / 回忆页 / 各国首日深度)= <b>T+1</b>,'
-        '每天 11:00(SGT) 前入库前一天的数据 ⇒ <b>这些卡最后一天偏低或为 0,是没入库不是业务为 0</b>。'
-        ' ｜ All cards query the production DB. Server tables are live; client telemetry lands one day late.')
+        '每天 11:00(SGT) 前入库前一天的数据 ⇒ <b>这些卡最后一天偏低或为 0,是没入库不是业务为 0</b>。',
+        '🛑 Every card queries the production database, but the two kinds of tables are a day apart: '
+        '<b>server tables</b> (quota wall, paywall, invites, postback reconciliation, reference photos, '
+        'push sends) are <b>live</b>; the <b>client telemetry table</b> host.firebase_event (version '
+        'adoption, voice, memories page, day-0 depth by country) is <b>T+1</b>, landing the previous '
+        'day before 11:00 SGT ⇒ <b>a low or zero last day on those cards means not yet loaded, '
+        'not zero business</b>.')
+    _boards = ",".join(str(x) for x in (meta.get("dashboard_ids") or [meta.get("dashboard_id","?")]))
+    _n = sum(len(s["cards"]) for s in sections)
+    _meta_zh = (f'数据 {meta.get("run_date","?")} · Metabase 看板 {_boards} · {_n} 卡'
+                + (f' · 缺 {len(failed)}' if failed else '')
+                + (f' · 沿用旧值 {len(carried)}' if carried else ''))
+    _meta_en = (f'Data {meta.get("run_date","?")} · Metabase dashboards {_boards} · {_n} cards'
+                + (f' · {len(failed)} missing' if failed else '')
+                + (f' · {len(carried)} carried over' if carried else ''))
     hdr = (f'<header><h1>SoulMap 看板 · SoulMap Dashboard</h1><div class="meta">'
-           f'数据 {meta.get("run_date","?")} · Metabase 看板 '
-           f'{",".join(str(x) for x in (meta.get("dashboard_ids") or [meta.get("dashboard_id","?")]))} · '
-           f'{sum(len(s["cards"]) for s in sections)} 卡'
-           + (f' · 缺 {len(failed)}' if failed else '')
-           + (f' · 沿用旧值 {len(carried)}' if carried else '') +
+           + i18n.bi(_meta_zh, _meta_en) +
            f'</div><div class="meta lag">{lag_note}</div>'
            f'<div class="meta src">{source_note}</div></header>'
            + (f'<div class="banner">{BANNER}</div>' if BANNER else '')
