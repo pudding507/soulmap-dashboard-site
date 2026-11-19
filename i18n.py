@@ -302,59 +302,10 @@ def changelog_en(what: str) -> str:
 # 显示在 Movers 行末的 ⚠ 提示里。key 是 CUTOVERS 的值,要逐字一致。
 # 🛑 这些文本是**直接拼进 HTML** 的,原文里的 `**粗体**` 会显示成字面星号 ——
 #    cutover_html() 渲染时统一转成 <b>,所以 CUTOVERS 原文不用动。
-# 🔴 与 CUTOVERS 一样冻结在 2026-11-19 —— 新切点的英文写 Lark「事项(EN)」列。
-CUTOVERS_EN = {
-    "埋点侧缺这一天(服务端不缺);画趋势留空,不补零不插值":
-        "Client telemetry is missing this day (server data is not); the trend is left blank, "
-        "neither zero-filled nor interpolated",
-    "印度启动墙上线(18:37)": "Launch wall went live in India (18:37)",
-    "全球免费额度 10 → 20(印度 A 类 30)":
-        "Global free allowance 10 → 20 (30 for Type A in India)",
-    "印度以外的 A 类额度也放到 30;first_message_gate 上线(16:16);「买 3 天」通行证开始有真实购买——它和月订阅共用 purchase_* 事件,付费口径从这天起必须按 product_id 限定":
-        "Type A allowance raised to 30 outside India too; first_message_gate shipped (16:16); the 3-day "
-        "pass started getting real purchases — it shares the purchase_* events with the monthly "
-        "subscription, so from this day on any payment metric must be filtered by product_id",
-    "AN 渠道关停(18:30)—— 装机分母清理,整体数会跳,不是产品变好":
-        "The AN channel was shut off (18:30) — this cleans up the install denominator, so overall "
-        "numbers jump; the product did not get better",
-    "能量系统全球放开(14:21,10-26 18:25 起印度已开);14:32:20 第一笔能量入账;同日 14:21 Type B 回复变快(4~7秒→约2秒)、16:46 Type A 变慢(6.3→10.5秒),两类反向动,混着看会互相抵消;18:22 搜索全量重排不留对照组":
-        "Energy opened globally (14:21; India had it from 10-26 18:25); first Energy credited at "
-        "14:32:20. The same day Type B replies got faster (4–7s → about 2s) at 14:21 and Type A got "
-        "slower (6.3 → 10.5s) at 16:46 — the two move in opposite directions and cancel out if read "
-        "together. At 18:22 search was fully re-ranked with no control group",
-    "12:14 能量改价 聊天 2→4、免费能量翻倍(之前的能量数 ÷2 才能和之后比);13:13 App 3.9.0 上线;18:11 SoulMap_TypeA_ 判 A 类、被邀请人 120→60;18:26 SoulMap_TypeB_ 判 B 类":
-        "12:14 Energy repriced: chat 2 → 4 and free Energy doubled (earlier Energy counts must be "
-        "halved to compare with later ones); 13:13 App 3.9.0 shipped; 18:11 SoulMap_TypeA_ became the "
-        "Type A marker and invitee rewards went 120 → 60; 18:26 SoulMap_TypeB_ became the Type B marker",
-    "11:57「研究」模式从入口移除,入口只剩想象/分忧/练习;11:27 Type B 三语统一到 G62Z;15:13 英语提示词改可缓存(成本降,质量无差别)":
-        "11:57 the Research mode was removed from the entry, leaving Imagine / Vent / Practice; 11:27 "
-        "Type B unified on G62Z across three languages; 15:13 the English prompt became cacheable "
-        "(lower cost, no quality difference)",
-    "投放侧:Meta 开始收到 purchase 回传(此前「Meta 应用内购买」列全是 0);🛑 Meta 收到的只有服务端实际成交的一半左右(它看到 3~6 笔/天,服务端实际 9~13 笔)—— 学习期门槛是按它看到的那一半算的":
-        "Marketing: Meta began receiving purchase postbacks (the in-app purchase column had been all "
-        "zeros). 🛑 Meta sees only about half of what the server actually bills (3–6 a day versus 9–13 "
-        "on the server) — the learning-phase threshold is counted against that half",
-    "🛑 投放侧:Meta 优化目标 install -> purchase 的切换**从这天开始**,不是一次性 —— TypeB_F_Lucien / TypeB_F_Kabir 当天先切;TypeA_M_Divya 当天两种结果都报(347 install + 1 purchase)说明中途切。旧结构(A 类 mobile_app_install / B 类 subscribe_mobile_app)从这天起消失":
-        "🛑 Marketing: the move of Meta's optimisation goal from install to purchase **started** on this "
-        "day and was not a single switch — TypeB_F_Lucien and TypeB_F_Kabir moved first; TypeA_M_Divya "
-        "reported both kinds that day (347 installs + 1 purchase), meaning it switched mid-day. The old "
-        "structure (mobile_app_install for Type A, subscribe_mobile_app for Type B) disappears from here",
-    "投放侧:切换进行中(Divya 退回只报 install、Sander 仍 install)。装机 630 -> 172、CPI 0.195 -> 0.605。🛑 这是改优化目标的定义性后果,不是投放效率崩了":
-        "Marketing: switch still in progress (Divya fell back to install only, Sander still on install). "
-        "Installs 630 → 172, CPI 0.195 → 0.605. 🛑 That is the definitional consequence of changing the "
-        "optimisation goal, not a collapse in efficiency",
-    "投放侧:TypeA_F_Sander 与 TypeB_M_Yui 切过来。装机 75(最低)、CPI 1.051。按注册日队列的 D0 付费率已回到 1.65%":
-        "Marketing: TypeA_F_Sander and TypeB_M_Yui moved over. Installs 75 (the lowest), CPI 1.051. "
-        "D0 payment rate by signup-day cohort is back to 1.65%",
-    "🛑 投放侧:五个系列**第一次全部是 purchase**,切换完成(11-02 起历时四天)。CPI 1.228;但 D0 付费率 3.97%,连续四天上升(0.67 -> 0.78 -> 1.65 -> 3.97),已超放量前的 1.6~2.0%。⇒ 跨 11-02~11-05 这段不能比装机 / CPI / 新注册 / 按注册日的队列指标;能比成交笔数 / 每笔成交成本 / 每日毛额。首个成熟 D7 队列要到 11-12。另:安卓 3.9.3 也在 11-05 01:58 过审放量(当日占 59.7%,11-06 到 88.5%),**两件事叠在同一天**,归因时要分开":
-        "🛑 Marketing: all five campaigns are on purchase **for the first time**; the switch is complete "
-        "(four days from 11-02). CPI 1.228, but the D0 payment rate is 3.97% after rising four days "
-        "running (0.67 → 0.78 → 1.65 → 3.97), above the 1.6–2.0% from before the scale-up. ⇒ Across "
-        "11-02 to 11-05 do not compare installs, CPI, signups or signup-day cohort metrics; purchases, "
-        "cost per purchase and daily gross are comparable. The first mature D7 cohort lands 11-12. Also "
-        "Android 3.9.3 was approved and rolled out at 11-05 01:58 (59.7% share that day, 88.5% by "
-        "11-06) — **two things fall on the same day**, so separate them when attributing",
-}
+# 🔴 2026-11-19 起为空:切点的英文改从 Lark 来 ——
+#    新切点写「数据表」的「事项(EN)」列,历史切点写「soulmap详细记录」的
+#    「切点说明(EN)」列,render_dashboard._load_changes() 启动时回填。
+CUTOVERS_EN = {}
 
 
 def cutover_html(zh: str) -> str:

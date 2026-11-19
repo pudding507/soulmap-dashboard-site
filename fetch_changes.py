@@ -25,7 +25,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "changes.json"
 APP_TOKEN = "QBAJbm4OIaDL8asjmZqjXMRWpVm"
-TABLE_ID = "tblCTnXxwQXeNztM"
+TABLE_ID = "tblCTnXxwQXeNztM"          # 「数据表」:三个项目的产品变更
+HISTORY_TABLE_ID = "tbl9hlxK0yTwurec"  # 「soulmap详细记录」:2026-11-10 之前的读数切点
 CN = datetime.timezone(datetime.timedelta(hours=8))
 
 
@@ -62,6 +63,23 @@ def main() -> int:
             print("   没有上一次的文件,写出空清单;页头的改动日志会是空的")
         return 0
 
+    # 历史切点(11-10 之前)在另一张表里,拉不到就当空 —— 不影响主流程
+    history = {}
+    try:
+        for r in lark.paged("POST",
+                            f"/bitable/v1/apps/{APP_TOKEN}/tables/{HISTORY_TABLE_ID}/records/search",
+                            tok, body={}):
+            f = r.get("fields", {})
+            raw = f.get("日期")
+            if not isinstance(raw, (int, float)):
+                continue
+            zh = cell(f.get("切点说明"))
+            if zh:
+                history[datetime.datetime.fromtimestamp(raw / 1000, CN).strftime("%Y-%m-%d")] = {
+                    "what": zh, "what_en": cell(f.get("切点说明(EN)"))}
+    except Exception as e:
+        print(f"⚠️ 历史切点表拉失败({type(e).__name__}),这一段按空处理")
+
     cutoff = datetime.datetime.now(CN) - datetime.timedelta(days=a.days)
     items = []
     for r in rows:
@@ -92,11 +110,12 @@ def main() -> int:
             "on_board": bool(f.get("上看板")),
         })
     items.sort(key=lambda x: x["at"], reverse=True)
-    out.write_text(json.dumps({"items": items, "stale": False,
+    out.write_text(json.dumps({"items": items, "history": history, "stale": False,
                                "fetched_at": datetime.datetime.now(CN).strftime("%Y-%m-%d %H:%M")},
                               ensure_ascii=False, indent=1))
     cut = sum(1 for i in items if i["is_cutover"])
-    print(f"✅ 拉到 SoulMap 变更 {len(items)} 条(近 {a.days} 天),其中读数切点 {cut} 条 → {out.name}")
+    print(f"✅ 拉到 SoulMap 变更 {len(items)} 条(近 {a.days} 天),其中读数切点 {cut} 条;"
+          f"另有历史切点 {len(history)} 条 → {out.name}")
     return 0
 
 

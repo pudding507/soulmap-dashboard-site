@@ -70,9 +70,14 @@
 `fetch_changes.py` 每天把它拉成 `changes.json`(随仓库提交,Lark 拉不到时沿用上一次),
 `render_dashboard._load_changes()` 读进来。
 
-🛑 **不要再往 `render_dashboard.py` 的 `CUTOVERS` / `CHANGELOG` 里写条目。**
-`CHANGELOG` 已经空了;`CUTOVERS` 里剩的是 11-19 之前、没进过 Lark 的历史,冻结不动。
-两边都写会重复显示。`i18n.py` 的 `CUTOVERS_EN` / `CHANGELOG_EN` 同理。
+同一个 base 里还有第二张表「soulmap详细记录」(`tbl9hlxK0yTwurec`),
+放 **2026-11-10 之前的历史切点**,一天一行,列是「日期 / 切点说明 / 切点说明(EN)」。
+它只喂 Movers 的 ⚠️ 判断,不上页面的改动日志 —— 所以可以写长,
+把「这天改了哪几件事、哪些指标跨这天不能比」一次写清。新切点不要写这张。
+
+🛑 **不要再往 `render_dashboard.py` 的 `CUTOVERS` / `CHANGELOG` 里写条目**,
+这两个常量 2026-11-19 起已经是空的,`i18n.py` 的 `CUTOVERS_EN` / `CHANGELOG_EN` 同理。
+两边都写会重复显示。
 
 🛑 条目是**直接拼进 HTML** 的,Lark 里可以写 `<b>` / `<code>`,
 **不要写 `**粗体**` 和反引号** —— 那两种会原样显示成字面字符。
