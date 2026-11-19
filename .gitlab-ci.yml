@@ -1,0 +1,36 @@
+# 探测用:确认公司 GitLab 的 Runner 够不够跑这条管线。
+# 用法:放到仓库根改名 .gitlab-ci.yml,推一次,看 pipeline 输出。
+# 🛑 这个文件只做只读探测:不抓数、不渲染、不部署、不写任何东西。
+#    每一项都单独报成功失败,一次跑完就知道哪条路通、哪条路堵。
+
+stages: [probe]
+
+探测:
+  stage: probe
+  # runner 是 docker executor 时用这个镜像;shell executor 会忽略 image
+  image: python:3.11-slim
+  script:
+    - 'echo "=== ① Runner 自身 ==="'
+    - 'echo "executor: ${CI_RUNNER_EXECUTABLE_ARCH:-未知} · tags: ${CI_RUNNER_TAGS:-无}"'
+    - 'python3 --version || echo "✗ 没有 python3 —— shell executor 要自己装"'
+    - 'git --version   || echo "✗ 没有 git"'
+
+    - 'echo "=== ② 能不能出网(抓数必须) ==="'
+    - 'for h in metabase.stylepedia.co open.larksuite.com; do
+         code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://$h/" || echo "连不上");
+         echo "  $h → $code";
+       done'
+
+    - 'echo "=== ③ 能不能连 Cloudflare 和 npm(部署必须) ==="'
+    - 'for h in api.cloudflare.com registry.npmjs.org; do
+         code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://$h/" || echo "连不上");
+         echo "  $h → $code";
+       done'
+    - 'command -v node >/dev/null && node --version || echo "  没有 node —— wrangler 要先装 node"'
+
+    - 'echo "=== ④ 能不能把产物写回仓库 ==="'
+    - 'git remote -v | head -2'
+    - 'echo "CI_JOB_TOKEN 是否可用于 push,要试推一次才知道;本探测不写。"'
+
+    - 'echo "=== ⑤ 管线自带的测试能不能跑(零第三方依赖) ==="'
+    - 'python3 -m unittest discover -s tests -v 2>&1 | tail -5 || echo "✗ 测试跑不了"'
