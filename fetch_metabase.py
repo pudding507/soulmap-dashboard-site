@@ -40,8 +40,9 @@ BASE_URL = os.environ.get("METABASE_URL", "https://metabase.stylepedia.co")
 USERNAME = os.environ.get("METABASE_USER", "")      # 本地跑:export METABASE_USER=...
 PASSWORD = os.environ.get("METABASE_PASSWORD", "")  # 线上:放 GitHub Actions secrets(勿写进代码)
 # 18 = Report raw(基础监控) · 24 = experiment(0.99/付费墙/额度墙/邀请/语音,最新口径)
+# 25 = 能量定价实验(2026-11-19 并入主看板,此前是独立的一页)
 DASHBOARD_IDS = [int(x) for x in
-                 os.environ.get("SOULMAP_DASHBOARD_IDS", "18,24").split(",") if x.strip()]
+                 os.environ.get("SOULMAP_DASHBOARD_IDS", "18,24,25").split(",") if x.strip()]
 
 # 抓了也不渲染的卡 —— 2026-10-19 从 render 的 SECTIONS 里删掉了这三张,
 # 但它们还挂在 Metabase 看板 18 上。不跳过的话每轮白抓三张(其中撞墙那张要扫 firebase_event)。
