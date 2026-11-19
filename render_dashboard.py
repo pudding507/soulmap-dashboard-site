@@ -350,12 +350,6 @@ SECTIONS = [
  #    所以这些列一律用 `d1`、把 % 写进列名 —— 同 capability 卡的 delivery_rate_before_0819。
  #    ⚠️ 写成 pct1 的话会显示成 7540%,而且不会报错。
 
- # 2026-10-19 第二次调整:区从 15 压到 10,顺序改成「用户旅程」。
- #   · 额度墙(1 张)并进付费墙实验 —— 「撞墙才弹墙」和「什么时机弹墙」是一件事的两面
- #   · 模型(1 张)+ 能力链路(2 张)合成「后端」—— 原来各自单卡成区
- #   · 原「现状」区的 2 张拆散:各国新用户与深度 → 增长,语音文字占比 → 语音
- #   · 0.99 首月(3 张)并进变现 —— 0.99 是价格、付费漏斗是结果,本来就是一条链
- #   · 三 Tab(3 张)并进发现 —— Tab 是进发现页的入口,渗透率和点击连着看
 
  # 2026-10-21 第三次调整:按 Michael 10-21 看板反馈第七条「瘦身」,
  #   把 23 张卡移进新建的「⑬ 附录」—— **不是删卡,只是挪到后面**。
@@ -473,25 +467,11 @@ SECTIONS = [
             bar=["installs","qcd_rate"],
             note='上一张卡的按装机日明细,列与口径相同,滤掉装机不足 10 的素材-日。按天拆分母更小,读比率前先看装机列。发起购买走埋点,滞后 1~2 天。｜ Per-install-date detail of the card above; Started is telemetry, lagged 1–2 days.')),
    ("growth_meta_funnel_by_creative", "素材汇总漏斗 · Meta Funnel by Creative", "table",
-       # 2026-09-07 随 SQL 重构:删掉「看过角色卡」与两个相关率列 —— 曝光埋点只覆盖部分 tab
-       #   (foryou/new_this_week/try_different 曝光恒为 0,而这三个占点击 79.5%),拿它当漏斗
-       #   第一级会出现「点击比看卡多 2.7 倍」。漏斗只留严格嵌套三级,目录那条路降为并列列。
-       # 2026-09-14 随 SQL 改版,三件事:
-       #   ① 漏斗加到四级:装机 → 发消息 → QCD(6句) → 累计20句。「20 句」用全历史累计口径
-       #      (同 Monetize_free quota wall daily 的额度上限那条线);实测 950 个达标用户里
-       #      只有 1 个不是 QCD,故仍可当严格漏斗读。
-       #   ② 变现做成三级「点击试用 → 试用生效 → 最终付费」。产品是点 7 天试用、到期才扣费、
-       #      期间可随时取消,所以必须分开:点击试用取 subscription_user_state、
-       #      试用生效取 subscription 里 in_trial=1 的行、付费取 in_trial=0(到期扣费后才转 0)。
-       #      只统计付费功能 2026-09-11 正式上线后才建立订阅关系的用户 —— 上线前那批是测试数据,
-       #      product_id NOT LIKE '%admin_test%' 过滤不掉(按分钟级续订周期才识别得出)。
-       #      三列量级都是个位数,只标人数不配率,不用于素材间比较。
-       #   ③ D1 / D7 由人数改为比率,分母同为装机(与本卡其余比率一致);人数不再单列,
-       #      装机就在同一行、乘回去即可。装机量小的素材比率噪声很大(实测有素材
-       #      installs=14、D1=7 → 50%),读比率前先看装机列。
-       #   ④ 瘦身:删掉目录那条路的四列(点击角色卡 / 装机→点卡 / 点后开聊 / 点卡→开聊)。
-       #      它们不是漏斗的级,而「曝光→点击→开聊」已有 9 张 Discover 专卡;留着只会把表撑宽
-       #      并持续制造误读。连带本卡不再读 host.firebase_event,跑时从 40~46s 降到 5 秒级。
+       # 漏斗四级:装机 → 发消息 → QCD(6句) → 累计20句,「20 句」是全历史累计口径。
+       # 变现三级「点击试用 → 试用生效 → 最终付费」必须分开:产品是点 7 天试用、到期才扣费、
+       #   期间可随时取消。三列量级都是个位数,只标人数不配率,不用于素材间比较。
+       # 🛑 D1 / D7 是比率,分母是装机。装机量小的素材噪声极大(实测有素材 installs=14、
+       #   D1=7 → 50%),读比率前先看装机列。
        dict(top=15, sort="installs",
             cols=[("creative","素材 Creative","text"),
                   ("installs","装机 Installs","int"),
@@ -616,19 +596,6 @@ SECTIONS = [
                   ("d1_return_rate","有效D1 %","d1")],
             bar=["devices","pick_rate"],
             note='一行 = 版本 × 来源 × 两道墙 × 首个角色类型,近 14 天,每格满 20 台才列出。这是把几件事拆开看,不是给出归因。前两级是埋点设备级、后两级是服务端账号级,跨这条线不要相除。来源判法 10-28 起换过,跨那天不要比来源分布。｜ Day-one crosstab, not an attribution.')),
-   # 🛑 2026-10-22 摘牌(用户决定):这里原有两张卡 ——
-   #     「Onboarding 流失 · Onboarding Dropoff」(Metabase 卡 335,原在 ② 激活)
-   #     「Silent 会话率 · Silent-Session Rate」(Metabase 卡 352,原在 ④ 对话)
-   #   处理方式:**只把 dashcard 从 Metabase 看板上摘掉,卡没有归档** ——
-   #     卡 352 原在看板 18;卡 335 在看板 18 和 24 **两个**上都有,都摘了。
-   #     两张卡仍在 collection 里,能单独打开查,只是不在任何看板上。
-   #   ⇒ 所以抓数侧**不用加 SKIP_CARDS**:fetch 是遍历看板的 dashcard,
-   #     卡不在看板上就自然不会被抓到,写进 SKIP_CARDS 反而是条死配置。
-   #   🛑 恢复的时候:先把 dashcard 加回 Metabase 看板,再把卡定义写回这里。
-   #     看板摘牌前的完整配置备份在
-   #     scratchpad/dashboard_18.bak_20261022.json 和 dashboard_24.bak_20261022.json
-   # 2026-09-08 下线「新版 Onboarding Anchor 分布」(activation_onboarding_from_2.5.0)。
-   #   SQL 备份在 soulmap_dashboard/Metabase/old/old_Activation_onboarding from 2.5.0.sql
  ]),
  ("③ 留存 · Retention", [
    ("retention_d1_drop_diagnosis", "有效D1 分来源 · Effective D1 by Source", "table",
@@ -1088,17 +1055,10 @@ SECTIONS = [
             bar=["renewals","revenue_usd"],
             empty_ok=True,          # 见 table 分支:零行要照常出卡,这张卡空着本身就是结论
             note="续费指同一人第 2 笔及以后的扣款,不能按事件名判,试用到期的首次扣款已归到新首付卡。距上一笔那一列能分开两种周期:首购价约 6.8 天,全价是一个月。｜ Renewal = a user's 2nd or later charge.")),
+   # 软墙只挂在客户端 paywall_viewed 上 ⇒ 本卡走 host.firebase_event(T+1,最后一天偏低)。
+   # 🛑 印度软墙将来要换成能量系统的内联首充卡,换完曝光归零 —— 留着这张才有「换之前」的基线。
+   #   换的那天 CUTOVERS、卡头 note、台账切点表三处都要记日期。
    ("india_soft_wall", "软墙转化 · India Soft Wall", "table",
-       # 2026-10-22 新建(Metabase 卡 440)。软墙已是第三大付费入口(近 3 天 378 次/225 人),
-       #   但 10-20 刚开那天 10 次曝光全被关掉。soft_wall_index 只挂在客户端 paywall_viewed 上,
-       #   所以这张卡只能走 host.firebase_event(T+1)。
-       # 🔴 2026-10-28:这张卡 10-28 抓数 **504 超时**(实测 102.6s)。last-touch 归因原本用
-       #   相关子查询,每条下游事件回头扫一遍曝光表 ⇒ 改成窗口函数 **102.6s → 1.3s**
-       #   (Metabase 侧 0.5s)。顺带修好「关掉率 101.3%」—— 同微秒两条曝光会把同一条
-       #   下游事件重复归因。两版 128 个格子只差那 2 格。同卡 437 的那类问题。
-       # 🛑 **本卡保留不摘牌**(2026-10-28 定):倡议书 §二 要把印度软墙换成能量系统的
-       #   内联首充卡,换完软墙曝光会归零 —— 留着这张才有「换之前是什么样」的基线。
-       #   替换时点未定;定了之后 CUTOVERS、卡头、台账 §2.0 **三处都要记日期**。
        dict(top=30,
             cols=[("date","日期 Date","text"),
                   ("soft_wall_index","第几次弹 Which","text"),
@@ -1187,20 +1147,6 @@ SECTIONS = [
                   ("cancel_reason","原因 Reason","text"),
                   ("was_extended","被推迟过 Extended","int")],
             note='首购价买家逐人一行,结果按终态优先级判。到期取订阅表里的最大到期时间,不是首购加 7 天,周期实测不到 7 天,而且扣款失败时商店会把到期往后推。首购价的新增已经基本停了,本卡此后只处理存量,不要把到期结局的比率跨 10-30 读。🔴 2026-11-17 14:45:56 paid_intro_v1 实验结束,所有人都走 paid,澳大利亚从完全不要求预付变成 100% 走首购价 ⇒ 跨这一刻任何首购相关的比率都不可比,澳大利亚尤其不能跨读。｜ Outcome resolved by terminal state; the intro experiment ended 2026-11-17 14:45 and AU went from 0% to 100%.')),
-   # 🛑 2026-10-28 摘牌(用户决定):这里原有三张 0.99 放量期的监控卡 ——
-   #     「0.99首月_首购按客户端版本 · Intro Purchase by Client Version」(Metabase 卡 420)
-   #     「0.99首月_首购按国家 · Intro Purchase by Country」(卡 421)
-   #     「0.99首月_放量覆盖按装机日 · Rollout Coverage by Install Date」(卡 422)
-   #   原因:它们量的是**放量进度**,而 0.99 在 2026-10-15 就已全量 ——
-   #     422 的「覆盖率」从那天起恒等于 100%,420 的客户端版本维度也是放量期用来看覆盖的;
-   #     421 的国家维度和「分市场实收价 · Price by Market」(438)、
-   #     「付费_付款页成功率与真实失败」(433)重合。
-   #   🛑 **「0.99首月_到期逐人结果 · Intro Expiry — Per-User Outcome」(429)留着** ——
-   #     它量的是续费结局,不是放量,数还在长(121 行)。
-   #   处理方式:**只摘 dashcard,卡没有归档** —— 三张卡都从看板 18 和 24 上摘掉,
-   #     仍在 collection 里能单独打开。⇒ 抓数侧不用加 SKIP_CARDS(fetch 遍历的是 dashcard)。
-   #   恢复:先把 dashcard 加回看板,再把卡定义写回这里。
-   #   摘牌前的看板配置备份在 scratchpad/dashboard_18.bak_20261028b.json 和 dashboard_24.bak_20261028b.json
    ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
        # 2026-09-09 新建。付费链路 09-08~09 刚打通。
        #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
@@ -1296,14 +1242,6 @@ SECTIONS = [
                   ("pct_written_back","回写率 %","d1")],
             bar=["devices","pct_written_back"],
             note="这是实验数据本身的质量卡:回写率低的版本,它的分臂结果就不可信。读上面几张分臂卡之前先看这张。｜ Data-quality guard for the experiment: low writeback = unreliable arm data for that version.")),
-   # 🛑 2026-10-22 摘牌:「免费额度线」(Metabase 卡 403)已进 fetch_metabase.py 的停抓名单,
-   #   处理方式与 404 分臂漏斗一致 —— **等条件,不是作废**,所以 Metabase 那边没归档。
-   #   原因:必定超 60 秒网关超时(三种写法都在 240 秒上下),根因是 soulmap_turn_log
-   #   36.8GB 数据 + 13.5GB 索引、而 buffer pool 只有 1.5GB,几乎每次回表都落盘,SQL 改不动。
-   #   🛑 恢复的时候:**这段注释换回原来的卡定义**,列名是
-   #     date / reason / free_total / rows_n / sessions / total_min / total_avg / total_max,
-   #     top=40,表格,卡头写明「数的是 total 的上下界,不是撞墙人数,撞墙人数看 424」。
-   #   详见 02_跨团队沟通/服务端/173_TO-Liwen-db-index-and-buffer-pool-20261022.md
    ("quota_wall_blocked_next", "撞墙与撞墙之后 · Quota Wall — Blocked & Next", "table",
        dict(top=30,
             cols=[("d","日期 Date","text"),
