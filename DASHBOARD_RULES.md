@@ -380,6 +380,22 @@ END AS pct_of_previous
 
 ## 九、改完怎么验
 
+0. **先跑测试**(2026-11-19 起):`python3 -m unittest discover -s tests`,39 条,不到 0.1 秒。
+   不连库不连 Metabase,CI 里在抓数**之前**跑一次、抓完数**再跑一次**
+   (量纲那条要有 `raw_metrics.json` 才验得了)。
+
+   | 文件 | 验什么 |
+   |---|---|
+   | `tests/test_config.py` | 卡 id 不重复 · 每张卡都在 `KEY_OVERRIDE` 里登记 · `fmt` 合法 · 百分比量纲 · note 不含 Markdown · 卡名能拆中英 · 列名没有尾空格 |
+   | `tests/test_movers.py` | Movers 的五条口径 + 「有分母 ≠ 是百分比」 |
+   | `tests/test_i18n.py` | 卡名 / 列名 / note 的拆分 · 手工表不能有重复 key · changelog 常量保持空 |
+
+   🛑 **测试报出来的不一定是代码错,也可能是测试写严了。** 先看真数据再判:
+   11-19 这轮就有三条规则是我写严的(`fallback_pct` 0.01% 是真的那么小、
+   `组 Arm` 这类混排列名是现有设计),误报比漏报更伤 —— 没人看的测试等于没有。
+
+
+
 0. **动手之前**(容易漏的一步):产品玩法、台账切点总表、本周 changelog 都对过(第二节)。
    有新切点的话,Lark 变更表和 `_已落地改动台账.md` 两处都写了(第 2.2 节)
 1. **语法**:`python3 -W error::SyntaxWarning -c "import ast; ..."` 扫一遍

@@ -24,6 +24,12 @@ _BOUND = CJK + CJK_PUNCT
 
 # ---------- 自动拆会切坏的列名:原文 → (中文, 英文);英文为 None 表示整条就是中文 ----------
 COLUMN_FIX = {
+    # 2026-11-19 补:这三条自动拆会把中文留在页面上(英文模式下仍显示中文)。
+    # 拆分规则是「最后一个中文字之后是英文」,QCD 这种纯大写缩写会被当成英文切走,
+    # 「延迟中位(分) p50」的 p50 同理(那两条在下面,2026-11-19 把中文侧补全了)——
+    # 切走之后 I18N 的 key 和页面上的原文对不上,查不到表就不翻译。
+    "装机→QCD": ("装机→QCD", "Install → QCD"),
+    "开聊→QCD": ("开聊→QCD", "Chat → QCD"),
     "不同 query Distinct":        ("不同 query", "Distinct"),
     "拿到 token Token":           ("拿到 token", "Token"),
     "无效 token Invalid":         ("无效 token", "Invalid"),
@@ -34,8 +40,8 @@ COLUMN_FIX = {
     "占有token的 %":               ("占有token的 %", "% of With Token"),
     "应发(真实0.99) Should":       ("应发(真实 0.99)", "Should Grant"),
     "开过订阅(试用或0.99) Sub Started": ("开过订阅(试用或 0.99)", "Sub Started"),
-    "延迟最大(分) max":             ("延迟最大(分)", "Max Delay (min)"),
-    "延迟中位(分) p50":             ("延迟中位(分)", "Median Delay (min)"),
+    "延迟最大(分) max":             ("延迟最大(分) max", "Max Delay (min)"),
+    "延迟中位(分) p50":             ("延迟中位(分) p50", "Median Delay (min) p50"),
     "占能量用户 % of Energy":        ("占能量用户 %", "% of Energy Users"),
     "到期时刻(SGT)":                ("到期时刻(SGT)", "Expiry (SGT)"),
     "首购时刻(SGT)":                ("首购时刻(SGT)", "First Purchase (SGT)"),

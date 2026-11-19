@@ -405,7 +405,7 @@ SECTIONS = [
             cols=[("country","国家 Country","text"),
                   ("new_users","新用户 New Users","int"),
                   ("engaged_gt3",">3句 >3 msgs","int"),
-                  ("engaged_gt3_pct",">3句 % ","d1"),
+                  ("engaged_gt3_pct",">3句 %","d1"),
                   ("engaged_ge10","≥10句 ≥10 msgs","int"),
                   ("engaged_ge10_pct","≥10句 %","d1"),
                   ("deep_ge20","≥20句 ≥20 msgs","int"),

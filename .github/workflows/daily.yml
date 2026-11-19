@@ -78,6 +78,12 @@ jobs:
               print(f'  OK {f}')
           "
 
+      # 配置自检 + movers 口径 + 中英拆分,38 条,不连库不连 Metabase,几十毫秒跑完。
+      # 放在抓数前面:卡没在 KEY_OVERRIDE 里登记、fmt 写错、列名拆不出英文这类
+      # 等到渲染完才发现,一整轮卡就白抓了。
+      - name: unit tests
+        run: python3 -m unittest discover -s tests -v
+
       - name: fetch
         env:
           METABASE_USER: ${{ secrets.METABASE_USER }}
@@ -104,6 +110,11 @@ jobs:
           LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
           LARK_APP_SECRET: ${{ secrets.LARK_APP_SECRET }}
         run: python3 fetch_changes.py
+      # 再跑一次:test_percent_scale_matches_fmt 要有 raw_metrics.json 才验得了量纲
+      # (pct* 列出现 >1.5 的值 = 一定显示错)。抓数前那轮会跳过它。
+      - name: unit tests (with data)
+        run: python3 -m unittest discover -s tests
+
       - name: render
         run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
       # ---- 能量定价实验:独立一页(带中英切换,给 Javier 看)----
