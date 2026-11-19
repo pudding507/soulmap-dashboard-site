@@ -129,6 +129,10 @@
 
 SQL 归档的文件名 = Metabase 卡名,**不加 `_v2` / `_提案` 这类后缀**。
 
+🛑 **卡名里不要用 `/`** —— 归档时它是路径分隔符,写文件会直接报 FileNotFoundError。
+已有的那张(`Engage / Depth / Return per Host`)归档时换成了 `-`,文件名和卡名因此对不上;
+新建卡时用 `·` 或 `-` 代替,别再制造这种例外。
+
 ### 4.2 列名:`中文 English`(空格连接,不要间隔号)
 
 例:`国家 Country` · `新用户 New Users` · `装机设备 Installs`。

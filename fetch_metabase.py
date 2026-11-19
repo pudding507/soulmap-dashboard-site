@@ -116,6 +116,41 @@ KEY_OVERRIDE = {
     413: "invite_reward_grants",        419: "invite_redeem_by_source",
     423: "invite_bonus_30msg",
     466: "invite_funnel_guards",      # 2026-11-17 新建;新链路(11-13 起)六步漏斗 + 四项防刷
+
+    # 🔴 2026-11-19 把**当前在用的 88 张卡**全部显式登记。
+    #    原因:key 本来是从卡名算的(safe_metric_id),一改卡名 key 就变、SECTIONS 立刻对不上。
+    #    这次要把 Metabase 卡名统一成看板上的中文名,所以先在这里把 card_id → key 钉死,
+    #    之后改卡名随便改,管线只认 card_id。
+    #    🛑 新增卡时**必须**在这里加一行,不能再依赖卡名自动算。
+    324: "growth_dau",                    # 日活跃用户数
+    325: "retention_d1",                  # 留存 D1(设备)
+    326: "growth_new_user",               # 新用户数
+    327: "retention_d7",                  # 留存 D7
+    328: "retention_d3",                  # 留存 D3
+    349: "chat_daily_msgs_per_user",      # 当天人均消息数
+    351: "chat_session_duration",         # 对话时长
+    363: "discover_click_position_distribution",# 点击位次分布
+    368: "activation_funnel_by_adgroup",  # 激活漏斗分广告组
+    369: "activation_guardrail_funnel",   # 护栏漏斗分版本
+    373: "chat_engaged_new_user_rate",    # 新用户投入率
+    374: "retention_d1_effective",        # 有效留存 D1(账号)
+    375: "growth_version_adoption",       # 版本覆盖率
+    376: "growth_adgroup_d0_comparison",  # 广告组首日对照
+    377: "discover_character_coverage",   # 角色覆盖
+    378: "retention_push_funnel",         # 推送权限与注册
+    379: "retention_push_delivery",       # 推送发送与送达
+    381: "discover_character_leaderboard",# 角色表现榜
+    382: "discover_character_daily_ctr",  # 每日角色 CTR
+    385: "growth_meta_funnel_by_creative",# 素材汇总漏斗
+    386: "growth_meta_daily_qcd_by_creative",# 装机日素材漏斗
+    387: "discover_character_qcd_and_retention",# 角色 QCD 与回访
+    388: "capability_funnel_daily_health",# 能力链路日度健康
+    392: "capability_funnel_by_capability",# 各能力可读性
+    393: "discover_search_usage",         # 搜索使用与结果质量
+    395: "monetize_payment_funnel_daily", # 付费漏斗
+    397: "chat_character_type_ab_funnel", # 角色类型 A/B 漏斗
+    399: "monetize_payment_funnel_by_country",# 付费漏斗分国家
+    400: "monetize_full_funnel_by_version",# 全链路付费漏斗分版本
     # 2026-11-18 新建:Metabase 看板 **25**(能量定价实验)。这十张**不进主看板** ——
     # 它们由 render_energy_ab.py 渲染成单独的一页 site/energy-ab.html,
     # 抓数也走单独一轮(`--dashboard-ids 25 --out raw_energy_ab.json`),和 18/24 完全隔离。

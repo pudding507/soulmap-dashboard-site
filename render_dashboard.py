@@ -610,7 +610,7 @@ SECTIONS = [
                   ("engaged_5plus","首日≥5条 Engaged","int"),("engaged_rate","投入率 %","pct1")],
             bar=["new_users","d1_rate"],
             note='分母是当天注册的账号,分子是次日发过消息的人;投入率那列的门槛是 5 条,和北极星的 3 条不是一回事。切到业务线那组看:CityPLX 的 D1 常年不到 1%,混在 overall 里会把整体压低,读趋势请看 SoulMap 那行。最后一天 D1 必然偏低。｜ Effective D1 by source and business line.')),
-   ("retention_d1_effective", "有效留存 D1(账号)· Effective Retention D1", "long_dim",
+   ("retention_d1_effective", "有效留存 D1(账号) · Effective Retention D1", "long_dim",
        # 🛑 2026-10-27 卡头补口径(口径清单 ② / ⑥)。SQL 没动,只写清楚这是哪一套。
        dict(rate=("messaged_users","new_users"), **RETENTION_DIMS,
             note='账号级:次日发过消息的账号 ÷ 当天注册的账号,只算用户自己发言,打开 App 不算。CityPLX 并成一栏,它的 D1 只有 0.2%、却占近 7 天注册的六成,Overall 被它压低约 2 个百分点,读趋势请看 SoulMap 那条。不要和设备级的留存 D1 或 D3/D7 相比。｜ Account-level D1; not comparable with the device-level card.')),
@@ -1631,7 +1631,7 @@ SECTIONS = [
             note='一行一个人,近 30 天按到手收入排序,占比的分母是全部到手收入,不是前 20 名的和。净额出现负数不是算错,聊得多的人服务成本会高过他付的钱。取消续费不是退款,关掉自动续费时这一期的钱并没有退回去,真正的退款现在没有数据源。 ｜ One row per person, ranked by takehome over 30 days. Negative net is not an error. Cancellations are not refunds.')),
  ]),
  ("⑭ 附录 · Appendix", [
-   ("retention_d1", "留存 D1(设备)· Retention D1", "long_dim",
+   ("retention_d1", "留存 D1(设备) · Retention D1", "long_dim",
        # 🛑 2026-10-27 卡头补口径(口径清单 ② / ⑥)。SQL 没动,只写清楚这是哪一套。
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note='设备级:次日开 App 的设备 ÷ 装机当天的新设备。这一套和 D3、D7 同源同层级,留存曲线要连着读就用这张。另一张有效留存 D1 是账号级、分子是发消息,两者差 1.4 倍,不要互相比也不要相除。北极星用哪一套尚未统一,定之前这个数只当参考。｜ Device-level D1, same basis as D3/D7.')),
