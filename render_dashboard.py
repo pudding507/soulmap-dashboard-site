@@ -2379,11 +2379,16 @@ def _movers_html(movers, dropped=(), run_date=None, write_history=False):
     # 逐行重复五遍只会把真正的差异盖掉 ⇒ 全员相同就提到表头说一次。
     cuts = {m["cut"] for m in movers}
     shared = cuts.pop() if len(cuts) == 1 and all(m["cut"] for m in movers) else None
+    refilled = [m for m in movers if m.get("refilled")]
     if shared:
+        # 🛑 全员同切点时,下面那条「本榜有 N 行本该让位」就是重复 —— 并进来说一次。
+        tail_zh = ('。今天没有别的指标够门槛,所以没让位' if refilled else '')
+        tail_en = (' — no other metric cleared the threshold today, so none gave up its slot'
+                   if refilled else '')
         head += ('<div class="mv-all-cut">' + i18n.bi(
-            f'⚠ 本榜全部 {len(movers)} 行都跨了同一个切点:{shared}',
+            f'⚠ 本榜全部 {len(movers)} 行都跨了同一个切点:{shared}{tail_zh}',
             f'⚠ All {len(movers)} rows cross the same cutover: '
-            + i18n.CUTOVERS_EN.get(shared, shared)) + '</div>')
+            + i18n.CUTOVERS_EN.get(shared, shared) + tail_en) + '</div>')
     rows = []
     for m in movers:
         rows.append(
@@ -2403,8 +2408,7 @@ def _movers_html(movers, dropped=(), run_date=None, write_history=False):
     # 被压制的要列出来 —— 压制是「让位给下一名」,不是把数藏起来。
     # 不写具体数值(那是让位的理由,不是今天要看的),只说是谁、为什么。
     foot = ''
-    refilled = [m for m in movers if m.get("refilled")]
-    if refilled:
+    if refilled and not shared:
         cut = refilled[0]["cut"]
         foot += ('<div class="mv-drop">' + i18n.bi(
             f'本榜有 {len(refilled)} 行和上面某行跨的是同一个切点,按规则本该让位,'
