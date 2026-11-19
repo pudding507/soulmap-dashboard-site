@@ -575,7 +575,7 @@ SECTIONS = [
         # 2026-09-15 随 SQL 改:轮数三级 → 累计句数五级,8 级改 9 级。
        #   绝对数会跳一次(≥3 +17.6% / ≥5 +29.5% / ≥10 +50.7%),是口径变化不是数据错。
        dict(gsort="version", note='九步按 App 版本分组。前两步是埋点设备级、近 30 天,第 3~8 步是服务端全历史累计句数、账号级,第 9 步是买过能量。第 1 到第 2 步跨源跨窗,可能往上翘;第 2~8 步严格嵌套。第 9 步每组只有个位数,只读人数不算比率。｜ Nine steps by app version.')),
-   ("activation_first_day_crosstab", "新用户第一天交叉表 · First Day — Crosstab", "table",
+   ("activation_first_day_crosstab", "新用户首日行为交叉 · First Day — Crosstab", "table",
        # 2026-10-26 新建(Metabase 卡 442)。WW46 D-456「新用户第一天」整段重做的第一环,
        #   Javier 牵头、Kang 配合;Kang 要据此查 3.7.0 起首屏到选角色多出的那一步(D-454)。
        # 🛑 原稿带 Metabase 模板变量 {{date_from}}/{{date_to}},管线不传参跑不了,
@@ -598,7 +598,7 @@ SECTIONS = [
             note='一行 = 版本 × 来源 × 两道墙 × 首个角色类型,近 14 天,每格满 20 台才列出。这是把几件事拆开看,不是给出归因。前两级是埋点设备级、后两级是服务端账号级,跨这条线不要相除。来源判法 10-28 起换过,跨那天不要比来源分布。｜ Day-one crosstab, not an attribution.')),
  ]),
  ("③ 留存 · Retention", [
-   ("retention_d1_drop_diagnosis", "有效D1 分来源 · Effective D1 by Source", "table",
+   ("retention_d1_drop_diagnosis", "有效 D1 分来源 · Effective D1 by Source", "table",
        # 2026-10-22 新建(Metabase 卡 432)。对应 Michael 10-21 反馈 P0 第三项。
        # 🛑 分母是「当天注册的账号」(D-151),**不是装机设备** —— 10-17 起有大批设备
        #   拿不到 uid、根本进不了 soul_map.user(见 OPPO/Realme 那条)。
@@ -686,7 +686,7 @@ SECTIONS = [
                   ("voice_msg_pct","语音消息占比 %","d1")],
             bar=["users","voice_user_pct"],
             note='一行 = 一天 × 一个国家。两个占比的分母不是同一个,一个是人、一个是消息,不要互相换算,也不要画成饼图。｜ One row per day x country; the two shares have different denominators.')),
-   ("voice_arm_comparison", "分桶对照 · Randomized Arm Comparison", "table",
+   ("voice_arm_comparison", "语音随机分桶对照 · Randomized Arm Comparison", "table",
        dict(cols=[("seq","#","int"),
                   ("metric","指标 Metric","text"),
                   ("metric_en","Metric (EN)","text"),
@@ -744,7 +744,7 @@ SECTIONS = [
                   ("community_ctr_pct","社区 CTR %","d1")],
             bar=["impressions","community_pct"],
             note='For You 推荐位里社区角色的占比,设备级,埋点次日入库。这一列至今恒为 0,但同期社区角色在聊天表里有上千条消息、上百人在聊,聊得到却曝光不到,基本可以判定是曝光埋点少带了前缀,判据要改,不能读成没有混入。｜ Community share is still 0; likely a telemetry prefix issue.')),
-   ("host_three_metrics", "每个角色三个数 · Per-Host Engage/Depth/Return", "table",
+   ("host_three_metrics", "每个角色的参与深度回访 · Per-Host Engage/Depth/Return", "table",
        # 2026-10-22 新建(Metabase 卡 437)。对应 Michael 10-21 反馈 P1 第 7 项(D-181/D-182)。
        dict(top=60,
             cols=[("host_name","角色 Host","text"),("char_class","类型 Class","text"),
@@ -953,7 +953,7 @@ SECTIONS = [
             bar=["new_legacy_buys","shadow_energy"],
             note='老的不限量订阅现在是什么状态,一行一天。老商品新开数目标是 0,不是 0 就说明商店里还买得到。迁移在 2026-11-13 当天跑完两批,名单 158 人里 88 人已经切过去,走的是直接切每月 950,不是每天 100 的过渡月,所以那一列读到的是当天切过去的人数。影子消耗是按能量制算出来的服务成本,但不真的扣,单位是能量不是美元,要折美元得另外定汇率。｜ Legacy unlimited: 88 of 158 switched on 2026-11-13.'
             )),
-   ("energy_ladder_progression", "能量阶梯推进 · Energy Offer Ladder", "table",
+   ("energy_ladder_progression", "能量档位推进 · Energy Offer Ladder", "table",
        # 2026-11-04 新建(Metabase 卡 458)。出处:产品玩法 §15.4 ②「聊天内阶梯优惠」。
        dict(cols=[("app_line","业务线 Line","text"),
                   ("tier","档位 Tier","text"),
@@ -968,7 +968,7 @@ SECTIONS = [
             bar=["shows_inline","reached_users"],
             note='全时段累计,一行一个档位,不按天拆,按天拆就看不出推进。分母是这一档有任何记录的人,不是只算曝光,有人只有接受没有曝光,只按曝光做分母会算出超过 100% 的接受率。推进率不是转化率,满 24 小时那条路也会推进。｜ Cumulative ladder L1-L5.'
             )),
-   ("energy_arm_comparison", "能量两臂对照 · energy_v1 Arm Comparison", "table",
+   ("energy_arm_comparison", "能量实验两臂对照 · energy_v1 Arm Comparison", "table",
        # 2026-11-04 新建(Metabase 卡 459)。出处:产品玩法 §15.6 / §十一。
        dict(cols=[("app_line","业务线 Line","text"),
                   ("arm","分臂 Arm","text"),
@@ -1058,7 +1058,7 @@ SECTIONS = [
    # 软墙只挂在客户端 paywall_viewed 上 ⇒ 本卡走 host.firebase_event(T+1,最后一天偏低)。
    # 🛑 印度软墙将来要换成能量系统的内联首充卡,换完曝光归零 —— 留着这张才有「换之前」的基线。
    #   换的那天 CUTOVERS、卡头 note、台账切点表三处都要记日期。
-   ("india_soft_wall", "软墙转化 · India Soft Wall", "table",
+   ("india_soft_wall", "印度软墙转化 · India Soft Wall", "table",
        dict(top=30,
             cols=[("date","日期 Date","text"),
                   ("soft_wall_index","第几次弹 Which","text"),
@@ -1128,7 +1128,7 @@ SECTIONS = [
    #     「印度·0.99首购率与次日回来」(Metabase 卡名同步改了)。要恢复 434 的话,
    #     **记得把 435 的标题改回带「剔除A类实验广告」**,否则两张卡会同名。
    #   摘牌前的看板配置备份在 scratchpad/dashboard_24.bak_20261027.json
-   ("intro_expiry_per_user", "0.99 到期逐人结果 · Intro Expiry Per-User", "table",
+   ("intro_expiry_per_user", "0.99 首月到期逐人结果 · Intro Expiry Per-User", "table",
        # 2026-10-21 新建(Metabase 卡 429)。对应 Michael 10-21 反馈 P0 第一条(W43 ③ / D-335)。
        # 🛑 到期取 MAX(expiration_at),**不能算「首购 + 7 天」** —— 实测周期均值 6.82 天、最长 6.96,
        #   而且扣款失败时商店会发 SUBSCRIPTION_EXTENDED 把到期往后推,每次推一天。
@@ -1184,7 +1184,7 @@ SECTIONS = [
        #   实测这个坑有多深:按整月算英美加澳撞墙率 1.5%、南亚 8.9%;按 09-12 起算是 6.4% / 14.5%。
        # 🛑 与 monetize_full_funnel_by_version 共有五个环节,数值必须一致,改口径要同步改两张。
        dict(note='七步按国家分组,队列是 2026-09-12 起新装的设备。前五步是埋点设备级、后两步是服务端账号级,靠埋点里的账号桥接、覆盖约 85%,所以试用与付费两级系统性偏低约一成半,跨这条线不要相除。只能看差距出现在哪一段,不能比较两地的付费率。｜ Read where the gap appears, not the paid rates.')),
-   ("churn_before_after_speaking", "退订·讲话前还是讲话后 · Churn Before/After Speaking", "table",
+   ("churn_before_after_speaking", "退订时点分讲话前后 · Churn Before/After Speaking", "table",
        # 2026-10-22 新建(Metabase 卡 436)。对应 Michael 10-21 反馈 P1 第 8 项(D-210)。
        dict(top=60,
             cols=[("unsub_date","退订日 Date","text"),("country","国家 Country","text"),
@@ -1209,7 +1209,7 @@ SECTIONS = [
        dict(gsort="version", note='九步按 App 版本分组,队列是 2026-09-12 起新装的设备,装机量不足 200 的版本并入其它。第 1 步是埋点、按设备数,第 2 步起是服务端、按账号数。装机设备里只有七成三接得回账号,接不回的从第 3 步起一律算未达,所以第 2 步那段落差是桥接丢的,不是用户不点。旧免费额度墙正被能量制替换,撞墙那一步跨 10-28 不要直接比。｜ Nine steps by version; step 1 device-level, step 2 onward account-level.')),
  ]),
  ("⑧ 付费墙实验 · Paywall Experiment", [
-   ("paywall_triggers_side_by_side", "五道墙并排 · Paywall Triggers Side by Side", "table",
+   ("paywall_triggers_side_by_side", "五道付费墙对比 · Paywall Triggers Side by Side", "table",
        # 🛑 2026-10-27 改名「四道墙」→「五道墙」。SQL 一行没动 —— 本卡从建卡起就是按 trigger
        #   动态分组、没有白名单,第五道墙 first_message_gate 一出现就自动有行。
        # 🛑 first_message_gate 不是 10-22 才有的:实测全量 344 次 / 126 人,
@@ -1311,7 +1311,7 @@ SECTIONS = [
             note="兑换失败的原因分布,按来源(链接 / 手动输码)拆。｜ Redemption outcomes split by entry path and failure reason.")),
  ]),
  ("⑩ 后端 · Backend", [
-   ("capability_funnel_by_capability", "各能力可读性 · Capability Readability", "table",
+   ("capability_funnel_by_capability", "各能力数据可读性 · Capability Readability", "table",
        dict(top=40,          # 不填 sort = 保持 SQL 的 ORDER BY surfaced_7d DESC
             cols=[("capability","能力 Capability","text"),
                   ("readability","可读性 Readability","text"),
@@ -1408,7 +1408,7 @@ SECTIONS = [
                   ("mismatch_pct","错配率 %","d1")],
             bar=["pairs","mismatch_pct"],
             note='本卡只统计 SoulMap,不含 CityPLX,不要和把两者并列的那些卡相加或对比。判的是书写系统不是语言,所以拉丁字母内部的错配判不出来,错配数是下界不是真实量,不要当语言错配率对外报。只看文字消息,语音那侧是转写文本。分母不足 30 的格子整行不出。｜ Lower-bound mismatch by writing system.')),
-   ("risk_ref_photo_uploads", "合照参考照上传量 · Reference Photo Uploads", "table",
+   ("risk_ref_photo_uploads", "合照参考图上传量 · Reference Photo Uploads", "table",
        # 2026-10-20 新建(Metabase 卡 426)。🔴 合照功能还不存在,但用户已经在上传真人照片。
        #   10-17 起累计 36 张在库,10-20 单日 20 张(15 人),在加速。
        #   这张卡盯的是存量风险,不是增长 —— 产品要定先关入口还是加文案。
@@ -1446,7 +1446,7 @@ SECTIONS = [
                   ("plus_tap_rate_trailing_7d_pct","点开率(7天滚动)%","d1")],
             bar=["layer_1_plus_shown_devices","layer_2_plus_tapped_devices"],
             note='四种模式入口三层:看到入口 → 选模式 → 点开始 → 真的跑起来,按版本拆,3.8.1 和 3.9.0 不是同一个交互,合行会把两套入口平均掉。漏损全在第一跳,实测 100 台看到只有 5 台点、真的跑起来 0 台。天花板是 A 类角色的进入量,入口压根不在多数人屏上出现。日度不给比率。｜ Shown but not tapped.')),
-   ("sp_memories_usage", "我们的回忆页使用 · Memories Page Usage", "table",
+   ("sp_memories_usage", "回忆页使用情况 · Memories Page Usage", "table",
        # 2026-10-20 新建(Metabase 卡 428)。Super Power 里唯一对所有角色都开的入口。
        # 🛑 这几步不是独立事件名,是 sp_step 的 params.step 取值 —— 按事件名查会一条都查不到。
        dict(top=30,
@@ -1504,7 +1504,7 @@ SECTIONS = [
             bar=['users_assigned', 'messages_per_user'],
             note='分母是实验开始后注册的新用户,已排掉 CityPLX 的游戏账号。先看两组人数差多少,50/50 分组下相差超过 5% 说明分组偏了,后面几张卡的对比都不成立。实验开始前所有人显示在 unassigned 一行。 ｜ New users who signed up after the start, excluding CityPLX accounts. A headcount gap above 5% under a 50/50 split means the split is skewed.')),
    # —— 原独立页的「② 钱 · Money」——
-   ('energy_ab_net_revenue', '主指标:每新用户 14 天净收入 · Net Revenue per User (14d)', 'table',
+   ('energy_ab_net_revenue', '每新用户 14 天净收入 · Net Revenue per User (14d)', 'table',
        dict(top=10,
             cols=[('arm', '组 Arm', 'text'),
                   ('cohort_maturity', '队列成熟度 Maturity', 'text'),
@@ -1532,7 +1532,7 @@ SECTIONS = [
                   ],
             bar=['buyers', 'first_purchase_pct'],
             note='分母是实验期注册的新用户。买的定义是服务端有金额的成交记录,订单表的金额和国家列是空的,用不了。又买比例的分母是买过的人,不是全部用户。用完后买这一列分子只有 12,现在读不出。 ｜ Denominator is new users in the experiment window. Purchases come from the server-side billing log. The repeat rate is over buyers, not over all users.')),
-   ('energy_ab_margin_band', '按条数分段的每条毛利 · Margin by Message Number', 'table',
+   ('energy_ab_margin_band', '分条数段的每条毛利 · Margin by Message Number', 'table',
        dict(top=20,
             cols=[('arm', '组 Arm', 'text'),
                   ('message_band', '第几条 Message No.', 'text'),
@@ -1575,7 +1575,7 @@ SECTIONS = [
                   ],
             bar=['users_total', 'sent_30_plus_pct'],
             note="分母是实验期注册的新用户。第 7 天这一列按账号算,口径是注册后第 7 天还在发消息,和主看板那张按设备算的留存卡不是一回事,两边的数不要互相对。人均活跃天数只有 1.3 天,多数新用户只来一天,第 7 天的数低是这个结构决定的。 ｜ Day 7 here counts accounts still sending messages, not devices. It is a different definition from the main dashboard's retention card.")),
-   ('energy_ab_conversation_length', '对话长度与第30条附近换角色 · Conversation Length', 'table',
+   ('energy_ab_conversation_length', '对话长度分布 · Conversation Length', 'table',
        dict(top=20,
             cols=[('arm', '组 Arm', 'text'),
                   ('final_length_band', '最终聊了多少条 Final Length', 'text'),
@@ -1586,7 +1586,7 @@ SECTIONS = [
             bar=['conversations', 'pct_of_conversations'],
             note='一行一个档位,分母是对话数不是人数,一个人可以有多个角色对话。免费额度正好 30 条,所以 26 到 30 这一档本来就偏高;D-594 的涨价点也在第 30 条,两件事落在同一条消息上,单看一组分不清堆积是哪一件造成的,只能比两组在同一档的占比差。 ｜ One row per final-length band; the denominator is conversations, not people. The free allowance and the D-594 price step both fall on message 30.')),
    # —— 原独立页的「④ 成本与大客户 · Cost and top users」——
-   ('energy_voice_per_charge', '语音生成 ÷ 扣费 · Voice Generations per Charge', 'table',
+   ('energy_voice_per_charge', '语音生成与扣费比 · Voice Generations per Charge', 'table',
        dict(top=30,
             cols=[('activity_date', '日期 Date', 'text'),
                   ('voice_kind', '类型 Kind', 'text'),
