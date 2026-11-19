@@ -1540,41 +1540,10 @@ SECTIONS = [
             note='Super Power 按档位逐日数扣费。定稿要活动每条扣 2、研究扣 10 和 50 三档,现在只有活动这一档在扣,研究两档一笔都没有,哪一档不出现就是还没上。档位靠扣费金额认,没有单独的类型列,以后两种价格撞到一起就分不开。没有扣费的日子不出行,不是补零。总共只有十八个人用过,单日的数不要单独下结论。｜ Super Power charges by tier; research tiers still zero.'))
  ]),
  ("⑬ 附录 · Appendix", [
-   ("search_zero_result_by_length", "搜索零结果 × 词长 · Zero-Result by Query Length", "table",
-       # 2026-10-27 新建(Metabase 卡 445)。新语义搜索 2026-10-26 15:14 上线,
-       #   现有 discover_search_usage 只给整体率、不给分布,而新旧对比必须按词长分档。
-       dict(top=60,
-            cols=[("date","日期 Date","text"),
-                  ("query_len_bucket","词长 Query Length","text"),
-                  ("searches","搜索次数 Searches","int"),
-                  ("zero_results","零结果次数 Zero","int"),
-                  ("zero_result_pct","零结果率 %","d1"),
-                  ("avg_result_count","平均结果数 Avg Results","int")],
-            bar=["searches","zero_result_pct"],
-            note='零结果率按查询词长分档,设备级,埋点次日入库。这张卡记录的是旧搜索的毛病:打得越完整越找不到,1 个字 2%,11 个字以上 82%,这正是换语义搜索的理由。本卡只说明有没有返回,说明不了返回得对不对,后者看搜索结果相关性。｜ Zero-result rate by query length.')),
-   ("search_result_relevance", "搜索结果相关性 · Search Result Relevance", "table",
-       # 2026-10-27 新建(Metabase 卡 446)。和上面那张成对,**必须一起读** ——
-       #   语义搜索上线后零结果率趋近 0,那张卡就只剩「有没有返回」一个信息,
-       #   换搜索这件事用它验收不了。这张回答另一半:返回得对不对。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("searches","搜索次数 Searches","int"),
-                  ("searches_with_result","有结果 With Result","int"),
-                  ("result_taps","点了结果 Taps","int"),
-                  ("tap_rate_pct","点击率 %","d1"),
-                  ("suggestion_taps","点了建议 Suggestion Taps","int"),
-                  ("avg_tap_position","点击位次(均值)Avg Pos","d1"),
-                  ("top3_tap_pct","点在前三 %","d1")],
-            bar=["searches","tap_rate_pct"],
-            note='分母是有结果的搜索次数,不是全部搜索,零结果的本来就没得点,混进分母会让点击率随零结果率一起动。判相关性看前三位点击占比,不要看位次均值,均值会被个别深翻的人拉偏。搜索建议单列,不并进点击率。切换日当天新旧混合,跨那天要当两段读。｜ Did people click what search returned.')),
    ("retention_d1", "留存 D1 · 设备级 · Retention D1 (device)", "long_dim",
        # 🛑 2026-10-27 卡头补口径(口径清单 ② / ⑥)。SQL 没动,只写清楚这是哪一套。
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note='设备级:次日开 App 的设备 ÷ 装机当天的新设备。这一套和 D3、D7 同源同层级,留存曲线要连着读就用这张。另一张有效留存 D1 是账号级、分子是发消息,两者差 1.4 倍,不要互相比也不要相除。北极星用哪一套尚未统一,定之前这个数只当参考。｜ Device-level D1, same basis as D3/D7.')),
-     ("growth_new_activated_user", "深度新用户数 · Deep New Users", "line", dict(val="value", cap=12,
-       note="新用户中对话≥5轮的人(1问1答=1轮) ｜ New users reaching ≥5 conversation turns (1 exchange = 1 turn)",
-       rollup={"country": 20},
-       dims=[("overall","Overall",None),("source","by source","source"),("adgroup","by source×adgroup",_ADG),("country","by country","country")])),
    ("discover_search_usage", "搜索使用与结果质量 · Search Usage & Result Quality", "table",
        # 2026-09-09 新建。选表格不选折线:13 个指标折线放不下,而零结果率需要精确读数
        #   (40.0% 与 52.0% 的差别要看得出);且日均仅 33–467 次搜索、6–70 用户,折线噪声大。
@@ -1604,21 +1573,10 @@ SECTIONS = [
    ("discover_character_daily_ctr", "每日角色 CTR · Daily CTR by Character", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct1", **CHAR_DAILY_CTR_DIMS,
             note='每天各角色在目录里的点击 ÷ 曝光,按累计点击取前 10,不足 20 次曝光的角色不出。跨 2026-10-29 不要前后对比,那天 For You 进了曝光白名单,分母涨了 5.6 倍。搜索有意不算。曝光少的角色开头几天 CTR 会偏高再回落,那是小样本收敛,不是变差。｜ Daily taps ÷ impressions, top 10.')),
-   ("discover_character_by_tile", "角色卡漏斗分场景 · Character Funnel by Tile", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct1", **TILE_DIMS,
-            note='角色卡按场景类别的三级转化:曝光 → 点击 → 开聊 → 深聊,曝光按用户 × 角色 × 日去重。跨 2026-10-29 不要前后对比,那天 For You 进了曝光白名单,分母涨了 5.6 倍,各场景的占比结构整个变了。搜索有意不算。｜ Impression → tap → chat → deep, by scene.')),
    ("discover_character_coverage", "角色覆盖 · Character Coverage", "line",
        dict(val="characters", cap=4,
             note='每天被曝光或被点击过的角色个数,不是用户数,近 14 天。对照基数是上线可见角色 763 个。搜索有意不算。跨 2026-10-29 不要前后对比,那天 For You 进了白名单、窗口同时由 30 天缩到 14 天。｜ Distinct characters impressed or tapped per day.',
             dims=[("metric","","metric")])),
-   ("discover_click_destination", "点击去向 · Click Destination", "line", dict(
-            note="点击后跳去哪:站内详情 / 外链 / 付费墙 ｜ Where a tap goes: in-app detail / external link / paywall",val="taps",
-       dims=[("overall","Overall",None),("destination","by destination","destination")])),
-   ("discover_preference_distribution", "用户偏好分布 · Preference Distribution", "long_dim",
-       dict(rate=("numerator","denominator"), fmt="pct0", **PREFERENCE_DIMS,
-            note='用户在偏好面板里设置的偏好占比,分母是当天成功写入资料的用户数。主题是多选,各线之和大于 100%。｜ Preferences set by users; themes are multi-select so the lines sum to over 100%.')),
-   ("chat_turns_distribution", "每场对话轮数 · Turns per Session (median)", "line", dict(val="turn_count", agg="median",
-       note="当天开始的每场会话的轮数,取平均(1问1答=1轮) ｜ Avg turns per session started that day (1 exchange = 1 turn)", dims=[("overall","Overall🛑 **图上两条线:中位数和均值**。均值被少数极端值拉高,中位数不会 —— 两条线分得越开说明分布越偏,这时候拿均值当「典型用户」就是错的。2026-11-03 起以中位数为准。",None)])),
    ("chat_daily_msgs_per_user", "当天人均消息数 · Daily Msgs per User (median)", "line",
        dict(val="user_messages", agg="median",
             note='当天每个用户发出的消息条数,不含 AI 回复。图上两条线是中位数和均值,均值被少数极端值拉高、中位数不会,两条线分得越开说明分布越偏,这时拿均值当典型用户就是错的,2026-11-03 起以中位数为准。均值那条就是原来的人均消息数,历史可以接着读。｜ Median and mean messages per user per day.',
@@ -1627,90 +1585,6 @@ SECTIONS = [
        note="当天开始的每场会话首末消息间隔,取平均(仅含 2 条以上消息的会话) ｜ Avg minutes from a session's first to last message, for sessions with 2+ messages",
        dims=[("overall","Overall🛑 **图上两条线:中位数和均值**。均值被少数极端值拉高,中位数不会 —— 两条线分得越开说明分布越偏,这时候拿均值当「典型用户」就是错的。2026-11-03 起以中位数为准。",None)])),
    # —— 交互形态 · Interaction form ——
-   ("chat_msg_length", "用户消息长度 · Msg Length (median chars)", "line", dict(
-            note='用户每条文字消息的字符数。图上两条线是中位数和均值,均值被少数极长消息拉高、中位数不会,两条线分得越开说明分布越偏,2026-11-03 起以中位数为准。｜ Median and mean characters per user text message.',val="char_len", agg="median",
-       dims=[("overall","Overall",None)])),
-   ("activation_ai_first_latency", "AI 首条响应时延 · AI First-Reply Latency (median s)", "line", dict(
-            note='每场会话首次回复的耗时,每用户取最早一次,不含前置组件,所以是真实等待的下限。图上两条线是中位数和均值,以中位数为准。本卡不按角色 A/B 类拆,两类会互相抵消:10-28 当天 B 类变快、A 类变慢,曲线上看着基本没变并不等于没变。跨 10-28 一律当两段读。｜ Median seconds to first reply; a lower bound.',val="first_reply_secs", agg="median",
-       dims=[("overall","Overall",None)])),
- ]),
- ("⑭ 历史队列 · Legacy Cohorts", [
-   # 🛑 2026-10-27 新建分区。这里的卡**没有坏,也没有归档** —— 是它们描述的那个世界过去了,
-   #   分母已经塌了,放在主位会让人以为还在看当下。
-   #
-   #   ① 分臂卡(A/B/C):**近一周新入组 A 臂 6 人、B 臂 3 人、C 臂 2,319 人** ——
-   #      10-03 之后新用户几乎全进 C,那几张「分臂」实际只剩一列有数。
-   #   ② 试用卡:**每天只有 0~4 人开试用**(10-21 开 1 / 买 0.99 15;10-27 开 0 / 买 2)。
-   #      0.99 直购上线之后,试用这条路基本没人走了。
-   #
-   # 🛑 **一张都不要归档、不要删** —— 召回名单(ADDENDUM 第 4 条,A 组约 392 人)
-   #   要用到试用结局的历史数据。移到这里只是让它们不占主位。
-   # 🛑 `paywall_writeback_by_version` **没有跟着搬** —— 它的维度是客户端版本、没有 arm 列,
-   #   测的是「服务端说该弹、客户端有没有回写」,和分臂塌不塌无关,留在 ⑧。
-   # 🛑 2026-11-17 从「⑨ 邀请」移来的两张 —— 同样是「描述的那个世界过去了」,不是卡坏了:
-   #   · 邀请人侧:数据源 `soulmap_invite_code`(老邀请码)**最后一条 2026-10-24**,停了三周多。
-   #   · 奖励发放明细:`soulmap_invite_reward_grant` **全表只有 4 行**,最后 2026-10-27。
-   #   新邀请链路 2026-11-13 起走 `soulmap_invite_card` / `_send` / `_click` 三张表,
-   #   由 ⑨ 里的「新链路漏斗与防刷」(card 466)覆盖。
-   # 🛑 **这两张同样不要删** —— 旧链路的历史结局还要用来和新链路对比。
-   ("invite_inviter_side", "邀请人侧 · Invite — Inviter Side", "table",
-       dict(cols=[("seq","#","int"),
-                  ("step","环节 Step","text"),
-                  ("step_en","Step (EN)","text"),
-                  ("users","人数 Users","int"),
-                  ("events","次数 Events","int"),
-                  ("pct_of_code_holders","占持码人 %","d1")],
-            bar=["users"],
-            note='这六行不是嵌套漏斗,是六个各自独立的动作,把相邻两行相除当转化率会得到没有意义的数。｜ These six rows are independent actions, NOT a nested funnel.')),
-   ("invite_reward_grants", "奖励发放明细 · Reward Grants", "table",
-       dict(top=40,
-            cols=[("granted_date","发放日 Date","text"),
-                  ("kind","类型 Kind","text"),
-                  ("inviter_user_id","邀请人 Inviter","text"),
-                  ("invitee_user_id","被邀请人 Invitee","text"),
-                  ("invitee_env","环境 Env","text"),
-                  ("is_real","真实? Real","int"),
-                  ("month_index","月序 Month","int")],
-            note='逐条明细,先用是否真实和被邀请人环境两列筛掉沙盒数据再数。｜ Row-level grants; filter sandbox rows before counting.')),
-   ("paywall_tpc_by_country", "试用付费取消 · 按国家 · Trial-Paid-Cancel by Country", "table",
-       dict(top=25,
-            cols=[("country","国家 Country","text"),
-                  ("new_users","新用户 New Users","int"),
-                  ("trials","开订阅 Trials","int"),
-                  ("trial_pct","开订阅率 %","d1"),
-                  ("canceled","取消 Canceled","int"),
-                  ("cancel_pct","取消率 %","d1"),
-                  ("lost","流失 Lost","int"),
-                  ("lost_pct","流失率 %","d1"),
-                  ("user_unsubscribed","主动退订 Unsub","int"),
-                  ("billing_failed","扣款失败 Billing Failed","int"),
-                  ("billing_failed_share_of_lost","扣款失败占流失 %","d1"),
-                  ("expired","过期 Expired","int"),
-                  ("paid","付费 Paid","int"),
-                  ("paid_pct","付费率 %","d1"),
-                  ("arm_a_share","A 臂占比 %","d1"),
-                  ("arm_b_share","B 臂占比 %","d1"),
-                  ("arm_c_share","C 臂占比 %","d1")],
-            bar=["new_users","paid_pct"],
-            note='三个分臂占比列说的是这个国家的人怎么分到各臂,不同国家的臂结构不同,跨国比付费率之前先看这三列,差异可能来自分臂而不是国家。分子不足 10 的比率读不出来,不要排名。｜ Arm mix differs by country; check it before comparing paid rates.')),
-   ("paywall_tpc_by_creative", "试用付费取消 · 按素材 · Trial-Paid-Cancel by Creative", "table",
-       dict(top=30,
-            cols=[("creative_name","素材 Creative","text"),
-                  ("creative_id","素材 ID","text"),
-                  ("networks","渠道 Networks","text"),
-                  ("campaign_name","Campaign","text"),
-                  ("new_users","新用户 New Users","int"),
-                  ("trials","开订阅 Trials","int"),
-                  ("trial_pct","开订阅率 %","d1"),
-                  ("canceled","取消 Canceled","int"),
-                  ("cancel_pct","取消率 %","d1"),
-                  ("user_unsubscribed","主动退订 Unsub","int"),
-                  ("billing_failed","扣款失败 Billing","int"),
-                  ("expired","过期 Expired","int"),
-                  ("paid","付费 Paid","int"),
-                  ("paid_pct","付费率 %","d1")],
-            bar=["new_users","paid_pct"],
-            note='素材名会重复,必须看素材 ID,实测同名素材有三个不同 ID、每装机收入差一倍以上。广告组也会改名,按名字归组会把同一组拆开。｜ Creative names repeat; always read the creative ID.')),
  ]),
 ]
 
