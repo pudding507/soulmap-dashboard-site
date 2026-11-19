@@ -744,7 +744,7 @@ SECTIONS = [
                   ("community_ctr_pct","社区 CTR %","d1")],
             bar=["impressions","community_pct"],
             note='For You 推荐位里社区角色的占比,设备级,埋点次日入库。这一列至今恒为 0,但同期社区角色在聊天表里有上千条消息、上百人在聊,聊得到却曝光不到,基本可以判定是曝光埋点少带了前缀,判据要改,不能读成没有混入。｜ Community share is still 0; likely a telemetry prefix issue.')),
-   ("host_three_metrics", "每个角色的参与深度回访 · Per-Host Engage/Depth/Return", "table",
+   ("host_three_metrics", "角色的参与深度回访 · Per-Host Engage/Depth/Return", "table",
        # 2026-10-22 新建(Metabase 卡 437)。对应 Michael 10-21 反馈 P1 第 7 项(D-181/D-182)。
        dict(top=60,
             cols=[("host_name","角色 Host","text"),("char_class","类型 Class","text"),
@@ -819,7 +819,7 @@ SECTIONS = [
             bar=["energy_out","spenders"],
             note='一行一天:今天进了多少、花了多少、花在哪。入账与扣费不相减成净额,赠送和购买混在一起,净额读不出意义,余额看能量钱包现状。补偿换算不算收入也不算消耗,已从两边排掉。折合聊天条数只对聊天算,且单价改过三次。｜ Daily energy in/out and what it was spent on.'
             )),
-   ("energy_daily_grants", "每天发放能量 · Energy Daily Grants", "table",
+   ("energy_daily_grants", "每天发放能量(按来源) · Energy Daily Grants", "table",
        # 2026-11-04 重做(Metabase 卡 452)。原「钱包三层」是日期 × 层 × 来源 × SKU,14 列。
        dict(top=30,
             cols=[("date","日期 Date","text"),
@@ -1232,7 +1232,7 @@ SECTIONS = [
                   ("succeeded_rate","成交率 Done %","pct1")],
             bar=["shown_users","tapped_rate"],
             note='一行 = 一天 × 触发位置,只覆盖服务端那一路。现在最大的那道墙不在这张卡里:能量用完卡走另一套事件,要看它请用撞墙与撞墙之后。首条消息墙已经停了,最后一次 10-29。一个用户一天可能撞多道墙,各行不能相加。成交必须分两段读,10-19 前后卖的不是同一个东西。🔴 2026-11-17 14:45:56 paywall_placement_v1 实验结束,所有人统一走 C 臂,此后不再有分臂 ⇒ 跨这一刻比各道墙的曝光和成交都不可比。｜ Server-side paywall only; the placement experiment ended 2026-11-17 14:45 and everyone is on arm C.')),
-   ("paywall_writeback_by_version", "回写率分客户端版本 · Writeback Rate by Client Version", "table",
+   ("paywall_writeback_by_version", "分臂回写率(数据质量) · Writeback Rate by Client Version", "table",
        dict(top=40,
             cols=[("date","日期 Date","text"),
                   ("app_version","版本 Version","text"),
@@ -1408,7 +1408,7 @@ SECTIONS = [
                   ("mismatch_pct","错配率 %","d1")],
             bar=["pairs","mismatch_pct"],
             note='本卡只统计 SoulMap,不含 CityPLX,不要和把两者并列的那些卡相加或对比。判的是书写系统不是语言,所以拉丁字母内部的错配判不出来,错配数是下界不是真实量,不要当语言错配率对外报。只看文字消息,语音那侧是转写文本。分母不足 30 的格子整行不出。｜ Lower-bound mismatch by writing system.')),
-   ("risk_ref_photo_uploads", "合照参考图上传量 · Reference Photo Uploads", "table",
+   ("risk_ref_photo_uploads", "合照参考图在库量 · Reference Photo Uploads", "table",
        # 2026-10-20 新建(Metabase 卡 426)。🔴 合照功能还不存在,但用户已经在上传真人照片。
        #   10-17 起累计 36 张在库,10-20 单日 20 张(15 人),在加速。
        #   这张卡盯的是存量风险,不是增长 —— 产品要定先关入口还是加文案。
@@ -1599,7 +1599,7 @@ SECTIONS = [
                   ],
             bar=['vendor_calls', 'vendor_calls_per_charge'],
             note="一行一天,分母是当天的扣费次数。生成时记账和厂商调用两列几乎逐日相等,而实际扣费比它们低四成,说明语音在检查能量之前就已经生成了。11-13 之前老 Plus 用户不扣费,分母接近 0,那几天的比值读不出。 ｜ One row per day; the denominator is that day's charges. Generations run about 40% above charges, so audio is produced before the energy check.")),
-   ('energy_company_margin', '全公司逐日毛利 · Company Margin Daily', 'table',
+   ('energy_company_margin', '产品逐日毛利 · Company Margin Daily', 'table',
        dict(top=21,
             cols=[('activity_date', '日期 Date', 'text'),
                   ('purchases', '成交笔数 Purchases', 'int'),
@@ -1635,7 +1635,7 @@ SECTIONS = [
        # 🛑 2026-10-27 卡头补口径(口径清单 ② / ⑥)。SQL 没动,只写清楚这是哪一套。
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note='设备级:次日开 App 的设备 ÷ 装机当天的新设备。这一套和 D3、D7 同源同层级,留存曲线要连着读就用这张。另一张有效留存 D1 是账号级、分子是发消息,两者差 1.4 倍,不要互相比也不要相除。北极星用哪一套尚未统一,定之前这个数只当参考。｜ Device-level D1, same basis as D3/D7.')),
-   ("discover_search_usage", "搜索使用与结果质量 · Search Usage & Result Quality", "table",
+   ("discover_search_usage", "发现页搜索使用与质量 · Search Usage & Result Quality", "table",
        # 2026-09-09 新建。选表格不选折线:13 个指标折线放不下,而零结果率需要精确读数
        #   (40.0% 与 52.0% 的差别要看得出);且日均仅 33–467 次搜索、6–70 用户,折线噪声大。
        #   表格按 date 倒序 —— 纵向扫一列看趋势,横向扫一行看当天横截面,两种读法都在。
