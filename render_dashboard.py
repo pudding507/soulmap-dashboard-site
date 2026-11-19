@@ -17,6 +17,8 @@ from collections import OrderedDict, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import i18n          # 中英切换:文案拆分 + 切换按钮的样式与脚本
+
 HERE = Path(__file__).resolve().parent
 WEEK_ORDER = ["6/27-7/3", "7/4-10", "7/11-17", "7/18起"]
 
@@ -2374,12 +2376,16 @@ def render(raw_path: Path, out_path: Path):
            # 2026-10-30:changelog 放在 Movers **之后** —— Movers 是「今天的数怎么变的」,
            # changelog 是「为什么会这么变」,先看现象再看原因。
            + _changelog_html())
-    doc = f"""<!doctype html><html><head><meta charset="utf-8">
+    # 中英切换:把页面上每条中文文案映射到英文,JS 按文本节点替换(见 i18n.py)
+    lang_table = json.dumps(i18n.build(sections), ensure_ascii=False)
+    doc = f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>SoulMap 看板 · SoulMap Dashboard</title>
-<style>{CSS}</style></head><body>{hdr}<div id="root"></div>
+<style>{CSS}{i18n.CSS}</style></head><body>{i18n.BUTTON}{hdr}<div id="root"></div>
 <script>{chartjs}</script>
 <script>const DATA={payload};</script>
-<script>{APP_JS}</script></body></html>"""
+<script>const I18N={lang_table};</script>
+<script>{APP_JS}</script>
+<script>{i18n.JS}</script></body></html>"""
     # 一张卡都没有就不要写 —— 写出去等于把上一版好页面覆盖成空白,而且下次连沿用的来源都没了。
     # workflow 的 guard 正常会先拦住(抓不满 25 张就不 render),这里是第二道,防手工误跑。
     if not sections:
