@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  SoulMap 看板定时刷新。装到主机器:tools/install_primary.sh 会把 __HOME__ 换成真实路径。
+  时间沿用 GitHub Actions 那版:新加坡 12:20 / 14:20 / 17:20 / 21:20。
+  🛑 主机器时区要是新加坡,不然这四个点对不上 ETL(firebase 实测 11:02 上下落库)。
+  🛑 不设 RunAtLoad —— 装的时候不该立刻抓一轮,手动跑用 bash scheduled_refresh.sh。
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.soulmap.dashboard.refresh</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__HOME__/DataGripProjects/soulmap-upload/scheduled_refresh.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__HOME__/DataGripProjects/soulmap-upload</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SOULMAP_SCHEDULED</key>
+    <string>1</string>
+    <key>LANG</key>
+    <string>en_US.UTF-8</string>
+    <key>LC_ALL</key>
+    <string>en_US.UTF-8</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>20</integer></dict>
+    <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>20</integer></dict>
+    <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>20</integer></dict>
+    <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>20</integer></dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/DataGripProjects/soulmap-upload/logs/launchd.out</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/DataGripProjects/soulmap-upload/logs/launchd.err</string>
+</dict>
+</plist>
