@@ -601,6 +601,21 @@ SECTIONS = [
                   ("account_coverage_rate","账号口径覆盖率 %","d1")],
             bar=["new_users","launch_coverage_rate"],
             note='每天新注册的人里有多少查得到是从哪条广告来的。两个口径对着看:设备口径走启动记录,有完整历史;账号口径是正式验收口径,但只有 11-08 以后的注册用户能读,之前的低值是没进那张表不是归因失败。分母按业务线拆,CityPLX 走自己的客户端不写启动记录,那一行的 0 不是缺口。跨 11-02 归因换了来源,覆盖率变化不能读成投放质量变化。｜ Ad attribution coverage, device vs account.')),
+   ("attribution_adjust_recon", "Adjust 发送对账 · Attribution Reconciliation", "table",
+       # 2026-10-20 新建(Metabase 卡 427)。3.7.2 起同一笔 0.99 最多有三条路到 Meta,
+       #   其中两路没有共享 event_id、Meta 去重不了。本卡盯服务端这一路。
+       # 🛑 两张表的 event_at 都是 UTC,SQL 里都已 CONVERT_TZ 到 SGT。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("intro_should_send","应发(真实0.99) Should","int"),
+                  ("intro_sent","实发 Sent","int"),
+                  ("intro_gap","差 Gap","int"),
+                  ("trial_start_sent","试用开始 TrialStart","int"),
+                  ("trial_conversion_sent","试用转化 TrialConv","int"),
+                  ("skipped_no_device_id","跳过·无设备ID Skipped","int"),
+                  ("failed","发送失败 Failed","int")],
+            bar=["intro_should_send"],
+            note='差不是 0 就是漏发或双算,要查。实发只数状态为已发送的,跳过和失败单独成列,算进实发会让对账永远是平的。还有第三条路要去 Events Manager 对,看板里放不进来,所以这里对平不等于对方侧没有双算。｜ Gap≠0 means missing or double-sent.')),
    ("acceptance_ad_host_landing", "广告用户落地角色 · Ad User Lands on Ad Host", "table",
        # 2026-11-13 新建(Metabase 卡 464)。出处:WW48 定稿 〇.8 待办 1(D-559 / D-560),
        #   验收「落地率 49% → 80%」。
@@ -732,8 +747,6 @@ SECTIONS = [
             dims=[("overall","Overall",None),
                   ("app_line","按业务线 by Line","app_line"),   # 🔴 2026-11-12 D-563
                   ("country","by country","country")])),
-   # 2026-10-22 摘牌:「Silent 会话率 · Silent-Session Rate」(卡 352),见 ② 激活区那条注释。
-   # —— 参与深度 · Engagement depth ——
  ]),
  ("⑤ 语音 · Voice", [
    ("snapshot_voice_text_share", "语音与文字使用占比 · Voice vs Text Share", "table",
@@ -842,6 +855,73 @@ SECTIONS = [
             note='各角色的开聊 → QCD → 回访,近 14 天,只列被 20 人以上聊过的角色。跨 2026-10-29 不要前后对比,那天窗口由 30 天缩到 14 天,上榜角色从 82 个降到 41 个,是窗口短了不是角色变差。D7 只能比角色之间的高低,不能当绝对回访率读。｜ D7 is relative only.')),
  ]),
  ("⑦ 变现 · Monetization", [
+   ("revenue_daily_by_type", "每天付费 · Daily Revenue by Type", "table",
+       # 2026-11-04 新建(Metabase 卡 457)。与现用的那张付费表逐日逐格对齐过(8 天 × 5 行全一致)。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("energy_pack_usd","能量包 Energy","d1"),
+                  ("sub_first_usd","订阅首购 First","d1"),
+                  ("sub_renew_usd","订阅续费 Renew","d1"),
+                  ("other_usd","其他购买 Other","d1"),
+                  ("total_usd","合计 Total","d1"),
+                  ("payers","付费人数 Payers","int")],
+            bar=["total_usd"],
+            note='一行一天,新加坡时区,四类加合计。订阅首购按事件类型判,和每天新首付那张卡不是一个口径,两张的首购数对不上是正常的,不要互相校验。能量版 Plus 算在订阅里。收入是商店流水价,没扣抽成也没扣税。当天那一行没结束,不要和昨天比。｜ Daily revenue split four ways.'
+            )),
+   ("revenue_first_time_payers", "每天新首付 · First-Time Payers", "table",
+       # 2026-10-21 新建(Metabase 卡 430)。与「每天续费」成对,按 pay_seq 互斥切分。
+       # 🛑 **不能按事件名判新首付**:实测 29 次 RENEWAL 其实是免费试用到期的**首次**扣款,
+       #   对用户是新首付。按名字归类会少算 29 人、少算 83% 的钱。
+       # 🛑 判「真的扣到钱」用 price_usd > 0 —— INITIAL_PURCHASE+TRIAL(415 次)是开免费试用,一分没扣。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("country","国家 Country","text"),
+                  ("acquisition","来源 Source","text"),
+                  ("first_payers","新首付人数 First Payers","int"),
+                  ("intro_099","其中 0.99 Intro","int"),
+                  ("trial_to_full","其中 试用转全价 Trial→Full","int"),
+                  ("direct_full","其中 直接全价 Direct","int"),
+                  ("revenue_usd","收入 USD","d1"),
+                  ("revenue_099_usd","其中 0.99 收入","d1"),
+                  ("revenue_full_usd","其中 全价收入","d1"),
+                  # 2026-10-29 新增:消耗型购买(3 天通行证 / 能量包)。
+                  # 🛑 单位是「笔」不是「人」——一个人可以买很多次,**不要和左边几列相加**。
+                  ("pass3day_buys","3天通行证 Pass(笔)","int"),
+                  ("energy_pack_buys","能量包 Energy(笔)","int"),
+                  ("consumable_usd","消耗型收入 USD","d1")],
+            bar=["first_payers","revenue_usd"],
+            note='新首付是该用户按时间排序的第 1 笔真实扣款,不看事件名,免费试用到期的首次扣款对用户就是新首付。读人数必须连着收入一起看,三类的单价差 14 倍。和每天续费那张卡互斥,相加等于总收入。通行证与能量包不算订阅首付,单列在右边。｜ First payment by time order, not event type.')),
+   ("revenue_renewals", "每天续费 · Renewals", "table",
+       # 2026-10-21 新建(Metabase 卡 431)。pay_seq >= 2,与新首付卡互斥。
+       # 🛑 当前为空是结论不是故障:全库 105 人付过钱,**没有任何人扣过第二次**。
+       #   0.99 最早 10-22 到期,试用转全价那 29 人下个周期也没到。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("country","国家 Country","text"),
+                  ("acquisition","来源 Source","text"),
+                  ("pay_seq","第几次扣款 Pay #","int"),
+                  ("renewals","续费笔数 Renewals","int"),
+                  ("revenue_usd","收入 USD","d1"),
+                  ("days_since_prev","距上一笔(天) Days","d1")],
+            bar=["renewals","revenue_usd"],
+            empty_ok=True,          # 见 table 分支:零行要照常出卡,这张卡空着本身就是结论
+            note="续费指同一人第 2 笔及以后的扣款,不能按事件名判,试用到期的首次扣款已归到新首付卡。距上一笔那一列能分开两种周期:首购价约 6.8 天,全价是一个月。｜ Renewal = a user's 2nd or later charge.")),
+   ("price_by_market", "分市场实收价 · Price by Market", "table",
+       # 2026-10-22 新建(Metabase 卡 438)。起因:当天 ABC 三档取消,全球统一
+       #   「试用 $0.99 / 月订阅 $9.99」,之前手动改过的地区价格全部清掉。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),
+                  ("country_code","国家 Country","text"),
+                  ("period_type","档位 Period","text"),
+                  ("currency","币种 Currency","text"),
+                  ("price_local","本币价 Local","d1"),
+                  ("price_usd","折美元 USD","d1"),
+                  ("purchases","笔数 Purchases","int")],
+            bar=["purchases"],
+            note='看实际成交价什么时候真的统一,商店价格改动有生效延迟,配置改了不等于用户看到的价变了。同一天同一国家可能有两个价,本卡每个价单独一行、不取均值,取均值会算出一个谁都没付过的数。本地价一般含当地税,折回美元不会正好等于标价。｜ Actual transacted price by market.')),
    ("energy_waterfall", "能量系统瀑布表 · Energy Waterfall", "table",
        # 2026-10-27 新建(Metabase 卡 444)。建卡时 soulmap_energy_offer_event 为 0 行。
        # 🔴 2026-10-29:**不再是壳** —— 能量系统 10-28 14:32:20 已上线,本卡出数了。
@@ -914,107 +994,6 @@ SECTIONS = [
             bar=["granted_energy","used_pct"],
             note='一行一个钱包层,全时段累计、没有日期,答的是现在用户手上还剩多少。三层的过期规则完全不同,买来的永不过期、订阅额度月底清零、赠送 14 天,剩余绝对不能跨层相加。最早到期只有两个新来源落了值,汇总会小一个量级。｜ Current wallet state by layer; never sum remaining across layers.'
             )),
-   ("energy_winback_list", "付费流失召回 · Energy Win-back List", "table",
-       # 2026-10-29 新建(Metabase 卡 453)。出处:倡议书 §四「因付款失败走掉的入戏用户」。
-       # 🔴 2026-11-02:建卡时写的「一次性批次」已不成立 —— 10-27 / 10-31 / 11-02 三批,
-       #   而且多了一个分组 C。本卡仍固定读全表(总共才 509 人),加窗口会把早批次切掉,
-       #   而早批次正是要看长期回流的那批。
-       dict(top=30,
-            cols=[("date","名单日 Listed","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("grp","分组 Group","text"),
-                  ("listed_users","名单人数 Listed","int"),
-                  ("granted_users","真发了 Granted","int"),
-                  ("granted_pct","发放率 Granted %","d1"),
-                  ("returned_to_chat_users","回来聊了 Returned","int"),
-                  ("returned_pct","回来率 Returned %","d1"),
-                  ("paid_subscription_users","回来买订阅 Sub","int"),
-                  ("paid_consumable_users","回来买消耗型 Consumable","int"),
-                  ("distinct_last_hosts","涉及角色数 Hosts","int")],
-            bar=["listed_users","returned_pct"],
-            note='付费流失召回名单,滚动多批,每人一行。分组是名单自带的,不是随机分桶,拿它谈因果前要先确认分组规则和依从率,两者目前都没有。各组发放率差很远但人数都极小,不要读成哪套文案更好。回来聊了只数用户自己发的消息。｜ Rolling win-back list; group is not a random arm.')),
-   ("energy_free_voice_trial", "免费语音体验 · Energy Free Voice Trial", "table",
-       # 2026-10-29 新建(Metabase 卡 454)。出处:产品玩法 §15.5 末「免费语音体验单独计数,不用能量」。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("kind","种类 Kind","text"),
-                  ("uses","次数 Uses","int"),
-                  ("users","人数 Users","int"),
-                  ("energy_users","能量用户 Energy Users","int"),
-                  ("users_pct","占能量用户 % of Energy","d1"),
-                  ("uses_per_user","人均次数 per User","d1"),
-                  ("refunded_uses","退回 Refunded","int")],
-            bar=["uses","users"],
-            note='免费语音体验不消耗能量,单独计数,两类各免费 4 次。不要和每天能量进出里的语音扣费相加,那是免费额度用完之后才开始扣的。人均次数接近 4 说明这批人快用完了。语音回复连续多天退回两到四成,而另一类几乎不退,问题出在语音生成那一路。｜ Free trial does not consume energy.')),
-   ("energy_legacy_migration", "老订阅迁移 · Legacy Subscriber Migration", "table",
-       # 2026-11-04 新建(Metabase 卡 456)。出处:产品玩法 §15.7「老用户怎么迁」。
-       dict(top=100,
-            cols=[("date","续费日 Renew Date","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("days_to_renew","还有几天 Days","int"),
-                  ("period_type","付费形态 Period Type","text"),
-                  ("sub_status","订阅状态 Status","text"),
-                  ("product_id","商品 Product","text"),
-                  ("user_id","用户 User","int"),
-                  ("in_energy_system","进了能量系统 In Energy","int"),
-                  ("switched","已切 Switched","int"),
-                  ("plan_energy_granted","已发订阅额度 Plan Energy","int"),
-                  ("wallet_remaining","钱包余额 Wallet","int")],
-            note='一人一行,队列是在册且自动续费、到期日在今天之后的订阅。老订阅切换前不限量,切换后每月 950 能量,切换点是 3.9.0 上架满 7 天后的第一个续费日。首购价、试用、促销这三类没有换算规则,最该盯,0.99 的人若照常发 950 会非常划算。｜ Legacy subscribers due to switch to 950 energy/month.'
-            )),
-   ("energy_repeat_and_monthly", "复购与月卡 · Repeat Purchase & Monthly Card", "table",
-       # 2026-11-12 新建(Metabase 卡 462)。出处:需求文档 §4.5 / 团队包看板 4。
-       # 🛑 一张卡四块,靠 `section` 列分开 —— 三块的量纲不同(人数 / 能量 / 美元),
-       #   不要跨块相加,也不要把整表画成一张图。
-       # 🛑 ③ 的消耗是**按 lotId 精确归属到月卡那一笔**的(txn.detail 是
-       #   [{"lotId":..,"amount":..}] 数组,JSON_TABLE 拆开再 join)。
-       #   不这么做会把同期从赠送层/购买层扣的能量算进来,第 0 天会虚高到到账额本身。
-       # 🔴 月卡至今只有 6 人 8 笔:两种自动续费拼法 (:monthly / .monthly) 还是 0 行,
-       #   商品类型没切。月卡那几块现在只读绝对人数。
-       dict(top=40,
-            cols=[("section","分块 Section","text"),
-                  ("item","项 Item","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("users","人数 Users","int"),
-                  ("pct_of_buyers","占买过的人 %","d1"),
-                  ("energy","能量 Energy","int")],
-            note='一张卡四块:买过的人里第几次购买各有多少人、买的是能量包还是月卡、月卡到手之后每天花掉多少、到期有没有再买。第 2 次购买率 44.2%、第 3 次 26.7%。月卡到手是一次性 950 不是每天 80,所以第三块看的是花掉的速度,不是每天领了多少。月卡至今只有 6 个人,那几块只读绝对人数不要算比率。｜ Repeat purchase and monthly card; monthly card n=6.'
-            )),
-   ("legacy_unlimited_status", "老不限量订阅 · Legacy Unlimited", "table",
-       # 2026-11-12 新建(Metabase 卡 461)。出处:需求文档 §4.4 / 团队包看板 5。
-       # 🔴 ①「老商品新开数」目标是 0,实际每天还有 1~12 笔。
-       # 🔴 ② 【2026-11-13 改】**迁移已经发生,建卡当天写的「一个人都还没进」已经过期。**
-       #   当天分两批:12:07:42 九人(energy_txn.source='oldplus_multi')、
-       #   17:33:15 七十九人(source='oldplus_switch',每人 950)。
-       #   soulmap_energy_legacy 已从 141 人涨到 158 人,其中 88 人 migrated_at 非空。
-       #   🛑 **走的不是「每天 100 的过渡月」,是直接切每月 950** —— soulmap_energy_daily_plan
-       #      到现在仍是 0 行 ⇒ entered_transition 读到的是「当天切过去的人数」,
-       #      不是「当天在过渡月里的人数」。
-       #   🛑 点过「Got it」的只有 2 人 ⇒ **它不是迁移的前置条件**,建卡当天推断的
-       #      「先点 Got it、再等满 30 天后第一次续费」那条链路不成立。
-       #   🛑 hit_daily_cap_users 那一列因此暂时读不出业务含义,只当「当天影子消耗 ≥100
-       #      的人数」看,不要读成「被额度挡住的人」。
-       # 🛑 `shadow_energy` 是**能量单位不是美元**:折美元要一个「每能量多少钱」的汇率,
-       #   定稿里没给(§4.1 那个 $0.0066 是看广告送出的 coin 成本,不是服务成本)。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("new_legacy_buys","老商品新开 New (目标0)","int"),
-                  ("renewed_users","续上 Renewed","int"),
-                  ("expired_users","到期没续 Expired","int"),
-                  ("billing_issue_users","扣款失败 Billing Issue","int"),
-                  ("renew_pct","续费率 %","d1"),
-                  ("revenue_usd","收入 USD","d1"),
-                  ("entered_transition","进过渡月 Transition","int"),
-                  ("acked_notice","点过 Got it","int"),
-                  ("active_legacy_users","当天在用 Active","int"),
-                  ("hit_daily_cap_users","碰到每日额度 ≥100","int"),
-                  ("shadow_energy","影子消耗 Energy","int"),
-                  ("shadow_energy_per_user","人均影子消耗","d1")],
-            bar=["new_legacy_buys","shadow_energy"],
-            note='老的不限量订阅现在是什么状态,一行一天。老商品新开数目标是 0,不是 0 就说明商店里还买得到。迁移在 2026-11-13 当天跑完两批,名单 158 人里 88 人已经切过去,走的是直接切每月 950,不是每天 100 的过渡月,所以那一列读到的是当天切过去的人数。影子消耗是按能量制算出来的服务成本,但不真的扣,单位是能量不是美元,要折美元得另外定汇率。｜ Legacy unlimited: 88 of 158 switched on 2026-11-13.'
-            )),
    ("energy_ladder_progression", "能量档位推进 · Energy Offer Ladder", "table",
        # 2026-11-04 新建(Metabase 卡 458)。出处:产品玩法 §15.4 ②「聊天内阶梯优惠」。
        dict(cols=[("app_line","业务线 Line","text"),
@@ -1048,105 +1027,6 @@ SECTIONS = [
                   ("revenue_usd","收入 USD","d1")],
             note='一行 = 业务线 × 分臂,2026-10-26 起分组,队列只收注册满 2 天的人。先看占比,control 应在 20% 附近,偏了后面所有对比都不成立。两条业务线的人群完全不同,占比在各自线内算,不要跨线比分臂。分到 energy 臂不等于真进了能量系统,看到的差是下界。｜ ITT comparison, by business line.'
             )),
-   ("attribution_adjust_recon", "Adjust 发送对账 · Attribution Reconciliation", "table",
-       # 2026-10-20 新建(Metabase 卡 427)。3.7.2 起同一笔 0.99 最多有三条路到 Meta,
-       #   其中两路没有共享 event_id、Meta 去重不了。本卡盯服务端这一路。
-       # 🛑 两张表的 event_at 都是 UTC,SQL 里都已 CONVERT_TZ 到 SGT。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("intro_should_send","应发(真实0.99) Should","int"),
-                  ("intro_sent","实发 Sent","int"),
-                  ("intro_gap","差 Gap","int"),
-                  ("trial_start_sent","试用开始 TrialStart","int"),
-                  ("trial_conversion_sent","试用转化 TrialConv","int"),
-                  ("skipped_no_device_id","跳过·无设备ID Skipped","int"),
-                  ("failed","发送失败 Failed","int")],
-            bar=["intro_should_send"],
-            note='差不是 0 就是漏发或双算,要查。实发只数状态为已发送的,跳过和失败单独成列,算进实发会让对账永远是平的。还有第三条路要去 Events Manager 对,看板里放不进来,所以这里对平不等于对方侧没有双算。｜ Gap≠0 means missing or double-sent.')),
-   ("revenue_daily_by_type", "每天付费 · Daily Revenue by Type", "table",
-       # 2026-11-04 新建(Metabase 卡 457)。与现用的那张付费表逐日逐格对齐过(8 天 × 5 行全一致)。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("energy_pack_usd","能量包 Energy","d1"),
-                  ("sub_first_usd","订阅首购 First","d1"),
-                  ("sub_renew_usd","订阅续费 Renew","d1"),
-                  ("other_usd","其他购买 Other","d1"),
-                  ("total_usd","合计 Total","d1"),
-                  ("payers","付费人数 Payers","int")],
-            bar=["total_usd"],
-            note='一行一天,新加坡时区,四类加合计。订阅首购按事件类型判,和每天新首付那张卡不是一个口径,两张的首购数对不上是正常的,不要互相校验。能量版 Plus 算在订阅里。收入是商店流水价,没扣抽成也没扣税。当天那一行没结束,不要和昨天比。｜ Daily revenue split four ways.'
-            )),
-   ("revenue_first_time_payers", "每天新首付 · First-Time Payers", "table",
-       # 2026-10-21 新建(Metabase 卡 430)。与「每天续费」成对,按 pay_seq 互斥切分。
-       # 🛑 **不能按事件名判新首付**:实测 29 次 RENEWAL 其实是免费试用到期的**首次**扣款,
-       #   对用户是新首付。按名字归类会少算 29 人、少算 83% 的钱。
-       # 🛑 判「真的扣到钱」用 price_usd > 0 —— INITIAL_PURCHASE+TRIAL(415 次)是开免费试用,一分没扣。
-       dict(top=60,
-            cols=[("date","日期 Date","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("country","国家 Country","text"),
-                  ("acquisition","来源 Source","text"),
-                  ("first_payers","新首付人数 First Payers","int"),
-                  ("intro_099","其中 0.99 Intro","int"),
-                  ("trial_to_full","其中 试用转全价 Trial→Full","int"),
-                  ("direct_full","其中 直接全价 Direct","int"),
-                  ("revenue_usd","收入 USD","d1"),
-                  ("revenue_099_usd","其中 0.99 收入","d1"),
-                  ("revenue_full_usd","其中 全价收入","d1"),
-                  # 2026-10-29 新增:消耗型购买(3 天通行证 / 能量包)。
-                  # 🛑 单位是「笔」不是「人」——一个人可以买很多次,**不要和左边几列相加**。
-                  ("pass3day_buys","3天通行证 Pass(笔)","int"),
-                  ("energy_pack_buys","能量包 Energy(笔)","int"),
-                  ("consumable_usd","消耗型收入 USD","d1")],
-            bar=["first_payers","revenue_usd"],
-            note='新首付是该用户按时间排序的第 1 笔真实扣款,不看事件名,免费试用到期的首次扣款对用户就是新首付。读人数必须连着收入一起看,三类的单价差 14 倍。和每天续费那张卡互斥,相加等于总收入。通行证与能量包不算订阅首付,单列在右边。｜ First payment by time order, not event type.')),
-   ("revenue_renewals", "每天续费 · Renewals", "table",
-       # 2026-10-21 新建(Metabase 卡 431)。pay_seq >= 2,与新首付卡互斥。
-       # 🛑 当前为空是结论不是故障:全库 105 人付过钱,**没有任何人扣过第二次**。
-       #   0.99 最早 10-22 到期,试用转全价那 29 人下个周期也没到。
-       dict(top=60,
-            cols=[("date","日期 Date","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("country","国家 Country","text"),
-                  ("acquisition","来源 Source","text"),
-                  ("pay_seq","第几次扣款 Pay #","int"),
-                  ("renewals","续费笔数 Renewals","int"),
-                  ("revenue_usd","收入 USD","d1"),
-                  ("days_since_prev","距上一笔(天) Days","d1")],
-            bar=["renewals","revenue_usd"],
-            empty_ok=True,          # 见 table 分支:零行要照常出卡,这张卡空着本身就是结论
-            note="续费指同一人第 2 笔及以后的扣款,不能按事件名判,试用到期的首次扣款已归到新首付卡。距上一笔那一列能分开两种周期:首购价约 6.8 天,全价是一个月。｜ Renewal = a user's 2nd or later charge.")),
-   # 软墙只挂在客户端 paywall_viewed 上 ⇒ 本卡走 host.firebase_event(T+1,最后一天偏低)。
-   # 🛑 印度软墙将来要换成能量系统的内联首充卡,换完曝光归零 —— 留着这张才有「换之前」的基线。
-   #   换的那天 CUTOVERS、卡头 note、台账切点表三处都要记日期。
-   ("india_soft_wall", "印度软墙转化 · India Soft Wall", "table",
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("soft_wall_index","第几次弹 Which","text"),
-                  ("shown_events","曝光次数 Shown","int"),
-                  ("shown_devices","曝光设备 Devices","int"),
-                  ("dismissed","关掉 Dismissed","int"),
-                  ("dismiss_rate_pct","关掉率 %","d1"),
-                  ("sub_tapped","点订阅 Tapped","int"),
-                  ("sheet_opened","开收银台 Sheet","int"),
-                  ("completed","成交 Completed","int"),
-                  ("failed","失败 Failed","int")],
-            bar=["shown_events","dismiss_rate_pct"],
-            note='印度非会员聊到第 10、20 条时弹的可关掉的弹窗。成交一直是 0,曝光数与关掉数精确相等。曝光正在快速衰减,能量系统的内联首充卡正在替换它,换完这张卡会归零,保留是为了留住旧机制的基线。两行的曝光设备数不能相加。埋点次日入库,最后一天天然缺。｜ Soft wall: zero conversions, impressions decaying.')),
-   ("price_by_market", "分市场实收价 · Price by Market", "table",
-       # 2026-10-22 新建(Metabase 卡 438)。起因:当天 ABC 三档取消,全球统一
-       #   「试用 $0.99 / 月订阅 $9.99」,之前手动改过的地区价格全部清掉。
-       dict(top=60,
-            cols=[("date","日期 Date","text"),
-                  ("country_code","国家 Country","text"),
-                  ("period_type","档位 Period","text"),
-                  ("currency","币种 Currency","text"),
-                  ("price_local","本币价 Local","d1"),
-                  ("price_usd","折美元 USD","d1"),
-                  ("purchases","笔数 Purchases","int")],
-            bar=["purchases"],
-            note='看实际成交价什么时候真的统一,商店价格改动有生效延迟,配置改了不等于用户看到的价变了。同一天同一国家可能有两个价,本卡每个价单独一行、不取均值,取均值会算出一个谁都没付过的数。本地价一般含当地税,折回美元不会正好等于标价。｜ Actual transacted price by market.')),
    ("paywall_free_quota_line", "免费额度线 · Free Quota Line", "table",
        # 2026-10-22 复活(Metabase 卡 403)。原来窗口是「2026-09-25 起固定」,每天都在长,
        #   必定超 nginx 60 秒代理超时,长期抓不到数;改成近 3 天滚动后 25.8 秒。
@@ -1161,54 +1041,6 @@ SECTIONS = [
                   ("total_avg","均值 Avg","d1"),
                   ("total_max","最大 Max","int")],
             note='只回答当前免费额度线是多少、这两三天有没有变,窗口是近 3 天滚动,不看历史。🔴 2026-11-17 14:45:56 起只应有一个取值 20:free_total_10v20_v1 实验结束,两臂都定成 20,此前 f10 臂只有 10 条。出现 10 就是还有旧分组的残留;空值是正常的,它来自两条不算额度的代码路径。配置改了和数据里旧值消失差约一天。｜ Since 2026-11-17 14:45 everyone is on 20; the 10-vs-20 experiment ended.')),
-   ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
-       # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
-       #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。
-       dict(top=60,
-            cols=[("date","日期 Date","text"),("country","国家 Country","text"),
-                  ("opened_users","打开付款页 Opened","int"),
-                  ("succeeded_users","成功 Done","int"),("success_rate","成功率 %","pct1"),
-                  ("failed_users","失败 Failed","int"),
-                  ("user_cancel_users","其中 用户取消","int"),
-                  ("other_error_users","其中 其他错误","int"),
-                  ("err_store_users","其中 商店报错 Store","int"),
-                  ("err_not_identified_users","其中 认不出用户 Not Identified","int"),
-                  ("err_already_owned_users","其中 已经买过 Already Owned","int"),
-                  ("err_other_users","其中 其余原因 Other","int"),
-                  ("cancel_share_of_fail","取消占失败 %","pct1"),
-                  ("recovered_events","自动找回 Recovered","int"),
-                  ("true_fail_events","真实失败 True Fail","int")],
-            bar=["opened_users","success_rate"],
-            note='分母是打开过付款页的人;从付费墙到付款页之间还有一层流失,那层看五道墙并排。真实失败等于失败减去自动找回,失败后找回时那条失败事件照发、不撤销,直接拿失败数算会高估。四列失败原因按人去重,之和可能大于其他错误,不要相减。｜ True failure = failed − recovered.')),
-   # 🛑 2026-10-27 摘牌:「印度·0.99首购率与次日回来 · India Intro & Return」(Metabase 卡 434)。
-   #   原因:和下面这张只差一个 WHERE,**剔除版才是对的**(A 类实验广告的落地链路是断的,会污染分母),
-   #   两个数并存只会在会上被问「到底看哪个」。
-   #   处理方式:**只把 dashcard 从看板 24 摘掉,卡没有归档** —— 434 仍在 collection 里能单独打开。
-   #   ⇒ 抓数侧不用加 SKIP_CARDS(fetch 遍历的是 dashcard,卡不在看板上就不会被抓)。
-   #   恢复:先把 dashcard 加回看板 24,再把卡定义写回这里。
-   #   🛑 2026-10-28:摘牌之后 435 成了印度这一块唯一的卡,**已把它的标题改回**
-   #     「印度·0.99首购率与次日回来」(Metabase 卡名同步改了)。要恢复 434 的话,
-   #     **记得把 435 的标题改回带「剔除A类实验广告」**,否则两张卡会同名。
-   #   摘牌前的看板配置备份在 scratchpad/dashboard_24.bak_20261027.json
-   ("intro_expiry_per_user", "0.99 首月到期逐人结果 · Intro Expiry Per-User", "table",
-       # 2026-10-21 新建(Metabase 卡 429)。对应 Michael 10-21 反馈 P0 第一条(W43 ③ / D-335)。
-       # 🛑 到期取 MAX(expiration_at),**不能算「首购 + 7 天」** —— 实测周期均值 6.82 天、最长 6.96,
-       #   而且扣款失败时商店会发 SUBSCRIPTION_EXTENDED 把到期往后推,每次推一天。
-       # 🛑「关了自动续费」看最新状态:实测有人 CANCELLATION 之后又 UNCANCELLATION 恢复了。
-       dict(top=100,
-            cols=[("expire_date","到期日 Expire Date","text"),
-                  ("expire_at_sgt","到期时刻(SGT)","text"),
-                  ("purchased_at_sgt","首购时刻(SGT)","text"),
-                  ("user_id","用户 User","text"),
-                  ("country","国家 Country","text"),
-                  ("creative","素材 Creative","text"),
-                  ("network","渠道 Network","text"),
-                  ("price_local","本地价 Price","text"),
-                  ("outcome","结果 Outcome","text"),
-                  ("canceled_at_sgt","关续费时刻 Canceled At","text"),
-                  ("cancel_reason","原因 Reason","text"),
-                  ("was_extended","被推迟过 Extended","int")],
-            note='首购价买家逐人一行,结果按终态优先级判。到期取订阅表里的最大到期时间,不是首购加 7 天,周期实测不到 7 天,而且扣款失败时商店会把到期往后推。首购价的新增已经基本停了,本卡此后只处理存量,不要把到期结局的比率跨 10-30 读。🔴 2026-11-17 14:45:56 paid_intro_v1 实验结束,所有人都走 paid,澳大利亚从完全不要求预付变成 100% 走首购价 ⇒ 跨这一刻任何首购相关的比率都不可比,澳大利亚尤其不能跨读。｜ Outcome resolved by terminal state; the intro experiment ended 2026-11-17 14:45 and AU went from 0% to 100%.')),
    ("monetize_payment_funnel_daily", "付费漏斗 · Payment Funnel Daily", "table",
        # 2026-09-09 新建。付费链路 09-08~09 刚打通。
        #   选表格不选折线:① 量级个位数到几十,折线全是贴地的点;② 左右两半是两个源、时效不同,
@@ -1246,17 +1078,6 @@ SECTIONS = [
        #   实测这个坑有多深:按整月算英美加澳撞墙率 1.5%、南亚 8.9%;按 09-12 起算是 6.4% / 14.5%。
        # 🛑 与 monetize_full_funnel_by_version 共有五个环节,数值必须一致,改口径要同步改两张。
        dict(note='七步按国家分组,队列是 2026-09-12 起新装的设备。前五步是埋点设备级、后两步是服务端账号级,靠埋点里的账号桥接、覆盖约 85%,所以试用与付费两级系统性偏低约一成半,跨这条线不要相除。只能看差距出现在哪一段,不能比较两地的付费率。｜ Read where the gap appears, not the paid rates.')),
-   ("churn_before_after_speaking", "退订时点分讲话前后 · Churn Before/After Speaking", "table",
-       # 2026-10-22 新建(Metabase 卡 436)。对应 Michael 10-21 反馈 P1 第 8 项(D-210)。
-       dict(top=60,
-            cols=[("unsub_date","退订日 Date","text"),("country","国家 Country","text"),
-                  ("sub_type","订阅类型 Type","text"),
-                  ("unsub_users","主动退订 Unsub","int"),
-                  ("spoke_then_churned","讲过话才退 Spoke","int"),
-                  ("churned_before_speaking","一句没说就退 Silent","int"),
-                  ("before_speaking_rate","没说话就退 %","pct1")],
-            bar=["unsub_users","before_speaking_rate"],
-            note='分母只算主动退订,不含扣款失败,两者合起来算退订率会把支付问题当成产品问题。判据是消息落在订阅开始到退订之间,不是有没有聊过天,后者会把订阅前聊过、订阅后没碰的人误判。实测约 17% 的人一句话没说就退了。｜ Voluntary churn only; billing failures are a different thing.')),
    ("monetize_full_funnel_by_version", "全链路付费漏斗分版本 · Full Payment Funnel by Version", "funnel",
        # 2026-09-21 新建。
        # 🔴 2026-11-12:第 2~6 步由埋点(设备级)改为服务端(账号级),本卡由超时变成 4.9 秒。
@@ -1269,6 +1090,133 @@ SECTIONS = [
        # 🛑 `5_撞墙` 跨 10-28 不可比:旧免费额度墙正在被能量制替换,人数已腰斩。
        #   (原来这里写的「20/40/60 三档随机实验」2026-11-04 已实测不成立,只剩 20 和 30 两档。)
        dict(gsort="version", note='九步按 App 版本分组,队列是 2026-09-12 起新装的设备,装机量不足 200 的版本并入其它。第 1 步是埋点、按设备数,第 2 步起是服务端、按账号数。装机设备里只有七成三接得回账号,接不回的从第 3 步起一律算未达,所以第 2 步那段落差是桥接丢的,不是用户不点。旧免费额度墙正被能量制替换,撞墙那一步跨 10-28 不要直接比。｜ Nine steps by version; step 1 device-level, step 2 onward account-level.')),
+   ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
+       # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
+       #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。
+       dict(top=60,
+            cols=[("date","日期 Date","text"),("country","国家 Country","text"),
+                  ("opened_users","打开付款页 Opened","int"),
+                  ("succeeded_users","成功 Done","int"),("success_rate","成功率 %","pct1"),
+                  ("failed_users","失败 Failed","int"),
+                  ("user_cancel_users","其中 用户取消","int"),
+                  ("other_error_users","其中 其他错误","int"),
+                  ("err_store_users","其中 商店报错 Store","int"),
+                  ("err_not_identified_users","其中 认不出用户 Not Identified","int"),
+                  ("err_already_owned_users","其中 已经买过 Already Owned","int"),
+                  ("err_other_users","其中 其余原因 Other","int"),
+                  ("cancel_share_of_fail","取消占失败 %","pct1"),
+                  ("recovered_events","自动找回 Recovered","int"),
+                  ("true_fail_events","真实失败 True Fail","int")],
+            bar=["opened_users","success_rate"],
+            note='分母是打开过付款页的人;从付费墙到付款页之间还有一层流失,那层看五道墙并排。真实失败等于失败减去自动找回,失败后找回时那条失败事件照发、不撤销,直接拿失败数算会高估。四列失败原因按人去重,之和可能大于其他错误,不要相减。｜ True failure = failed − recovered.')),
+   # 软墙只挂在客户端 paywall_viewed 上 ⇒ 本卡走 host.firebase_event(T+1,最后一天偏低)。
+   # 🛑 印度软墙将来要换成能量系统的内联首充卡,换完曝光归零 —— 留着这张才有「换之前」的基线。
+   #   换的那天 CUTOVERS、卡头 note、台账切点表三处都要记日期。
+   ("india_soft_wall", "印度软墙转化 · India Soft Wall", "table",
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("soft_wall_index","第几次弹 Which","text"),
+                  ("shown_events","曝光次数 Shown","int"),
+                  ("shown_devices","曝光设备 Devices","int"),
+                  ("dismissed","关掉 Dismissed","int"),
+                  ("dismiss_rate_pct","关掉率 %","d1"),
+                  ("sub_tapped","点订阅 Tapped","int"),
+                  ("sheet_opened","开收银台 Sheet","int"),
+                  ("completed","成交 Completed","int"),
+                  ("failed","失败 Failed","int")],
+            bar=["shown_events","dismiss_rate_pct"],
+            note='印度非会员聊到第 10、20 条时弹的可关掉的弹窗。成交一直是 0,曝光数与关掉数精确相等。曝光正在快速衰减,能量系统的内联首充卡正在替换它,换完这张卡会归零,保留是为了留住旧机制的基线。两行的曝光设备数不能相加。埋点次日入库,最后一天天然缺。｜ Soft wall: zero conversions, impressions decaying.')),
+   ("energy_free_voice_trial", "免费语音体验 · Energy Free Voice Trial", "table",
+       # 2026-10-29 新建(Metabase 卡 454)。出处:产品玩法 §15.5 末「免费语音体验单独计数,不用能量」。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("kind","种类 Kind","text"),
+                  ("uses","次数 Uses","int"),
+                  ("users","人数 Users","int"),
+                  ("energy_users","能量用户 Energy Users","int"),
+                  ("users_pct","占能量用户 % of Energy","d1"),
+                  ("uses_per_user","人均次数 per User","d1"),
+                  ("refunded_uses","退回 Refunded","int")],
+            bar=["uses","users"],
+            note='免费语音体验不消耗能量,单独计数,两类各免费 4 次。不要和每天能量进出里的语音扣费相加,那是免费额度用完之后才开始扣的。人均次数接近 4 说明这批人快用完了。语音回复连续多天退回两到四成,而另一类几乎不退,问题出在语音生成那一路。｜ Free trial does not consume energy.')),
+   ("energy_winback_list", "付费流失召回 · Energy Win-back List", "table",
+       # 2026-10-29 新建(Metabase 卡 453)。出处:倡议书 §四「因付款失败走掉的入戏用户」。
+       # 🔴 2026-11-02:建卡时写的「一次性批次」已不成立 —— 10-27 / 10-31 / 11-02 三批,
+       #   而且多了一个分组 C。本卡仍固定读全表(总共才 509 人),加窗口会把早批次切掉,
+       #   而早批次正是要看长期回流的那批。
+       dict(top=30,
+            cols=[("date","名单日 Listed","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("grp","分组 Group","text"),
+                  ("listed_users","名单人数 Listed","int"),
+                  ("granted_users","真发了 Granted","int"),
+                  ("granted_pct","发放率 Granted %","d1"),
+                  ("returned_to_chat_users","回来聊了 Returned","int"),
+                  ("returned_pct","回来率 Returned %","d1"),
+                  ("paid_subscription_users","回来买订阅 Sub","int"),
+                  ("paid_consumable_users","回来买消耗型 Consumable","int"),
+                  ("distinct_last_hosts","涉及角色数 Hosts","int")],
+            bar=["listed_users","returned_pct"],
+            note='付费流失召回名单,滚动多批,每人一行。分组是名单自带的,不是随机分桶,拿它谈因果前要先确认分组规则和依从率,两者目前都没有。各组发放率差很远但人数都极小,不要读成哪套文案更好。回来聊了只数用户自己发的消息。｜ Rolling win-back list; group is not a random arm.')),
+   ("churn_before_after_speaking", "退订时点分讲话前后 · Churn Before/After Speaking", "table",
+       # 2026-10-22 新建(Metabase 卡 436)。对应 Michael 10-21 反馈 P1 第 8 项(D-210)。
+       dict(top=60,
+            cols=[("unsub_date","退订日 Date","text"),("country","国家 Country","text"),
+                  ("sub_type","订阅类型 Type","text"),
+                  ("unsub_users","主动退订 Unsub","int"),
+                  ("spoke_then_churned","讲过话才退 Spoke","int"),
+                  ("churned_before_speaking","一句没说就退 Silent","int"),
+                  ("before_speaking_rate","没说话就退 %","pct1")],
+            bar=["unsub_users","before_speaking_rate"],
+            note='分母只算主动退订,不含扣款失败,两者合起来算退订率会把支付问题当成产品问题。判据是消息落在订阅开始到退订之间,不是有没有聊过天,后者会把订阅前聊过、订阅后没碰的人误判。实测约 17% 的人一句话没说就退了。｜ Voluntary churn only; billing failures are a different thing.')),
+   # 🛑 2026-10-27 摘牌:「印度·0.99首购率与次日回来 · India Intro & Return」(Metabase 卡 434)。
+   #   原因:和下面这张只差一个 WHERE,**剔除版才是对的**(A 类实验广告的落地链路是断的,会污染分母),
+   #   两个数并存只会在会上被问「到底看哪个」。
+   #   处理方式:**只把 dashcard 从看板 24 摘掉,卡没有归档** —— 434 仍在 collection 里能单独打开。
+   #   ⇒ 抓数侧不用加 SKIP_CARDS(fetch 遍历的是 dashcard,卡不在看板上就不会被抓)。
+   #   恢复:先把 dashcard 加回看板 24,再把卡定义写回这里。
+   #   🛑 2026-10-28:摘牌之后 435 成了印度这一块唯一的卡,**已把它的标题改回**
+   #     「印度·0.99首购率与次日回来」(Metabase 卡名同步改了)。要恢复 434 的话,
+   #     **记得把 435 的标题改回带「剔除A类实验广告」**,否则两张卡会同名。
+   #   摘牌前的看板配置备份在 scratchpad/dashboard_24.bak_20261027.json
+   ("intro_expiry_per_user", "0.99 首月到期逐人结果 · Intro Expiry Per-User", "table",
+       # 2026-10-21 新建(Metabase 卡 429)。对应 Michael 10-21 反馈 P0 第一条(W43 ③ / D-335)。
+       # 🛑 到期取 MAX(expiration_at),**不能算「首购 + 7 天」** —— 实测周期均值 6.82 天、最长 6.96,
+       #   而且扣款失败时商店会发 SUBSCRIPTION_EXTENDED 把到期往后推,每次推一天。
+       # 🛑「关了自动续费」看最新状态:实测有人 CANCELLATION 之后又 UNCANCELLATION 恢复了。
+       dict(top=100,
+            cols=[("expire_date","到期日 Expire Date","text"),
+                  ("expire_at_sgt","到期时刻(SGT)","text"),
+                  ("purchased_at_sgt","首购时刻(SGT)","text"),
+                  ("user_id","用户 User","text"),
+                  ("country","国家 Country","text"),
+                  ("creative","素材 Creative","text"),
+                  ("network","渠道 Network","text"),
+                  ("price_local","本地价 Price","text"),
+                  ("outcome","结果 Outcome","text"),
+                  ("canceled_at_sgt","关续费时刻 Canceled At","text"),
+                  ("cancel_reason","原因 Reason","text"),
+                  ("was_extended","被推迟过 Extended","int")],
+            note='首购价买家逐人一行,结果按终态优先级判。到期取订阅表里的最大到期时间,不是首购加 7 天,周期实测不到 7 天,而且扣款失败时商店会把到期往后推。首购价的新增已经基本停了,本卡此后只处理存量,不要把到期结局的比率跨 10-30 读。🔴 2026-11-17 14:45:56 paid_intro_v1 实验结束,所有人都走 paid,澳大利亚从完全不要求预付变成 100% 走首购价 ⇒ 跨这一刻任何首购相关的比率都不可比,澳大利亚尤其不能跨读。｜ Outcome resolved by terminal state; the intro experiment ended 2026-11-17 14:45 and AU went from 0% to 100%.')),
+   ("energy_repeat_and_monthly", "复购与月卡 · Repeat Purchase & Monthly Card", "table",
+       # 2026-11-12 新建(Metabase 卡 462)。出处:需求文档 §4.5 / 团队包看板 4。
+       # 🛑 一张卡四块,靠 `section` 列分开 —— 三块的量纲不同(人数 / 能量 / 美元),
+       #   不要跨块相加,也不要把整表画成一张图。
+       # 🛑 ③ 的消耗是**按 lotId 精确归属到月卡那一笔**的(txn.detail 是
+       #   [{"lotId":..,"amount":..}] 数组,JSON_TABLE 拆开再 join)。
+       #   不这么做会把同期从赠送层/购买层扣的能量算进来,第 0 天会虚高到到账额本身。
+       # 🔴 月卡至今只有 6 人 8 笔:两种自动续费拼法 (:monthly / .monthly) 还是 0 行,
+       #   商品类型没切。月卡那几块现在只读绝对人数。
+       dict(top=40,
+            cols=[("section","分块 Section","text"),
+                  ("item","项 Item","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("users","人数 Users","int"),
+                  ("pct_of_buyers","占买过的人 %","d1"),
+                  ("energy","能量 Energy","int")],
+            note='一张卡四块:买过的人里第几次购买各有多少人、买的是能量包还是月卡、月卡到手之后每天花掉多少、到期有没有再买。第 2 次购买率 44.2%、第 3 次 26.7%。月卡到手是一次性 950 不是每天 80,所以第三块看的是花掉的速度,不是每天领了多少。月卡至今只有 6 个人,那几块只读绝对人数不要算比率。｜ Repeat purchase and monthly card; monthly card n=6.'
+            )),
  ]),
  ("⑧ 付费墙实验 · Paywall Experiment", [
    ("paywall_triggers_side_by_side", "五道付费墙对比 · Paywall Triggers Side by Side", "table",
@@ -1739,7 +1687,56 @@ SECTIONS = [
    ("chat_session_duration", "对话时长 · Session Duration (median min)", "line", dict(val="duration_min", agg="median",
        note="当天开始的每场会话首末消息间隔,取平均(仅含 2 条以上消息的会话)。图上两条线是中位数和均值,均值被少数极端值拉高、中位数不会,两条线分得越开说明分布越偏。｜ Avg minutes from a session's first to last message, for sessions with 2+ messages.",
        dims=[("overall","Overall",None)])),
-   # —— 交互形态 · Interaction form ——
+   ("energy_legacy_migration", "老订阅迁移 · Legacy Subscriber Migration", "table",
+       # 2026-11-04 新建(Metabase 卡 456)。出处:产品玩法 §15.7「老用户怎么迁」。
+       dict(top=100,
+            cols=[("date","续费日 Renew Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("days_to_renew","还有几天 Days","int"),
+                  ("period_type","付费形态 Period Type","text"),
+                  ("sub_status","订阅状态 Status","text"),
+                  ("product_id","商品 Product","text"),
+                  ("user_id","用户 User","int"),
+                  ("in_energy_system","进了能量系统 In Energy","int"),
+                  ("switched","已切 Switched","int"),
+                  ("plan_energy_granted","已发订阅额度 Plan Energy","int"),
+                  ("wallet_remaining","钱包余额 Wallet","int")],
+            note='一人一行,队列是在册且自动续费、到期日在今天之后的订阅。老订阅切换前不限量,切换后每月 950 能量,切换点是 3.9.0 上架满 7 天后的第一个续费日。首购价、试用、促销这三类没有换算规则,最该盯,0.99 的人若照常发 950 会非常划算。｜ Legacy subscribers due to switch to 950 energy/month.'
+            )),
+   ("legacy_unlimited_status", "老不限量订阅 · Legacy Unlimited", "table",
+       # 2026-11-12 新建(Metabase 卡 461)。出处:需求文档 §4.4 / 团队包看板 5。
+       # 🔴 ①「老商品新开数」目标是 0,实际每天还有 1~12 笔。
+       # 🔴 ② 【2026-11-13 改】**迁移已经发生,建卡当天写的「一个人都还没进」已经过期。**
+       #   当天分两批:12:07:42 九人(energy_txn.source='oldplus_multi')、
+       #   17:33:15 七十九人(source='oldplus_switch',每人 950)。
+       #   soulmap_energy_legacy 已从 141 人涨到 158 人,其中 88 人 migrated_at 非空。
+       #   🛑 **走的不是「每天 100 的过渡月」,是直接切每月 950** —— soulmap_energy_daily_plan
+       #      到现在仍是 0 行 ⇒ entered_transition 读到的是「当天切过去的人数」,
+       #      不是「当天在过渡月里的人数」。
+       #   🛑 点过「Got it」的只有 2 人 ⇒ **它不是迁移的前置条件**,建卡当天推断的
+       #      「先点 Got it、再等满 30 天后第一次续费」那条链路不成立。
+       #   🛑 hit_daily_cap_users 那一列因此暂时读不出业务含义,只当「当天影子消耗 ≥100
+       #      的人数」看,不要读成「被额度挡住的人」。
+       # 🛑 `shadow_energy` 是**能量单位不是美元**:折美元要一个「每能量多少钱」的汇率,
+       #   定稿里没给(§4.1 那个 $0.0066 是看广告送出的 coin 成本,不是服务成本)。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("app_line","业务线 Line","text"),
+                  ("new_legacy_buys","老商品新开 New (目标0)","int"),
+                  ("renewed_users","续上 Renewed","int"),
+                  ("expired_users","到期没续 Expired","int"),
+                  ("billing_issue_users","扣款失败 Billing Issue","int"),
+                  ("renew_pct","续费率 %","d1"),
+                  ("revenue_usd","收入 USD","d1"),
+                  ("entered_transition","进过渡月 Transition","int"),
+                  ("acked_notice","点过 Got it","int"),
+                  ("active_legacy_users","当天在用 Active","int"),
+                  ("hit_daily_cap_users","碰到每日额度 ≥100","int"),
+                  ("shadow_energy","影子消耗 Energy","int"),
+                  ("shadow_energy_per_user","人均影子消耗","d1")],
+            bar=["new_legacy_buys","shadow_energy"],
+            note='老的不限量订阅现在是什么状态,一行一天。老商品新开数目标是 0,不是 0 就说明商店里还买得到。迁移在 2026-11-13 当天跑完两批,名单 158 人里 88 人已经切过去,走的是直接切每月 950,不是每天 100 的过渡月,所以那一列读到的是当天切过去的人数。影子消耗是按能量制算出来的服务成本,但不真的扣,单位是能量不是美元,要折美元得另外定汇率。｜ Legacy unlimited: 88 of 158 switched on 2026-11-13.'
+            )),
  ]),
 ]
 
