@@ -289,48 +289,9 @@ def status_en(status: str) -> str:
 # key 是 CHANGELOG 里 what 字段的原文(含 <b>/<code> 标签),要逐字一致。
 # 🛑 只需要覆盖**最近 CHANGELOG_DAYS 天**会显示的那些;更早的条目页头不再渲染,
 #    表里没有的原样显示中文,不会报错。加新改动时顺手补一条,别留到以后补。
-CHANGELOG_EN = {
-    "<b>能量账本改成 1 位小数</b> —— <code>energy_txn</code> 与 <code>energy_lot</code> 的能量字段由整数改为 <code>DECIMAL(10,1)</code>;同时建好能量定价实验的分组表和公告弹窗表":
-        "<b>Energy ledger moved to one decimal place</b> — the Energy columns on <code>energy_txn</code> "
-        "and <code>energy_lot</code> changed from integer to <code>DECIMAL(10,1)</code>; the pricing "
-        "experiment's arm table and the announcement popup tables were created at the same time",
-    "<b>老 Plus 全部转能量</b> —— 79 人各 +950,不再无限;另有 9 个多账号老 Plus 在 12:07 撤单":
-        "<b>All legacy Plus moved onto Energy</b> — 79 users granted +950 each, no longer unlimited; "
-        "9 multi-account legacy Plus subscriptions were refunded at 12:07",
-    "<b>邀请改 30 / 30</b>(原邀请人 100 / 好友 60),<b>好友发第一条消息就发</b>(原聊满 10 次);邀请卡打开":
-        "<b>Invite rewards changed to 30 / 30</b> (was 100 for the inviter, 60 for the friend), "
-        "<b>granted as soon as the friend sends their first message</b> (was after 10 exchanges); "
-        "invite cards opened up",
-    "<b>推送精简</b> —— 1 / 3 分钟与 24 小时跟进取消,3 小时跟进改按用户计时,全部 50 / 50;第二批 11-13 15:00":
-        "<b>Push trimmed</b> — the 1-minute, 3-minute and 24-hour follow-ups were dropped, the 3-hour "
-        "follow-up now counts from the user's own clock, all split 50/50; second batch 11-13 15:00",
-    "<b>一台手机一个账号</b>,订阅不能转号 —— <b>新注册数会下降</b>(服务端估每周约 19 个)":
-        "<b>One account per phone</b>, subscriptions can no longer be transferred between accounts — "
-        "<b>signups will fall</b> (server estimates about 19 a week)",
-    "<b>iOS 隐藏 Type B 和社区</b>(所有版本,含已有对话);iOS 不发试用推送 —— <b>iOS 与安卓必须分开看</b>":
-        "<b>Type B characters and Community hidden on iOS</b> (all versions, including existing "
-        "conversations); iOS also stopped sending trial pushes — <b>iOS and Android must be read "
-        "separately from here on</b>",
-    "<b>安卓 3.9.5</b> —— 付费全流程 23 屏重做,<code>pw_*</code> 口径变了,3.9.5 前后不要直接比":
-        "<b>Android 3.9.5</b> — the whole payment flow was rebuilt across 23 screens; the <code>pw_*</code> "
-        "events changed definition, so do not compare across 3.9.5 directly",
-    "<b>energy_v1 20% 对照组结束</b> —— 之后注册的新用户全部进能量;同时新用户起始能量 15 → 20":
-        "<b>The 20% energy_v1 control group ended</b> — every user who signs up after this goes into "
-        "Energy; starting Energy for new users also went from 15 to 20",
-    "<b>安卓 3.9.3 过审,开始分阶段放量</b>":
-        "<b>Android 3.9.3 approved, staged rollout began</b>",
-    "<b>广告用户落地弹窗</b> —— 从广告装的先看角色大图+「和 X 聊天」,<b>不再直接推进对话</b>":
-        "<b>Landing popup for ad installs</b> — users from ads now see a large character image and a "
-        "\"Chat with X\" button first, <b>instead of being pushed straight into the conversation</b>",
-    "免费能量改<b>领取制</b> —— 用完不再自动补,「我的」页手动领、8 小时倒计时、每次 +2":
-        "Free Energy became <b>claim-based</b> — no longer topped up automatically; users claim it on the "
-        "Me page, on an 8-hour timer, +2 each time",
-    "<b>创作者奖励</b>上线 —— 付费用户在你建的角色上每花 12 能量,你得 1(<code>source=creator_reward</code>)":
-        "<b>Creator rewards</b> shipped — for every 12 Energy a paying user spends on a character you "
-        "created, you receive 1 (<code>source=creator_reward</code>)",
-    "<b>Meta 优化目标 install -> purchase</b>": "<b>Meta optimisation goal moved from install to purchase</b>",
-    "Meta 开始收到 purchase 回传": "Meta began receiving purchase postbacks",
-}
+# 🔴 2026-11-19 起为空:changelog 的英文改从 Lark「事项(EN)」列来,
+#    render_dashboard._load_changes() 启动时回填进来。不要再往这里写。
+CHANGELOG_EN = {}
 
 
 def changelog_en(what: str) -> str:
@@ -341,6 +302,7 @@ def changelog_en(what: str) -> str:
 # 显示在 Movers 行末的 ⚠ 提示里。key 是 CUTOVERS 的值,要逐字一致。
 # 🛑 这些文本是**直接拼进 HTML** 的,原文里的 `**粗体**` 会显示成字面星号 ——
 #    cutover_html() 渲染时统一转成 <b>,所以 CUTOVERS 原文不用动。
+# 🔴 与 CUTOVERS 一样冻结在 2026-11-19 —— 新切点的英文写 Lark「事项(EN)」列。
 CUTOVERS_EN = {
     "埋点侧缺这一天(服务端不缺);画趋势留空,不补零不插值":
         "Client telemetry is missing this day (server data is not); the trend is left blank, "
@@ -392,12 +354,6 @@ CUTOVERS_EN = {
         "cost per purchase and daily gross are comparable. The first mature D7 cohort lands 11-12. Also "
         "Android 3.9.3 was approved and rolled out at 11-05 01:58 (59.7% share that day, 88.5% by "
         "11-06) — **two things fall on the same day**, so separate them when attributing",
-    "能量账本字段 int → DECIMAL(10,1)(16:42)—— 跨这一刻比「人均能量」要留意单位。同时建好定价实验分组表 soulmap_energy_pricing_arm 与公告弹窗四表,**都还没有写入** ⇒ 能量相关读数本身这一天没有变化,只是字段类型变了":
-        "Energy ledger columns went from int to DECIMAL(10,1) (16:42) — mind the unit when comparing "
-        "Energy-per-user across this moment. The pricing experiment's arm table "
-        "(soulmap_energy_pricing_arm) and the four announcement tables were created at the same time but "
-        "**nothing writes to them yet** ⇒ Energy readings themselves did not change this day, only the "
-        "column type did",
 }
 
 
