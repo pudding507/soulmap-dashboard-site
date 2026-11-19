@@ -71,7 +71,7 @@ jobs:
         run: |
           python3 -W error::SyntaxWarning -c "
           import ast, sys
-          for f in ['fetch_metabase.py', 'render_dashboard.py', 'render_energy_ab.py']:
+          for f in ['fetch_metabase.py', 'render_dashboard.py', 'render_energy_ab.py', 'fetch_changes.py']:
               src = open(f).read()
               ast.parse(src)
               compile(src, f, 'exec')
@@ -95,6 +95,15 @@ jobs:
           # 原来的 25 相当于「一半就放行」,现在 25 连三分之一都不到,
           # 新加的六章(0.99/付费墙/额度墙/邀请/语音)全缺也能过 guard。
           if [ "$n" -lt 35 ]; then echo "太少($n),跳过发布、保留上一版"; exit 1; fi
+      # 从 Lark 变更登记表拉产品变更 → changes.json(页头的切点与改动日志用它)
+      # 🛑 continue-on-error + 脚本自身也吞异常:Lark 挂了、权限被改回只读、网络不通,
+      #    都不该让整轮渲染失败。拉不到就沿用上一次的 changes.json。
+      - name: fetch product changes
+        continue-on-error: true
+        env:
+          LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
+          LARK_APP_SECRET: ${{ secrets.LARK_APP_SECRET }}
+        run: python3 fetch_changes.py
       - name: render
         run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
       # ---- 能量定价实验:独立一页(带中英切换,给 Javier 看)----

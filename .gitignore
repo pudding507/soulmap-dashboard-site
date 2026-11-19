@@ -9,3 +9,5 @@ CLAUDE.md
 .DS_Store
 raw_energy_ab.json
 site/energy-ab-artifact.html
+
+# 从 Lark 拉的变更,每轮重新拉;但保留本地副本做降级兜底

@@ -110,6 +110,51 @@ CHANGELOG = [
 CHANGELOG_DAYS = 14
 
 
+CHANGES_JSON = HERE / "changes.json"
+
+
+def _load_changes():
+    """优先用 Lark 变更登记表拉下来的数据(fetch_changes.py 产出),拉不到就用下面的常量。
+
+    🛑 常量 CUTOVERS / CHANGELOG 现在是**兜底**,不是主来源。
+       新切点登记在 Lark 表里,不要再往常量里加 —— 两边都有会重复显示。
+       常量留着是为了 Lark 不可用时页头仍有内容,以及保留 2026-11-19 之前的历史。
+    """
+    try:
+        import json
+        d = json.loads(CHANGES_JSON.read_text(encoding="utf-8"))
+        items = [i for i in d.get("items", []) if i.get("on_board")]
+        if not items:
+            return None, None
+        cutovers = {}
+        for i in items:
+            if not i.get("is_cutover"):
+                continue
+            # 同一天多条切点合并成一行,页头的 Movers 按日期 key 查
+            txt = i["what"] + (f"({i['note']})" if i.get("note") else "")
+            cutovers[i["date"]] = (cutovers.get(i["date"], "") + " / " + txt).strip(" /")
+        # 🛑 备注列有两种写法:回填的是「服务端 · 已生效」,手写的是一整段说明。
+        #    只有恰好「团队 · 状态」两段、且第一段是已知团队名时才拆,否则团队留空、状态按生效时间判。
+        TEAMS = {"服务端", "客户端", "算法", "投放", "数据", "市场", "运营", "产品"}
+        changelog = []
+        for i in items:
+            parts = [x.strip() for x in (i.get("note") or "").split(" · ")]
+            team = parts[0] if len(parts) == 2 and parts[0] in TEAMS else ""
+            status = parts[1] if len(parts) == 2 and parts[0] in TEAMS else "已生效"
+            changelog.append((i["mmdd_hhmm"], team or i.get("type", ""),
+                              i["what"], status, bool(i.get("is_cutover"))))
+        return cutovers, changelog
+    except Exception:
+        return None, None
+
+
+_lark_cut, _lark_log = _load_changes()
+if _lark_cut:
+    CUTOVERS = {**CUTOVERS, **_lark_cut}     # Lark 的覆盖同日的常量
+if _lark_log:
+    CHANGELOG = _lark_log
+
+
 def _changelog_recent(items, days=CHANGELOG_DAYS, today=None):
     """按条目开头的 MM-DD 过滤到最近 days 天。表里不写年份,跨年时按「离今天最近」解释。"""
     import re as _re
