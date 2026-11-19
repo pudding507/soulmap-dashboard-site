@@ -1657,7 +1657,7 @@ SECTIONS = [
                   ("broad_result_count","21-399 结果","int"),
                   ("near_full_result_count","400+ 结果","int")],
             bar=["search_penetration_rate","zero_result_rate"],
-            note='渗透率的分母是当天打开过发现页的人,不是 DAU;零结果率的分母是当天全部搜索次数。设备级,埋点次日入库,最后一两天必然偏低。窗口里有三代搜索,换代那两天已单独标出。零结果跨代不是同一个指标,语义搜索几乎总能返回些东西,不是搜不到的变少了。｜ Three search generations.')),
+            note='渗透率的分母是当天打开过发现页的人,不是 DAU;零结果率的分母是当天全部搜索次数。账号级,走服务端表,实时。窗口里有三代搜索,换代那两天已单独标出。零结果跨代不是同一个指标,语义搜索几乎总能返回些东西,不是搜不到的变少了。｜ Three search generations.')),
    ("discover_click_position_distribution", "点击位次分布 · Click Position Distribution", "long_dim",
        dict(rate=("numerator","denominator"), fmt="pct0", **POSITION_DIMS,
             note='每个子 tab 里点击落在哪些位次档,占该 tab 当天点击的比例,只用点击侧数据、不含曝光。搜索这一档跨 10-26 和 10-28 都不可比,那两天换了召回集合又做了全量重排;其余 tab 的排序没动,照常比。本卡按天出行、不跨天汇总,要当心的是把 30 天平着看。｜ Tap-side only.')),
