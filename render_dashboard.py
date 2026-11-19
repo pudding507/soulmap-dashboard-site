@@ -743,7 +743,7 @@ SECTIONS = [
                   ("community_taps","社区点击 Community Taps","int"),
                   ("community_ctr_pct","社区 CTR %","d1")],
             bar=["impressions","community_pct"],
-            note='For You 推荐位里社区角色的占比,设备级,埋点次日入库。这一列至今恒为 0,但同期社区角色在聊天表里有上千条消息、上百人在聊,聊得到却曝光不到,基本可以判定是曝光埋点少带了前缀,判据要改,不能读成没有混入。｜ Community share is still 0; likely a telemetry prefix issue.')),
+            note='For You 推荐位里社区角色的占比,数的是曝光和点击次数、没有去重到人,埋点次日入库。这一列至今恒为 0,但同期社区角色在聊天表里有上千条消息、上百人在聊,聊得到却曝光不到,基本可以判定是曝光埋点少带了前缀,判据要改,不能读成没有混入。｜ Community share is still 0; likely a telemetry prefix issue.')),
    ("host_three_metrics", "角色的参与深度回访 · Per-Host Engage/Depth/Return", "table",
        # 2026-10-22 新建(Metabase 卡 437)。对应 Michael 10-21 反馈 P1 第 7 项(D-181/D-182)。
        dict(top=60,
