@@ -398,19 +398,31 @@ def main() -> int:
     todo = [(c["card_id"], c["card_name"], safe_metric_id(c["card_name"], c["card_id"]))
             for c in cards]
 
+    # 每张卡耗时多少、第几轮才抓到 —— 写进 _meta,再由 log_run.py 落进 logs/runs.jsonl。
+    # 没有这个就答不了「这张卡是从哪天开始变慢的」,只能从 Actions 日志里人工拼。
+    timings, rounds_taken = {}, {}
+    cur_round = [0]
+
     def fetch_one(item):
         cid, cname, mid = item
         t0 = time.time()
         rows = run_card_with_retry(tok, cid, max_retries=0)   # 每轮 1 次,靠多轮磨
+        dt = time.time() - t0
+        with lock:
+            timings[cname] = round(dt, 1)
         if rows is None:
-            print(f"  ✗ {cname}(留待下轮) {time.time()-t0:.0f}s", flush=True)
+            print(f"  ✗ {cname}(留待下轮) {dt:.0f}s", flush=True)
             return item
         with lock:
             metrics[mid] = rows
-        print(f"  ✓ {cname} -> {mid}  {len(rows)}行 {time.time()-t0:.0f}s", flush=True)
+            rounds_taken[cname] = cur_round[0]
+        print(f"  ✓ {cname} -> {mid}  {len(rows)}行 {dt:.0f}s", flush=True)
         return None
 
+    t_all = time.time()
+    round_seconds = []
     for rd in range(1, args.rounds + 1):
+        cur_round[0] = rd
         # 并发递减:第1轮拼吞吐(4),后面几轮只剩硬骨头,降并发让每张卡拿到完整带宽。
         # 实测第3轮 7 张卡开 4 并发时互相拖累、6 张全超时;单跑 41–46 秒的卡本来能过。
         workers = max(1, min(args.workers // (2 ** (rd - 1)), len(todo)))
@@ -418,6 +430,7 @@ def main() -> int:
         t_round = time.time()
         with ThreadPoolExecutor(max_workers=workers) as pool:
             still = [x for x in pool.map(fetch_one, todo) if x is not None]
+        round_seconds.append(round(time.time() - t_round, 1))
         print(f"  本轮用时 {time.time()-t_round:.0f}s", flush=True)
         todo = still
         if not todo:
@@ -428,7 +441,12 @@ def main() -> int:
 
     out = {
         "_meta": {"run_date": args.run_date, "dashboard_ids": dash_ids,
-                  "source": BASE_URL, "n_cards": len(metrics), "failed": failed},
+                  "source": BASE_URL, "n_cards": len(metrics), "failed": failed,
+                  "n_asked": len(cards),
+                  "seconds": round(time.time() - t_all, 1),
+                  "round_seconds": round_seconds,
+                  "timings": timings,              # 卡名 → 本轮最后一次的耗时(秒)
+                  "rounds_taken": rounds_taken},   # 卡名 → 第几轮才抓到
         "metrics": metrics,
     }
     outp = Path(args.out)

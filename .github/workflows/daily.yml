@@ -93,6 +93,12 @@ jobs:
         # ⚠️ 2026-10-19 起抓两个看板(18+24),卡数 51 → 73,整体耗时会比上面那组实测更长。
         # 那 6-7 张卡在 Metabase 侧就是 >60 秒,并发 1 也救不回来 —— 调度到此为止,要归零得靠兜底。
         run: python3 fetch_metabase.py --out raw_metrics.json
+      # 这一轮抓了多久、哪几张卡慢、哪几张没抓到 —— 追加到 logs/runs.jsonl。
+      # always():抓数部分失败也要记,失败本身就是要观察的现象。
+      - name: log run
+        if: always()
+        run: python3 log_run.py
+
       - name: guard
         run: |
           n=$(python3 -c "import json;print(len(json.load(open('raw_metrics.json')).get('metrics',{})))")
@@ -131,7 +137,9 @@ jobs:
         run: |
           git config user.name  "soulmap-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add -A site/
+          # 🛑 site/ 之外还有三样要带上:运行记录、连续上榜的计数、Lark 变更的本地兜底。
+          #    漏了的话它们只存在于 runner 上,下一轮就没了。
+          git add -A site/ logs/ anomaly_history.json changes.json
           git commit -m "dashboard $(date -u +%F_%H%M)" || { echo "no change"; exit 0; }
           for i in 1 2 3; do
             git pull --rebase --autostash -X theirs origin main && git push && exit 0
