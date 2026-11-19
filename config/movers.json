@@ -1,0 +1,25 @@
+{
+  "_": "页头「今天变化最大的 5 个数」的门槛和压制规则。改这里不用动代码,下一轮渲染就生效。",
+  "_注意": "这个文件缺了或者写坏了,渲染不会失败 —— 回退到 render_dashboard.py 里的默认值,并在日志里打一行。",
+
+  "top": 5,
+  "min_numerator": 30,
+  "skip_kind": ["table", "funnel"],
+  "skip_agg": ["avg", "median"],
+  "only_complete_days": true,
+
+  "suppress": {
+    "max_per_cutover": 2,
+    "repeat_days": 3
+  },
+
+  "_说明": {
+    "top": "榜上放几行。Michael 要的是「5 个数」。",
+    "min_numerator": "分子两天都要达到这个数。比率卡卡分子、绝对数卡卡值本身。防的是小分母按百分比霸榜 —— 2 → 4 的相对变化是 100%,但读不出。",
+    "skip_kind": "表格卡和漏斗卡不进榜:一行一个实体 / 一行一级,没有「今天这一个数」。",
+    "skip_agg": "均值卡和中位数卡不进榜:没有分子,min_numerator 这道门槛落不到实处。",
+    "only_complete_days": "只比已过完的整天。服务端表是实时的,当天那条是半天数据;埋点表 T+1,当天那条还没入库。拿它们去比,榜上天天是假跌。",
+    "suppress.max_per_cutover": "同一个切点最多占几行。2026-11-19 这天五行全是同一个切点(能量账本改一位小数),等于这张卡当天没提供信息。被挤下去的让位给下一名,榜上始终 top 行。设 0 关掉。",
+    "suppress.repeat_days": "同一张卡连续上榜这么多天之后压制,给别的指标让位。记录在 anomaly_history.json。设 0 关掉。"
+  }
+}

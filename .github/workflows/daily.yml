@@ -116,7 +116,9 @@ jobs:
         run: python3 -m unittest discover -s tests
 
       - name: render
-        run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html
+        # --history:把今天上榜的卡记进 anomaly_history.json,连续上榜的压制规则靠它。
+        # 只有这一轮正式渲染加,本地试渲染不加 —— 否则连续计数会被手动渲染污染。
+        run: python3 render_dashboard.py --raw raw_metrics.json --out site/index.html --history
       # ---- 能量定价实验:独立一页(带中英切换,给 Javier 看)----
       # 2026-11-19:这十张卡已并入主看板的「⑬ 能量定价实验」区,主 fetch 也抓看板 25 了,
       # 所以这里**不再单独抓一轮**,直接复用 raw_metrics.json 渲染独立页。

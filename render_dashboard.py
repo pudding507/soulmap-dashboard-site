@@ -145,8 +145,61 @@ CHANGELOG_SRC = "客户端 / 服务端 / 算法 / 投放 四端每周提交的�
 
 # ---------- 页头「今天变化最大的 5 个数」的门槛 ----------
 # 出处:埋点需求 §10 最后一行「Chris 每天在看板顶部给一张『今天变化最大的 5 个数』」。
-MOVERS_MIN_N = 30     # 两天的值都要到这个数才进榜,见 _movers() 的口径 ③
+#
+# 🔴 2026-11-19:门槛和压制规则搬到 config/movers.json,改阈值不用再动代码。
+#    下面这些是**兜底默认值** —— 配置文件缺了或写坏了就用它们,渲染不中断。
+MOVERS_MIN_N = 30     # 两天的值都要到这个数才进榜,见 _movers() 的口径 ②
 MOVERS_TOP   = 5      # Michael 要的是「5 个数」
+MOVERS_SKIP_KIND = ("table", "funnel")
+MOVERS_SKIP_AGG  = ("avg", "median")
+MOVERS_MAX_PER_CUTOVER = 2    # 同一个切点最多占几行
+MOVERS_REPEAT_DAYS     = 3    # 同一张卡连续上榜几天之后让位
+
+CONFIG_JSON  = HERE / "config" / "movers.json"
+HISTORY_JSON = HERE / "anomaly_history.json"
+
+
+def _load_movers_config():
+    """读 config/movers.json。读不到就用上面的默认值 —— 配置坏了不该让整个看板发不出去。"""
+    cfg = dict(top=MOVERS_TOP, min_numerator=MOVERS_MIN_N,
+               skip_kind=list(MOVERS_SKIP_KIND), skip_agg=list(MOVERS_SKIP_AGG),
+               only_complete_days=True,
+               suppress=dict(max_per_cutover=MOVERS_MAX_PER_CUTOVER,
+                             repeat_days=MOVERS_REPEAT_DAYS))
+    try:
+        raw = json.loads(CONFIG_JSON.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return cfg
+    except Exception as e:
+        print(f"⚠️ config/movers.json 读不了({type(e).__name__}),用默认门槛")
+        return cfg
+    for k in ("top", "min_numerator", "skip_kind", "skip_agg", "only_complete_days"):
+        if k in raw:
+            cfg[k] = raw[k]
+    if isinstance(raw.get("suppress"), dict):
+        cfg["suppress"].update(raw["suppress"])
+    return cfg
+
+
+MOVERS_CFG = _load_movers_config()
+
+
+def _load_history():
+    """{日期: [卡 key, ...]} —— 哪天榜上有谁。读不到当空的,压制规则自动失效,不影响出页面。"""
+    try:
+        return json.loads(HISTORY_JSON.read_text(encoding="utf-8")).get("runs", {})
+    except Exception:
+        return {}
+
+
+def _save_history(runs, run_date, keys):
+    """只留最近 30 天 —— 这个文件随仓库提交,不让它无限长。"""
+    runs = dict(runs)
+    runs[run_date] = keys
+    for d in sorted(runs)[:-30]:
+        runs.pop(d, None)
+    HISTORY_JSON.write_text(json.dumps({"runs": runs}, ensure_ascii=False, indent=1),
+                            encoding="utf-8")
 
 # ---------- 聚合 ----------
 def _num(x):
@@ -1955,6 +2008,8 @@ background:rgba(240,180,60,.14);border:1px solid rgba(240,180,60,.55);color:var(
   background:var(--surface);border:1px solid var(--bd)}
 .mv-h{font-size:13.5px;font-weight:700;color:var(--tp);margin-bottom:3px}
 .mv-sub{font-size:11px;color:var(--mut);line-height:1.5;margin-bottom:8px}
+.mv-drop{font-size:11px;color:var(--mut);line-height:1.5;margin-top:8px;
+  padding-top:7px;border-top:1px dashed var(--bd)}
 .mv-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto minmax(0,1.1fr);
   gap:4px 14px;align-items:baseline;padding:5px 0;border-top:1px solid var(--grid)}
 .mv-t{font-size:12.5px;color:var(--tp);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2128,12 +2183,18 @@ def _carry(prev_cards: dict, mid: str, prev_date: str | None,
 # 只给百分比会把「40 → 80」和「4,000 → 8,000」混为一谈。
 # 各卡的「最后两个完整日」可能不同(埋点 T+1、服务端实时),所以**日期逐行给**,
 # 表头不写统一区间。
-def _movers(metrics, run_date, top=MOVERS_TOP):
-    """直接从 raw 行里算,不走 build_card。返回已排好序的前 top 条。"""
+def _movers(metrics, run_date, top=None, cfg=None, history=None):
+    """直接从 raw 行里算,不走 build_card。返回 (上榜的, 被压制的)。
+
+    门槛和压制规则在 config/movers.json,见 _load_movers_config()。"""
+    cfg = cfg or MOVERS_CFG
+    top = top or cfg["top"]
+    min_n = cfg["min_numerator"]
+    skip_kind, skip_agg = tuple(cfg["skip_kind"]), tuple(cfg["skip_agg"])
     cand = []
     for _sec, cards in SECTIONS:
         for mid, title, kind, p in cards:
-            if kind in ("table", "funnel"): continue          # 口径 ④
+            if kind in skip_kind: continue                     # 口径 ④
             if not isinstance(p, dict): continue
             rows = metrics.get(mid)
             if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
@@ -2156,7 +2217,7 @@ def _movers(metrics, run_date, top=MOVERS_TOP):
                 if not have: continue
                 first = next((k for k in (p.get("dimorder") or []) if k in have), have[0])
                 rows = [r for r in rows if str(r.get(dim_col)) == first]
-            if p.get("agg") in ("avg", "median"): continue      # 口径 ③(中位数卡同均值卡)
+            if p.get("agg") in skip_agg: continue               # 口径 ③(中位数卡同均值卡)
             num, den = p["rate"] if p.get("rate") else (None, None)
             col = num or p.get("val")
             if not col: continue
@@ -2168,11 +2229,12 @@ def _movers(metrics, run_date, top=MOVERS_TOP):
                 a = acc[_nd(d)]
                 a[0] += _num(r.get(col))
                 if den: a[1] += _num(r.get(den))
-            days = sorted(d for d in acc if not run_date or d < run_date)   # 口径 ①
+            days = sorted(d for d in acc
+                          if not (cfg["only_complete_days"] and run_date) or d < run_date)  # 口径 ①
             if len(days) < 2: continue
             d0, d1 = days[-2], days[-1]
             n0, n1 = acc[d0][0], acc[d1][0]
-            if n0 < MOVERS_MIN_N or n1 < MOVERS_MIN_N: continue             # 口径 ②
+            if n0 < min_n or n1 < min_n: continue                           # 口径 ②
             if den:
                 q0, q1 = acc[d0][1], acc[d1][1]
                 if q0 <= 0 or q1 <= 0: continue
@@ -2184,11 +2246,67 @@ def _movers(metrics, run_date, top=MOVERS_TOP):
             else:
                 v0, v1, unit = n0, n1, p.get("fmt") or "int"
             if v0 == 0: continue
-            cand.append(dict(title=title, d0=d0, d1=d1, v0=v0, v1=v1, unit=unit,
+            cand.append(dict(key=mid, title=title, d0=d0, d1=d1, v0=v0, v1=v1, unit=unit,
                              n1=n1, delta=v1 - v0, rel=abs(v1 - v0) / v0,
                              cut=CUTOVERS.get(d1) or CUTOVERS.get(d0)))
     cand.sort(key=lambda m: m["rel"], reverse=True)
-    return cand[:top]
+    return _suppress(cand, top, cfg.get("suppress") or {}, history, run_date)
+
+
+def _suppress(cand, top, rules, history, run_date):
+    """按相对变化从大到小取 top 条,中途跳过被压制的。
+
+    🛑 压制 = **让位给下一名**,不是少显示一行 —— 榜上始终 top 行,
+       否则「今天变化最大的 5 个数」会变成 3 个,读的人不知道少了什么。
+    🛑 被压制的要能查:返回第二个列表,榜底列出来。悄悄藏起来比霸榜更糟。
+    """
+    max_per_cut = rules.get("max_per_cutover") or 0
+    repeat_days = rules.get("repeat_days") or 0
+    history = history if history is not None else _load_history()
+
+    # 连续上榜几天了。按**有记录的日期**往回数,不按自然日 ——
+    # 哪天没跑(周末、Actions 挂了)不该把连续计数打断。
+    streak = {}
+    if repeat_days and run_date:
+        past = sorted((d for d in history if d < run_date), reverse=True)
+        for k in {k for d in past for k in history[d]}:
+            n = 0
+            for d in past:
+                if k not in history[d]:
+                    break
+                n += 1
+            streak[k] = n
+
+    picked, dropped, per_cut = [], [], defaultdict(int)
+    for m in cand:
+        if len(picked) >= top:
+            break
+        if max_per_cut and m["cut"] and per_cut[m["cut"]] >= max_per_cut:
+            dropped.append(dict(m, why="same_cutover"))
+            continue
+        if repeat_days and streak.get(m["key"], 0) >= repeat_days:
+            dropped.append(dict(m, why="repeat", streak=streak[m["key"]]))
+            continue
+        if m["cut"]:
+            per_cut[m["cut"]] += 1
+        picked.append(m)
+
+    # 🛑 压制只在**有替补**时才算数。今天所有候选都跨同一个切点的时候(2026-11-19 就是),
+    #    按规则压完榜上只剩 2 行 —— 「变化最大的 5 个数」给 3 个数更难读。
+    #    ⇒ 补不满就按原顺序补回来,榜底说明为什么它们跨的是同一个切点。
+    # 🛑 补回来的顺序:先补 same_cutover,repeat 的放最后。
+    #    same_cutover 是「今天没得选」,repeat 是「它已经霸榜好几天了,故意让位」——
+    #    反过来补会让连上三天的那张卡又回到榜上,压制等于白做。
+    dropped.sort(key=lambda m: (m.get("why") == "repeat", m["rel"] * -1))
+    refilled = []
+    while len(picked) < top and dropped:
+        m = dropped.pop(0)
+        refilled.append(m)
+        picked.append(m)
+    picked.sort(key=lambda m: m["rel"], reverse=True)
+    for m in refilled:
+        m["refilled"] = True
+    return picked, dropped
 
 
 def _mvnum(v):
@@ -2235,26 +2353,27 @@ def _changelog_html():
     return '<div class="movers">' + head + "".join(rows) + src + '</div>'
 
 
-def _movers_html(movers):
-    _k = len(movers) or MOVERS_TOP
+def _movers_html(movers, dropped=(), run_date=None, write_history=False):
+    _k = len(movers) or MOVERS_CFG["top"]
+    _min_n = MOVERS_CFG["min_numerator"]
     head = ('<div class="mv-h">'
             + i18n.bi(f'今天变化最大的 {_k} 个数 · Biggest Movers', f'{_k} Biggest Movers Today')
             + '</div><div class="mv-sub">' + i18n.bi(
                 '口径:只比<b>已过完的整天</b>'
                 '(当天那条服务端只有半天、埋点还没入库)'
-                f' ｜ 分子两天都要 ≥ {MOVERS_MIN_N} ｜ 均值卡 / 表格卡 / 漏斗卡不进榜'
+                f' ｜ 分子两天都要 ≥ {_min_n} ｜ 均值卡 / 表格卡 / 漏斗卡不进榜'
                 ' ｜ 一张卡只出一行,取整卡总体'
                 ' ｜ ⚠ = 比较窗口跨了切点,这一跳可能不是业务变化',
                 'Method: only <b>complete days</b> are compared (today is half a day on the server side '
-                f'and client telemetry has not landed) ｜ the numerator must be ≥ {MOVERS_MIN_N} on both '
+                f'and client telemetry has not landed) ｜ the numerator must be ≥ {_min_n} on both '
                 'days ｜ median, table and funnel cards are excluded ｜ one row per card, taken at the '
                 'card total ｜ ⚠ = the comparison window crosses a cutover, so the jump may not be a '
                 'business change') + '</div>')
     if not movers:
         return ('<div class="movers">' + head +
                 '<div class="mv-empty">' + i18n.bi(
-                    f'今天没有分子两天都 ≥ {MOVERS_MIN_N} 的指标 —— 是门槛拦住了,不是没有变化。',
-                    f'No metric had a numerator ≥ {MOVERS_MIN_N} on both days — that is the threshold '
+                    f'今天没有分子两天都 ≥ {_min_n} 的指标 —— 是门槛拦住了,不是没有变化。',
+                    f'No metric had a numerator ≥ {_min_n} on both days — that is the threshold '
                     'filtering them out, not an absence of change.') + '</div></div>')
     # 切点落在窗口里的时候,**五行往往全中同一个切点**(比如 AN 关停那天)。
     # 逐行重复五遍只会把真正的差异盖掉 ⇒ 全员相同就提到表头说一次。
@@ -2281,10 +2400,44 @@ def _movers_html(movers):
             + ('<div class="mv-c">⚠ ' + i18n.cutover_html(m["cut"]) + '</div>'
                if (m["cut"] and not shared) else '<div class="mv-c"></div>')
             + '</div>')
-    return '<div class="movers">' + head + "".join(rows) + '</div>'
+    # 被压制的要列出来 —— 压制是「让位给下一名」,不是把数藏起来。
+    # 不写具体数值(那是让位的理由,不是今天要看的),只说是谁、为什么。
+    foot = ''
+    refilled = [m for m in movers if m.get("refilled")]
+    if refilled:
+        cut = refilled[0]["cut"]
+        foot += ('<div class="mv-drop">' + i18n.bi(
+            f'本榜有 {len(refilled)} 行和上面某行跨的是同一个切点,按规则本该让位,'
+            '但今天没有别的指标够门槛 —— 补回来凑满榜,读的时候当成同一件事的几个侧面。',
+            f'{len(refilled)} of these rows cross the same cutover as a row above. They would '
+            'normally give up their slot, but no other metric cleared the threshold today — '
+            'read them as several facets of one change.') + '</div>')
+    # 🛑 一旦发生过 refill,剩下这些让位就不是「被压制」了,是榜装满了 ——
+    #    两条一起说会自相矛盾(既然补了 3 个,为什么还有 2 个让位?)。
+    if dropped and not refilled:
+        same = [m for m in dropped if m.get("why") == "same_cutover"]
+        rep  = [m for m in dropped if m.get("why") == "repeat"]
+        bits_zh, bits_en = [], []
+        if same:
+            names = " · ".join(i18n.split_title(m["title"])[0] for m in same)
+            bits_zh.append(f'{len(same)} 项和榜上某行跨的是同一个切点({names})')
+            bits_en.append(f'{len(same)} cross the same cutover as a row above')
+        if rep:
+            names = " · ".join(i18n.split_title(m["title"])[0] for m in rep)
+            _rd = MOVERS_CFG["suppress"].get("repeat_days")
+            bits_zh.append(f'{len(rep)} 项已连续上榜 {_rd} 天({names})')
+            bits_en.append(f'{len(rep)} have been on the list for several days running')
+        foot += ('<div class="mv-drop">' + i18n.bi(
+            '另有 ' + " ｜ ".join(bits_zh) + ',已让位给下一名',
+            'Also suppressed: ' + " ｜ ".join(bits_en) + ' — their slots went to the next rows')
+            + '</div>')
+    # 🛑 只在 --history 时写。本地随手渲染一次不该污染连续上榜的计数。
+    if write_history and run_date:
+        _save_history(_load_history(), run_date, [m["key"] for m in movers])
+    return '<div class="movers">' + head + "".join(rows) + foot + '</div>'
 
 
-def render(raw_path: Path, out_path: Path):
+def render(raw_path: Path, out_path: Path, write_history: bool = False):
     D = json.loads(raw_path.read_text(encoding="utf-8"))
     meta = D.get("_meta", {}); metrics = D.get("metrics", D)
     for a, c in ALIAS.items():          # 现卡名 → 权威 metric_id,两种都能认
@@ -2352,7 +2505,8 @@ def render(raw_path: Path, out_path: Path):
            # 2026-10-28:「今天变化最大的 5 个数」放在横幅之后、卡片之前 ——
            # Michael 要的是「看板顶部」,但它不能盖住上面那条新鲜度说明,
            # 因为这张榜的第一条口径(只比完整的天)正是从那条说明来的。
-           + _movers_html(_movers(metrics, meta.get("run_date")))
+           + _movers_html(*_movers(metrics, meta.get("run_date")),
+                          run_date=meta.get("run_date"), write_history=write_history)
            # 2026-10-30:changelog 放在 Movers **之后** —— Movers 是「今天的数怎么变的」,
            # changelog 是「为什么会这么变」,先看现象再看原因。
            + _changelog_html())
@@ -2604,8 +2758,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=str(HERE / "raw_metrics.json"))
     ap.add_argument("--out", default=str(HERE / "soulmap-online.html"))
+    ap.add_argument("--history", action="store_true",
+                    help="把今天上榜的卡记进 anomaly_history.json(连续上榜的压制规则靠它)。"
+                         "只有每天那一轮正式渲染才加,本地试渲染不要加。")
     a = ap.parse_args()
-    render(Path(a.raw), Path(a.out))
+    render(Path(a.raw), Path(a.out), write_history=a.history)
 
 if __name__ == "__main__":
     main()
