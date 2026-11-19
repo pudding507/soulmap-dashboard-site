@@ -9,9 +9,9 @@
 
 产物:{metric_id: [row, ...]},每张卡一个 key(metric_id = 卡名转 ASCII)。
 用法:
-  python3 fetch_metabase.py                 # 抓 dashboard 18+24 全部卡 → raw_metrics.json
+  python3 fetch_metabase.py                 # 抓 dashboard 24+25 全部卡 → raw_metrics.json
   python3 fetch_metabase.py --limit 3       # 只抓前 3 张(冒烟测试)
-  python3 fetch_metabase.py --dashboard-ids 18,24 --out raw_metrics.json
+  python3 fetch_metabase.py --dashboard-ids 24,25 --out raw_metrics.json
 
 2026-10-19 改两处:
   ① 支持多看板。18 是 Report raw(基础监控),24 是 experiment(0.99/付费墙/额度墙/邀请/语音)。
@@ -39,10 +39,13 @@ from pathlib import Path
 BASE_URL = os.environ.get("METABASE_URL", "https://metabase.stylepedia.co")
 USERNAME = os.environ.get("METABASE_USER", "")      # 本地跑:export METABASE_USER=...
 PASSWORD = os.environ.get("METABASE_PASSWORD", "")  # 线上:放 GitHub Actions secrets(勿写进代码)
-# 18 = Report raw(基础监控) · 24 = experiment(0.99/付费墙/额度墙/邀请/语音,最新口径)
-# 25 = 能量定价实验(2026-11-19 并入主看板,此前是独立的一页)
+# 🔴 2026-11-19 看板 18 与 24 合并:18「Report raw」的 17 张独有卡并入 24,
+#    24 改名「SoulMap 看板 · SoulMap Dashboard」(80 张卡),**18 已归档**。
+#    合并前两边重叠 21 张,每轮要按 card_id 去重;合并后不需要了,但去重逻辑留着无害。
+#    想还原:Metabase 归档区还原看板 18,再把这里改回 "18,24,25"。
+# 24 = SoulMap 看板(全部常规卡) · 25 = 能量定价实验
 DASHBOARD_IDS = [int(x) for x in
-                 os.environ.get("SOULMAP_DASHBOARD_IDS", "18,24,25").split(",") if x.strip()]
+                 os.environ.get("SOULMAP_DASHBOARD_IDS", "24,25").split(",") if x.strip()]
 
 # 抓了也不渲染的卡 —— 2026-10-19 从 render 的 SECTIONS 里删掉了这三张,
 # 但它们还挂在 Metabase 看板 18 上。不跳过的话每轮白抓三张(其中撞墙那张要扫 firebase_event)。
@@ -55,6 +58,8 @@ DASHBOARD_IDS = [int(x) for x in
 #    容易被当成当前数据读。摘牌后这三条也变成冗余配置,同样只留作记录。
 #    看板 18 摘牌前的备份:scratchpad/dashboard_18.bak_20261028.json
 #    🛑 **恢复的话:先把 dashcard 加回看板 18,再从这里删掉对应条目。**
+#    ⚠️ 2026-11-19 看板 18 已并入 24 并归档,上面这几条讲的是当时的情形,保留作记录;
+#       现在要恢复某张卡,是加回**看板 24**。
 #    ⇒ 现在只剩 **404** 一张是「挂在看板上但停抓」的(等 firebase_event 加索引后恢复)。
 SKIP_CARDS = {
     396: "Monetize_free quota wall daily —— 已被看板 24 的 424 替代(那张用真正的 chat_wall_blocked 事件)",
@@ -69,6 +74,8 @@ SKIP_CARDS = {
     #   在那之前每天被抓 5 次 × 3 轮 = 15 次注定 60 秒超时的重查询,是压 Metabase 的那类负载。
     #   (🔴 2026-11-05 起定时改为一天 1 次,这类负载同步降到五分之一。)
     404: "付费墙实验_分臂漏斗 —— day0 62.8s + events_day0 82s,必定超时;等 firebase_event 加 (uid,event_date) 索引后恢复",
+    # 2026-11-19 发现:它既不在 SECTIONS 也不在这里,每轮被抓一次再扔掉,是纯白抓。
+    384: "Monetize_usage distribution 30d —— 挂在看板上但 SECTIONS 里没有,不渲染",
     # ↓ 2026-10-21 下线(用户决定)。不是性能问题,是这两张本身已经没用了。
     344: "Module_locked tab tap —— 锁定 Tab 点击率,数据停在 10-17,且不服务「聊深·回来·不退订」",
     # ↓ 2026-11-19 下线(用户决定的一轮瘦身)。看板从 14 区 91 卡压到 13 区 78 卡。
