@@ -450,7 +450,7 @@ SECTIONS = [
                     ("retention_d1_rate","D1 留存率 Rate","pct0")],
               bar=["new_users","first_message_rate"],
               note='一行 = 装机日 × 广告主题,设备级。2026-11-04 换了首条消息的判法,改用服务端轮数,绝对数和比率一次性跳高,翻那天以前的截图对不上就是这条。取不到账号的设备记未达、不从分母剔除。次日留存那一列最后一天必然为 0。｜ Day-0 comparison by ad theme; first-message judge fixed 2026-11-04.')),
-   ("growth_meta_daily_qcd_by_creative", "按装机日明细 · Meta 素材全链路 · Meta Funnel by Install Date", "table",
+   ("growth_meta_daily_qcd_by_creative", "装机日素材漏斗 · Meta Funnel by Install Date", "table",
        # 2026-09-14 随 SQL 改版:列结构与 growth_meta_funnel_by_creative 对齐,只是多一个 date 维度。
        #   两张卡变成「明细 / 汇总」的关系:本卡按装机日拆,那张按素材汇总,口径完全一致。
        #   唯一例外是本卡有 HAVING installs >= 10,所以按 date 求和会略小于汇总表。
@@ -472,7 +472,7 @@ SECTIONS = [
                   ("retained_d7_window_rate","D7窗 回访率 (5\u20139d)","pct1")],
             bar=["installs","qcd_rate"],
             note='上一张卡的按装机日明细,列与口径相同,滤掉装机不足 10 的素材-日。按天拆分母更小,读比率前先看装机列。发起购买走埋点,滞后 1~2 天。｜ Per-install-date detail of the card above; Started is telemetry, lagged 1–2 days.')),
-   ("growth_meta_funnel_by_creative", "按素材汇总 · Meta 素材全链路 · Meta Funnel by Creative", "table",
+   ("growth_meta_funnel_by_creative", "素材汇总漏斗 · Meta Funnel by Creative", "table",
        # 2026-09-07 随 SQL 重构:删掉「看过角色卡」与两个相关率列 —— 曝光埋点只覆盖部分 tab
        #   (foryou/new_this_week/try_different 曝光恒为 0,而这三个占点击 79.5%),拿它当漏斗
        #   第一级会出现「点击比看卡多 2.7 倍」。漏斗只留严格嵌套三级,目录那条路降为并列列。
@@ -643,7 +643,7 @@ SECTIONS = [
                   ("engaged_5plus","首日≥5条 Engaged","int"),("engaged_rate","投入率 %","pct1")],
             bar=["new_users","d1_rate"],
             note='分母是当天注册的账号,分子是次日发过消息的人;投入率那列的门槛是 5 条,和北极星的 3 条不是一回事。切到业务线那组看:CityPLX 的 D1 常年不到 1%,混在 overall 里会把整体压低,读趋势请看 SoulMap 那行。最后一天 D1 必然偏低。｜ Effective D1 by source and business line.')),
-   ("retention_d1_effective", "有效留存 D1 · 账号级 · Effective Retention D1 (account)", "long_dim",
+   ("retention_d1_effective", "有效留存 D1(账号)· Effective Retention D1", "long_dim",
        # 🛑 2026-10-27 卡头补口径(口径清单 ② / ⑥)。SQL 没动,只写清楚这是哪一套。
        dict(rate=("messaged_users","new_users"), **RETENTION_DIMS,
             note='账号级:次日发过消息的账号 ÷ 当天注册的账号,只算用户自己发言,打开 App 不算。CityPLX 并成一栏,它的 D1 只有 0.2%、却占近 7 天注册的六成,Overall 被它压低约 2 个百分点,读趋势请看 SoulMap 那条。不要和设备级的留存 D1 或 D3/D7 相比。｜ Account-level D1; not comparable with the device-level card.')),
@@ -749,7 +749,7 @@ SECTIONS = [
                   ("over_10s_pct",">10 秒 %","d1")],
             bar=["voice_user_msgs","miss_pct"],
             note='时延一律给中位数,不给均值,这类分布尾巴很长,均值会被少数极慢的拖走。｜ Latency is reported as median; the distribution has a long tail.')),
-   ("voice_playback_reasons", "播放结果与没出声的原因 · Playback & No-Audio Reasons (Client)", "table",
+   ("voice_playback_reasons", "播放与没出声 · Playback & No-Audio", "table",
        dict(top=25,
             cols=[("grp","分组 Group","text"),
                   ("grp_en","Group (EN)","text"),
@@ -952,7 +952,7 @@ SECTIONS = [
                   ("energy","能量 Energy","int")],
             note='一张卡四块:买过的人里第几次购买各有多少人、买的是能量包还是月卡、月卡到手之后每天花掉多少、到期有没有再买。第 2 次购买率 44.2%、第 3 次 26.7%。月卡到手是一次性 950 不是每天 80,所以第三块看的是花掉的速度,不是每天领了多少。月卡至今只有 6 个人,那几块只读绝对人数不要算比率。｜ Repeat purchase and monthly card; monthly card n=6.'
             )),
-   ("legacy_unlimited_status", "老的不限量订阅 · Legacy Unlimited — Status & Migration", "table",
+   ("legacy_unlimited_status", "老不限量订阅 · Legacy Unlimited", "table",
        # 2026-11-12 新建(Metabase 卡 461)。出处:需求文档 §4.4 / 团队包看板 5。
        # 🔴 ①「老商品新开数」目标是 0,实际每天还有 1~12 笔。
        # 🔴 ② 【2026-11-13 改】**迁移已经发生,建卡当天写的「一个人都还没进」已经过期。**
@@ -1693,7 +1693,7 @@ SECTIONS = [
             note='一行一个人,近 30 天按到手收入排序,占比的分母是全部到手收入,不是前 20 名的和。净额出现负数不是算错,聊得多的人服务成本会高过他付的钱。取消续费不是退款,关掉自动续费时这一期的钱并没有退回去,真正的退款现在没有数据源。 ｜ One row per person, ranked by takehome over 30 days. Negative net is not an error. Cancellations are not refunds.')),
  ]),
  ("⑭ 附录 · Appendix", [
-   ("retention_d1", "留存 D1 · 设备级 · Retention D1 (device)", "long_dim",
+   ("retention_d1", "留存 D1(设备)· Retention D1", "long_dim",
        # 🛑 2026-10-27 卡头补口径(口径清单 ② / ⑥)。SQL 没动,只写清楚这是哪一套。
        dict(rate=("retained_users","new_users"), **RETENTION_DIMS,
             note='设备级:次日开 App 的设备 ÷ 装机当天的新设备。这一套和 D3、D7 同源同层级,留存曲线要连着读就用这张。另一张有效留存 D1 是账号级、分子是发消息,两者差 1.4 倍,不要互相比也不要相除。北极星用哪一套尚未统一,定之前这个数只当参考。｜ Device-level D1, same basis as D3/D7.')),
