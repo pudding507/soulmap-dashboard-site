@@ -1734,9 +1734,11 @@ SECTIONS = [
        dict(val="user_messages", agg="median",
             note='当天每个用户发出的消息条数,不含 AI 回复。图上两条线是中位数和均值,均值被少数极端值拉高、中位数不会,两条线分得越开说明分布越偏,这时拿均值当典型用户就是错的,2026-11-03 起以中位数为准。均值那条就是原来的人均消息数,历史可以接着读。｜ Median and mean messages per user per day.',
             dims=[("overall","Overall",None)])),
+   # 2026-11-19 修:dims 的标签原本被误写成一整段说明(粘贴时把上一张卡的 note 粘进来了),
+   #   那个标签会显示在页面的维度切换按钮上,变成一个几十字的长按钮。说明挪回 note。
    ("chat_session_duration", "对话时长 · Session Duration (median min)", "line", dict(val="duration_min", agg="median",
-       note="当天开始的每场会话首末消息间隔,取平均(仅含 2 条以上消息的会话) ｜ Avg minutes from a session's first to last message, for sessions with 2+ messages",
-       dims=[("overall","Overall🛑 **图上两条线:中位数和均值**。均值被少数极端值拉高,中位数不会 —— 两条线分得越开说明分布越偏,这时候拿均值当「典型用户」就是错的。2026-11-03 起以中位数为准。",None)])),
+       note="当天开始的每场会话首末消息间隔,取平均(仅含 2 条以上消息的会话)。图上两条线是中位数和均值,均值被少数极端值拉高、中位数不会,两条线分得越开说明分布越偏。｜ Avg minutes from a session's first to last message, for sessions with 2+ messages.",
+       dims=[("overall","Overall",None)])),
    # —— 交互形态 · Interaction form ——
  ]),
 ]
