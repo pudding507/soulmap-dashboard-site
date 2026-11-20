@@ -15,15 +15,19 @@ for f in "$HOME/.soulmap_env"; do
 done
 [ -f "$HOME/.lark_env" ] && echo "  ✓ ~/.lark_env" \
   || echo "  ⚠ 缺 ~/.lark_env —— 页头的改动日志会沿用上一次,不致命"
-if git -C "$REPO" remote get-url origin >/dev/null 2>&1; then
-  echo "  ✓ git remote: $(git -C "$REPO" remote get-url origin)"
+REMOTE=$(git -C "$REPO" remote | grep -x github || git -C "$REPO" remote | grep -x origin || git -C "$REPO" remote | head -1)
+if [ -n "$REMOTE" ]; then
+  echo "  ✓ git remote: $REMOTE → $(git -C "$REPO" remote get-url "$REMOTE")"
 else
-  echo "  ✗ 没有 git remote origin"; fail=1
+  echo "  ✗ 一个 git remote 都没有"; fail=1
 fi
-if git -C "$REPO" ls-remote --heads origin main >/dev/null 2>&1; then
-  echo "  ✓ 能访问远程仓库"
+# 🛑 这条只警告不拦:抓数和渲染不依赖推送能力。钥匙没配好时照样可以先跑起来,
+#    成果留在本地提交里,钥匙配好后第一轮自动补推。
+if git -C "$REPO" ls-remote --heads "$REMOTE" main >/dev/null 2>&1; then
+  echo "  ✓ 能访问 $REMOTE"
 else
-  echo "  ✗ 访问不了远程仓库(deploy key 没配好?)"; fail=1
+  echo "  ⚠ 访问不了 $REMOTE(deploy key 还没配)—— 定时任务照装,抓数渲染会正常跑,"
+  echo "    但产物推不出去、线上不会更新。配好钥匙后下一轮自动补推。"
 fi
 python3 -c "import sys; assert sys.version_info >= (3, 9)" 2>/dev/null \
   && echo "  ✓ python3 $(python3 --version 2>&1 | cut -d' ' -f2)" \

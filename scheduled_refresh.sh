@@ -24,6 +24,10 @@ export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 [ -f "$HOME/.soulmap_env" ] && . "$HOME/.soulmap_env"
 [ -f "$HOME/.lark_env" ]    && . "$HOME/.lark_env"
 
+# 推哪个远程:必须是 GitHub —— Cloudflare Pages 监听的是它。
+# 本机的远程叫 github / gitlab,别处可能叫 origin,这里自动认。
+REMOTE=$(git remote | grep -x github || git remote | grep -x origin || git remote | head -1)
+
 mkdir -p logs; LOG="logs/refresh.log"
 log(){ echo "$(date '+%F %T') $*" >> "$LOG"; }
 
@@ -49,7 +53,7 @@ done
 if [ -n "$(git status --porcelain -- ':!site/' ':!logs/' ':!raw_metrics.json' ':!raw_energy_ab.json')" ]; then
   log "⚠️ 主机上有未提交的代码改动,跳过 git pull(代码只在本机改)"
 else
-  git pull -q --rebase --autostash origin main >> "$LOG" 2>&1 || log "⚠️ git pull 失败,用本地这版继续"
+  git pull -q --rebase --autostash "$REMOTE" main >> "$LOG" 2>&1 || log "⚠️ git pull 失败,用本地这版继续"
 fi
 
 # 🛑 测试在抓数**之前**跑。卡没登记、fmt 写错、列名拆不出英文这类
@@ -94,10 +98,13 @@ git -c user.name=soulmap-bot -c user.email=bot@users.noreply.github.com \
 
 # Cloudflare Pages 监听 GitHub 仓库,push 上去就会自动部署
 for i in 1 2 3; do
-  if git push -q origin main 2>>"$LOG"; then log "已推送,Pages 会自动部署"; exit 0; fi
+  if git push -q "$REMOTE" main 2>>"$LOG"; then log "已推送到 $REMOTE,Pages 会自动部署"; exit 0; fi
   log "push 被拒(第 $i 次),拉一下再试"
-  git pull -q --rebase --autostash -X ours origin main >> "$LOG" 2>&1
+  git pull -q --rebase --autostash -X ours "$REMOTE" main >> "$LOG" 2>&1
   sleep 5
 done
-log "❌ push 失败三次,本地已提交,下一轮会带上"
+# 🛑 push 失败不删本地提交 —— 下一轮会连着一起推。
+#    deploy key 还没配好的时候,这里每轮都会失败,但抓数和渲染的成果都留在本地,
+#    钥匙配好后第一轮就会把积攒的提交一起推上去。
+log "❌ push 失败三次($REMOTE),本地已提交,下一轮会带上"
 exit 1
