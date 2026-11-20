@@ -1277,17 +1277,26 @@ SECTIONS = [
  ]),
  ("⑨ 邀请 · Invite", [
    ("invite_funnel_guards", "新链路漏斗与防刷 · Invite — Funnel and Abuse Guards", "table",
-       dict(cols=[("step_no","#","int"),
-                  ("step_name","环节 Step","text"),
-                  ("step_count","数量 Count","int"),
-                  ("pct_of_previous","占上一步 %","d1"),
-                  ("numerator_over_denominator","分子/分母 Num/Den","text"),
-                  ("step_note","备注 Note","text")],
-            bar=["step_count"],
-            note='2026-11-13 起的新邀请链路。① ② 之间不是转化关系(一人可建多卡、一卡可发多条),比例从 ③ 起才有意义。'
-                 '③ 的点开数只从 11-16 18:18 落地页修好之后才可信,此前点击一次也没记。'
-                 '表里的 opened_at 是邀请人自己点「发送」时写的,不是朋友点开,不能当点开率。'
-                 '｜ New invite flow since 2026-11-13. Clicks are only reliable after the landing page was fixed on 11-16 18:18.')),
+       # 2026-11-20 改成一天一行(原来十行一级)。逐日的 pct_of_previous 已去掉 ——
+       #   每天的量是个位数,那一列只会在 0% 和 100% 之间跳。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("cards_created","建卡 Cards","int"),
+                  ("invites_sent","发出 Sent","int"),
+                  ("invites_clicked","朋友点开 Clicked","int"),
+                  ("friends_bound","朋友绑定 Bound","int"),
+                  ("friends_started_chatting","朋友开聊 Chatting","int"),
+                  ("rewards_to_friend","朋友侧奖励 Reward","int"),
+                  ("bindings_total","防刷·绑定总数 Bindings","int"),
+                  ("bindings_same_country","防刷·同国家 Same Country","int"),
+                  ("bindings_same_device","防刷·同设备 Same Device","int"),
+                  ("bindings_revoked","防刷·已撤销 Revoked","int")],
+            bar=["invites_sent","friends_bound"],
+            note='一行一天,2026-11-13 起的新邀请链路。建卡和发出之间不是转化关系,一人可建多卡、一卡可发多条。'
+                 '朋友点开只从 11-16 18:18 落地页修好之后才可信,此前点击一次也没记,那几天的零不是真的零。'
+                 '防刷四列的分母是绑定总数,它和朋友绑定不是同一个口径,前者含不走这条链路进来的绑定。'
+                 '同国家那一列存的其实是同地区不是同 IP,不是防刷信号。每天的量是个位数,看有没有就行,不要算逐日转化率。'
+                 '｜ One row per day since 2026-11-13; clicks are only reliable after the landing page fix on 11-16 18:18.')),
    ("invite_invitee_side", "被邀请人侧 · Invite — Invitee Side", "table",
        # 2026-11-20 改成一天一行(原来六行一步、整段合计)。同日换掉了三个死掉的步骤:
        #   incoming_shown / incoming_confirm / redeem via=referrer 自 10-14 起再无数据,
