@@ -1384,18 +1384,21 @@ SECTIONS = [
    ("churn_winback", "退订与挽回链路 · Churn & Win-back", "table",
        # 2026-10-22 新建(Metabase 卡 441)。整条链都在跑但看板上一张卡都没有;
        #   0.99 首批 10-22 到期,这条链马上从边缘变主战场。
-       #   🛑 近 30 天整段合计、**不拆天** —— 分子全是个位数,拆天每格都是 0~3 读不出。
        # 🔴 2026-10-29:两条链各补一个 ⓪ 级,用服务端 `subscription_event_log.cancel_reason`
        #   给出分母。⓪ 和 ① 是**两个数据源**,不是嵌套漏斗 —— 见 note。
-       dict(top=20,
-            cols=[("chain","链路 Chain","text"),
+       # 🔴 2026-11-20 改成一天一行一级(原来整段合计)。每天每级 15 行上下,
+       #   top=75 大致是最近 5 天。**0 行是故意留着的** —— 某一级今天是 0 本身就是信号,
+       #   行消失了反而看不出来。
+       dict(top=75,
+            cols=[("date","日期 Date","text"),
+                  ("chain","链路 Chain","text"),
                   ("app_line","业务线 Line","text"),
                   ("step_no","级 Step","int"),
                   ("step","步骤 Name","text"),
                   ("events","次数 Events","int"),
                   ("users","人数 Users","int")],
             bar=["users"],
-            note='两条挽回链:扣款失败走保留期弹窗,主动取消走取消弹窗和问原因。第 0 级来自服务端账本,第 1 级往下是客户端埋点,两者不同源也不嵌套,相除不是覆盖率,第 0 级只给量级参照。相邻级也不要相除,只读各级绝对量、看哪级掉得最狠。第 0 级只有安卓。｜ Two win-back chains; level 0 is Android-only.')),
+            note='一行是一天里的一级。两条挽回链:扣款失败走保留期弹窗,主动取消走取消弹窗和问原因。第 0 级来自服务端账本,第 1 级往下是客户端埋点,两者不同源也不嵌套,相除不是覆盖率,第 0 级只给量级参照。相邻级也不要相除。每天每级只有个位数,这张卡是看哪天断的,不要拿它算逐日转化率。显示为零的行是真的零,不是缺数。｜ One row per day per step; zeros are real, not missing.')),
    ("silence_nudge_by_tier", "沉默提醒按档位与角色类型 · Silence Nudge by Ladder & Class", "table",
        # 2026-10-22 新建(Metabase 卡 439)。起因:10-21 18:19 服务端上线、10-22 算法侧打开,
        #   B 类沉默提醒现在能走到 3h 档。原来 B 类在 3m 被算法拒 ⇒ 计数还是 0 ⇒ 永远到不了 3h。
