@@ -744,8 +744,13 @@ SECTIONS = [
             note='左边七列是服务端口径、数次数,右边两列是客户端口径、设备去重,两边不同源而且发出与收到会跨日,只做量级对照不要相除。最大的瓶颈是没有 token,常年六成以上。10-11 客户端埋点整天空白,那天的 0 是采集缺口不是业务为 0。｜ Left server-side counts, right client-side devices.'))
  ]),
  ("④ 对话 · Chat", [
-   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table", dict(top=4, cols=[("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
-                  ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note='A 是真实类、B 是幻想类,按进过哪类角色的聊天页分组,每台设备只进一组,四行可相加;两类都用过的单列。分母用客户端埋点,服务端只在用户开口后才落库。试用和付费是靠进过哪类聊天页反推的,合计小于付费漏斗卡是预期不是漏数。｜ A = realistic, B = fictional.')),
+   ("chat_character_type_ab_funnel", "角色类型 A/B 漏斗 · Character Type A/B Funnel", "table",
+       # 2026-11-20 加 date(一行 = 一天 × 分组)。同日做了性能改写:112s → 37s。
+       # 🔴 三个比率列的分母是**当天**进聊天页的设备,分子是这些人的**全历史**状态 ——
+       #   它回答「今天来的人里有多少已经聊到 N 句」,不是「今天来的人发了 N 句」。
+       #   逐日比率因此比整段高(B 类 msg20 逐日 0.50 vs 整段 0.364),**两者不可对比**。
+       dict(top=60, cols=[("date","日期 Date","text"), ("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(已停售) Sub Started","int"),
+                  ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note='一行是一天里的一组。A 是真实类、B 是幻想类,按当天进过哪类角色的聊天页分组,同一天里每台设备只进一组。三个比率列的分母是当天进来的设备,分子是这些人的终身累计状态,所以它读作今天来的人里有多少已经聊到那么多句,不是今天发了那么多句,也因此逐日比率会比整段高,两者不能对比。跨天不要把进过聊天页那一列相加,同一台设备每天来都算一次。试用和付费是靠进过哪类聊天页反推的,合计小于付费漏斗卡是预期不是漏数。｜ A = realistic, B = fictional; rates use today as denominator but lifetime state as numerator.')),
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
        dict(rate=("engaged_new_users","new_users"),
