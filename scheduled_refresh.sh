@@ -30,6 +30,11 @@ REMOTE=$(git remote | grep -x github || git remote | grep -x origin || git remot
 
 mkdir -p logs; LOG="logs/refresh.log"
 log(){ echo "$(date '+%F %T') $*" >> "$LOG"; }
+# 🔴 2026-11-20 新增告警。此前**八个会让整轮停下的地方一个告警都没有**,
+#    只写日志文件 ⇒ 看板静默停更,除非有人主动点开页面看日期才会发现。
+# 🛑 notify.py 自己永远返回 0(webhook 没配、网络不通都只打印),
+#    所以这里不加 `|| true` 也不会把流水线带下去。
+alert(){ python3 notify.py "$1" "$2" >> "$LOG" 2>&1; }
 
 # 旧锁清理:一次完整抓数约 25 分钟,超过 70 分钟还占着锁就是上次卡死了
 if [ -d logs/.lock ] && [ $(( $(date +%s) - $(stat -f %m logs/.lock) )) -gt 4200 ]; then
@@ -40,7 +45,9 @@ trap 'rmdir logs/.lock 2>/dev/null' EXIT
 
 log "===== 开始 ====="
 for v in METABASE_USER METABASE_PASSWORD; do
-  if [ -z "${!v:-}" ]; then log "缺少 $v(写进 ~/.soulmap_env),退出"; exit 3; fi
+  if [ -z "${!v:-}" ]; then log "缺少 $v(写进 ~/.soulmap_env),退出"
+    alert "没跑起来:缺凭据" "缺少环境变量 $v,应该写在 ~/.soulmap_env 里。这一轮没抓数。"
+    exit 3; fi
 done
 
 # 机器刚唤醒时网络可能还没好,先等(最多 2 分钟)
@@ -61,11 +68,26 @@ fi
 # 🛑 测试输出单独写一个文件,**不要并进 refresh.log** ——
 #    test_log_run 会故意喂坏文件、用假的「抓到 71/88 卡」做夹具,
 #    混进运行日志里,以后排查的人会把夹具数据当成真的抓数结果(2026-11-20 踩过)。
+# 🔴 2026-11-20 改:测试**不再拦截**,红了也照常抓数发布,只推 Lark。
+#    原来是 `exit 1`,等于 55 条测试里那 51 条「顶多显示得丑一点」的
+#    (movers 榜单 20 条、日志 7 条、中英拆分那批)握着「停掉整个看板」的权力。
+#    实测踩过:自己写的规则太严,把 fallback_pct 最大值 0.01 判成「忘了乘 100」
+#    (SQL 里 ROUND(100.0 * …) 已经乘过,兜底率真就是万分之一)——
+#    那种误报要是留在拦截位上,看板白停一整天而且没人知道。
+# 🛑 **代价要认**:真会显示错数的那 4 条(百分比量纲 / 格式名没实现 /
+#    卡 ID 重复 / 翻译表重复 key)现在也不拦了,错数会上线。
+#    靠的是告警 + 这几种错大多很显眼(7540% 一眼就不对)。
+#    🔴 唯一不显眼的是「格式名没实现」—— $97.43 会显示成 97,看着像个正常的数。
 if ! python3 -m unittest discover -s tests > logs/tests.log 2>&1; then
-  log "❌ 单元测试没过,不抓数也不发布;详见 logs/tests.log"
-  tail -15 logs/tests.log >> "$LOG"; exit 1
+  log "⚠️ 单元测试没过(**不拦截**,照常抓数发布);详见 logs/tests.log"
+  tail -15 logs/tests.log >> "$LOG"
+  alert "测试没过(已照常发布)" "$(grep -E '^(FAIL|ERROR):' logs/tests.log | head -8)
+
+不拦截是 11-20 定的:51/55 条测试顶多让页面难看,不值得停掉整个看板。
+但真会显示错数的那 4 条也在里面,看到这条告警请去 logs/tests.log 确认是哪一条。"
+else
+  log "测试通过($(grep -c . logs/tests.log) 行输出在 logs/tests.log)"
 fi
-log "测试通过($(grep -c . logs/tests.log) 行输出在 logs/tests.log)"
 
 # 变更登记表(页头的改动日志和读数切点)。拉不到不致命:changes.json 会沿用上一次
 python3 fetch_changes.py >> "$LOG" 2>&1 || log "⚠️ 拉 Lark 变更失败,沿用上一次的 changes.json"
@@ -73,24 +95,36 @@ python3 fetch_changes.py >> "$LOG" 2>&1 || log "⚠️ 拉 Lark 变更失败,沿
 # macOS 没有 timeout 命令,用 perl 的 alarm。一次抓数封顶 40 分钟
 fetch(){ perl -e 'alarm shift; exec @ARGV' 2400 python3 fetch_metabase.py --out raw_metrics.json >> "$LOG" 2>&1; }
 log "开始抓数"
-if ! fetch; then log "抓数出错或超过 40 分钟,不发布"; python3 log_run.py >> "$LOG" 2>&1; exit 1; fi
+if ! fetch; then log "抓数出错或超过 40 分钟,不发布"; python3 log_run.py >> "$LOG" 2>&1
+  alert "抓数失败,这一轮没发布" "抓数出错或超过 40 分钟上限。线上保留上一版。\n日志尾部:\n$(tail -6 \"$LOG\")"
+  exit 1; fi
 
 # 这一轮抓了多久、哪几张慢、哪几张没抓到 → logs/runs.jsonl
 python3 log_run.py >> "$LOG" 2>&1 || log "⚠️ 记录运行日志失败(不影响发布)"
 
 # 护栏:抓到的卡太少就不发布,线上保留上一版,别出半截页面
 n=$(python3 -c "import json;print(len(json.load(open('raw_metrics.json')).get('metrics',{})))" 2>/dev/null || echo 0)
-if [ "$n" -lt 35 ]; then log "❌ 只抓到 $n 张卡(门槛 35),不发布,线上保留上一版"; exit 1; fi
+if [ "$n" -lt 35 ]; then log "❌ 只抓到 $n 张卡(门槛 35),不发布,线上保留上一版"
+  alert "抓到的卡太少,这一轮没发布" "只抓到 $n 张(门槛 35)。线上保留上一版,不会出半截页面。"
+  exit 1; fi
 log "抓到 $n 张卡"
 
 # 抓完数再跑一次:百分比量纲那条要有 raw_metrics.json 才验得了
+# 同上:不拦截,只告警。这一轮里**唯一真会显示错数**的是百分比量纲那条
+# (pct 列出现 >1.5 的值 ⇒ 页面会显示 7540% 那种数)。
 python3 -m unittest discover -s tests > logs/tests-with-data.log 2>&1 \
-  || { log "❌ 带数据的测试没过,不发布;详见 logs/tests-with-data.log"
-       tail -15 logs/tests-with-data.log >> "$LOG"; exit 1; }
+  || { log "⚠️ 带数据的测试没过(**不拦截**,照常发布);详见 logs/tests-with-data.log"
+       tail -15 logs/tests-with-data.log >> "$LOG"
+       alert "带数据的测试没过(已照常发布)" "$(grep -E '^(FAIL|ERROR):' logs/tests-with-data.log | head -8)
+
+这一步里真会显示错数的是百分比量纲那条:pct 列出现 >1.5 的值,页面会显示成 7540% 那种。
+看到这条请立刻去线上核对相关卡。"; }
 
 # --history:把今天上榜的卡记进 anomaly_history.json,连续上榜的压制规则靠它
 python3 render_dashboard.py --raw raw_metrics.json --out site/index.html --history >> "$LOG" 2>&1 \
-  || { log "❌ 渲染主页出错,不发布"; exit 1; }
+  || { log "❌ 渲染主页出错,不发布"
+       alert "渲染出错,这一轮没发布" "render_dashboard.py 报错,线上保留上一版。\n日志尾部:\n$(tail -8 \"$LOG\")"
+       exit 1; }
 python3 render_energy_ab.py --raw raw_metrics.json --out site/energy-ab.html >> "$LOG" 2>&1 \
   || log "⚠️ 能量实验页渲染失败,主页照发"
 
@@ -113,4 +147,5 @@ done
 #    deploy key 还没配好的时候,这里每轮都会失败,但抓数和渲染的成果都留在本地,
 #    钥匙配好后第一轮就会把积攒的提交一起推上去。
 log "❌ push 失败三次($REMOTE),本地已提交,下一轮会带上"
+alert "推送失败,线上没更新" "数抓到了、页面也渲染好了,但 push 到 $REMOTE 失败三次。\n产物留在主机本地,下一轮会一起推。连着两轮看到这条就要上机器看了。"
 exit 1
