@@ -58,10 +58,14 @@ fi
 
 # 🛑 测试在抓数**之前**跑。卡没登记、fmt 写错、列名拆不出英文这类
 #    等渲染完才发现,一整轮卡就白抓了(约 25 分钟)。
-if ! python3 -m unittest discover -s tests >> "$LOG" 2>&1; then
-  log "❌ 单元测试没过,不抓数也不发布"; exit 1
+# 🛑 测试输出单独写一个文件,**不要并进 refresh.log** ——
+#    test_log_run 会故意喂坏文件、用假的「抓到 71/88 卡」做夹具,
+#    混进运行日志里,以后排查的人会把夹具数据当成真的抓数结果(2026-11-20 踩过)。
+if ! python3 -m unittest discover -s tests > logs/tests.log 2>&1; then
+  log "❌ 单元测试没过,不抓数也不发布;详见 logs/tests.log"
+  tail -15 logs/tests.log >> "$LOG"; exit 1
 fi
-log "测试通过"
+log "测试通过($(grep -c . logs/tests.log) 行输出在 logs/tests.log)"
 
 # 变更登记表(页头的改动日志和读数切点)。拉不到不致命:changes.json 会沿用上一次
 python3 fetch_changes.py >> "$LOG" 2>&1 || log "⚠️ 拉 Lark 变更失败,沿用上一次的 changes.json"
@@ -80,7 +84,9 @@ if [ "$n" -lt 35 ]; then log "❌ 只抓到 $n 张卡(门槛 35),不发布,线�
 log "抓到 $n 张卡"
 
 # 抓完数再跑一次:百分比量纲那条要有 raw_metrics.json 才验得了
-python3 -m unittest discover -s tests >> "$LOG" 2>&1 || { log "❌ 带数据的测试没过,不发布"; exit 1; }
+python3 -m unittest discover -s tests > logs/tests-with-data.log 2>&1 \
+  || { log "❌ 带数据的测试没过,不发布;详见 logs/tests-with-data.log"
+       tail -15 logs/tests-with-data.log >> "$LOG"; exit 1; }
 
 # --history:把今天上榜的卡记进 anomaly_history.json,连续上榜的压制规则靠它
 python3 render_dashboard.py --raw raw_metrics.json --out site/index.html --history >> "$LOG" 2>&1 \
