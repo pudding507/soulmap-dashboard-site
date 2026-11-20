@@ -353,7 +353,14 @@ def run_card_with_retry(tok: str, card_id: int, timeout=90, max_retries=4, backo
                 s = backoff ** attempt
                 print(f"   ⏳ retry {attempt+1}/{max_retries} (server {ex.code}) sleep={s:.1f}s")
                 time.sleep(s); continue
-            print(f"   ❌ HTTP {ex.code} card={card_id}: {ex.read().decode('utf-8','replace')[:200]}")
+            # 🛑 2026-11-20:原来直接把响应体前 200 字符抄进日志。Metabase / Nginx 超时
+            #    返回的是**整页 HTML**,那 200 字符全是 <html><head>…,一点信息都没有,
+            #    却把日志撑大 —— 实测 1,381 行里 588 行是这种噪音(43%)。
+            #    ⇒ JSON 错误体才记正文(那是 Metabase 自己说的原因),HTML 只记长度。
+            body = ex.read().decode('utf-8', 'replace').strip()
+            detail = (f"(HTML 错误页 {len(body)} 字节,多半是网关超时)"
+                      if body[:1] in ('<',) else body[:200])
+            print(f"   ❌ HTTP {ex.code} card={card_id}: {detail}")
             return None
         except Exception as ex:
             if attempt < max_retries:

@@ -29,6 +29,11 @@ export PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 REMOTE=$(git remote | grep -x github || git remote | grep -x origin || git remote | head -1)
 
 mkdir -p logs; LOG="logs/refresh.log"
+# 🔴 2026-11-20 加轮转。此前 refresh.log 只追加不清理,一天四轮一直长下去。
+#    超过 2MB 就转存成 .1(只留一份),旧的那份下次轮转时被覆盖。
+if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 2000000 ]; then
+  mv -f "$LOG" "$LOG.1"
+fi
 log(){ echo "$(date '+%F %T') $*" >> "$LOG"; }
 # 🔴 2026-11-20 新增告警。此前**八个会让整轮停下的地方一个告警都没有**,
 #    只写日志文件 ⇒ 看板静默停更,除非有人主动点开页面看日期才会发现。
