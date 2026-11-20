@@ -19,6 +19,7 @@
 from __future__ import annotations
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -54,8 +55,13 @@ def append(raw_path: Path) -> int:
         print("⚠️ 没有 _meta,这一轮不记录")
         return 0
     failed = meta.get("failed") or []
+    # 🔴 2026-11-20 新增 runner。主机(launchd,一天四次)和 GitHub Actions(22:20 补位)
+    #    都会往这个文件追加,不标来源的话排查时只能靠提交时间倒推,很别扭。
+    #    判据:Actions 的 runner 上 GITHUB_ACTIONS=true,这是官方保证一直有的环境变量。
+    runner = "actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "host"
     row = {
         "at": datetime.now(SGT).strftime("%Y-%m-%d %H:%M"),
+        "runner": runner,
         "run_date": meta.get("run_date"),
         "n_asked": meta.get("n_asked"),
         "n_cards": meta.get("n_cards"),
@@ -70,7 +76,7 @@ def append(raw_path: Path) -> int:
     with LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
     where = LOG.relative_to(HERE) if LOG.is_relative_to(HERE) else LOG
-    print(f"✅ 记了一轮:{row['at']} · 抓到 {row['n_cards']}/{row['n_asked'] or '?'} 卡"
+    print(f"✅ 记了一轮:{row['at']} [{runner}] · 抓到 {row['n_cards']}/{row['n_asked'] or '?'} 卡"
           f" · 缺 {row['n_failed']} · {row['seconds'] or '?'}s → {where}")
     return 0
 

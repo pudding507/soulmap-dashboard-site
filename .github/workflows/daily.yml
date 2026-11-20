@@ -34,10 +34,18 @@ on:
     #  ① 必须排在 ETL 之后才能稳定拿到昨天的数 —— 排早了会变成"ETL 比它早就有昨天、
     #     比它晚就只有前天",同一张卡隔天口径不同,比晚一小时更糟。
     #  ② 分钟数从整点挪到 :20。Actions 在每小时 :00 排队最挤,错开能实测缩短延迟。
-    - cron: "20 4 * * *"    # 新加坡 12:20 —— 当天第一次,ETL 之后留 78 分钟余量
-    - cron: "20 6 * * *"    # 新加坡 14:20
-    - cron: "20 9 * * *"    # 新加坡 17:20
-    - cron: "20 13 * * *"   # 新加坡 21:20 —— 当天最后一次
+    # 🔴 2026-11-20 改成**一天一次、只做补位**。
+    #    此前这里和主机的 launchd 排了**完全相同的四个时刻**,
+    #    GitHub billing 一解开两边就会同时跑。同时跑的真正危害不是浪费:
+    #      ① `anomaly_history.json` 会互相覆盖 —— 它是「连续上榜就压制」那条规则的
+    #         唯一依据,后推的盖掉前推的,压制规则会永远读到残缺历史;
+    #      ② `logs/runs.jsonl` 两边各追加,rebase 时可能丢记录;
+    #      ③ 同一时刻 2×88 张重查询压 Metabase,本来每轮就有 3~5 张撞 60 秒网关超时。
+    #    ⇒ **主机做主**(四次,launchd 准时),**Actions 做补位**(一次,主机挂了才接手)。
+    #    为什么不是反过来:下面那句「计划任务 best-effort,常晚 40min~2.5h」是 Actions 的
+    #    老毛病,而 launchd 是准时的。但主机依赖开机和办公室网络、没人看着,所以 Actions
+    #    不关掉,改成真正的备份。
+    - cron: "20 14 * * *"   # 新加坡 22:20 —— 主机最后一次是 21:20,留一小时判断它成没成功
     # 🛑 以下两个保持关闭,**都早于 12:20**,跑了只会拿到前天的 firebase 数:
     #  - cron: "20 3 * * *"   # 新加坡 11:20(2026-11-05 之前用的,ETL 余量只有 18 分钟)
     #  - cron: "20 20 * * *"  # 新加坡 04:20(2026-11-05 之前用的,离当天 ETL 还有 7 小时)
@@ -55,7 +63,38 @@ concurrency:
 permissions:
   contents: write
 jobs:
+  # 🔴 2026-11-20 新增。这一步决定今天要不要跑 —— 见上面 schedule 那段。
+  #    依据是仓库里的 `logs/runs.jsonl` 最后一行(主机每轮都会推上来)。
+  #    🛑 **同时看 run_date 和 n_cards**:只看日期的话,主机「跑了但抓砸了」
+  #       (guard 拦下、没发布)也会被当成跑过,那天就彻底没人补位了。
+  standby-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "手动触发,不做补位判断,直接跑"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          TODAY=$(TZ=Asia/Singapore date +%F)
+          LAST=$(tail -1 logs/runs.jsonl 2>/dev/null || echo '{}')
+          RUN_DATE=$(echo "$LAST" | python3 -c "import sys,json;print((json.load(sys.stdin) or {}).get('run_date',''))" 2>/dev/null || echo '')
+          N=$(echo "$LAST" | python3 -c "import sys,json;print((json.load(sys.stdin) or {}).get('n_cards',0))" 2>/dev/null || echo 0)
+          echo "今天=$TODAY  仓库里最后一轮=$RUN_DATE  抓到 $N 张"
+          if [ "$RUN_DATE" = "$TODAY" ] && [ "$N" -ge 35 ]; then
+            echo "✅ 主机今天已经跑过并发布($N 张),补位不用跑"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "⚠️ 仓库里最后一轮是 $RUN_DATE / $N 张 —— 主机今天没跑成,这次接手"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: standby-check
+    if: needs.standby-check.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

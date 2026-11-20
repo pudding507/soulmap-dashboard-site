@@ -485,7 +485,7 @@ GitHub Actions **跑不了** —— 账号 billing 锁住,job 1 秒就被拒(原
 
 | | |
 |---|---|
-| 机器 | `公司常开的那台 mac`(macOS 15.8.1 · Python 3.9.6),和 cityplx、invader 两套看板同机 |
+| 机器 | 公司常开的那台 mac(macOS 15.8.1 · Python 3.9.6),和 cityplx、invader 两套看板同机。🛑 **地址和账号不写在这里** —— 本仓库是公开的,见本地 `CLAUDE.md` |
 | 目录 | `~/DataGripProjects/soulmap-upload` |
 | 定时 | launchd `com.soulmap.dashboard.refresh`,新加坡 12:20 / 14:20 / 17:20 / 21:20(和原 Actions 一致) |
 | 脚本 | `scheduled_refresh.sh`,装 / 重载用 `tools/install_primary.sh` |

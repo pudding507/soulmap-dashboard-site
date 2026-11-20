@@ -454,8 +454,13 @@ SECTIONS = [
             bar=["installs","open_pct"],
             note='分母是装机设备,正常启动指发出过 app_open。AN 渠道 10-17 起只有 2~20% 能正常启动,其余渠道 77~100%;这批设备不建号不付费却都在分母里,把整体付费率稀释了约 1 个百分点,回到 90% 以上才算修好。无来源记录是最大的一格,它不是某个渠道,不要并进其它渠道读。｜ Installed but never booted the JS layer.')),
    ("snapshot_country_depth", "各国新用户与聊天深度 · New Users & Depth by Country", "table",
-       dict(top=25,
-            cols=[("country","国家 Country","text"),
+       # 2026-11-20 加 date(一行 = 注册日 × 国家),窗口同时补了 30 天下界。
+       #   🛑 保留国家的门槛改成「该国 30 天合计 ≥5 人」,不是「当天 ≥5」——
+       #     按天用原门槛的话除了印度美国其余国家全被滤掉,这张卡的横向比就没了。
+       #   🛑 三个深度比率在分子 <10 时给 NULL(读不出就别给数)。
+       dict(top=60,
+            cols=[("date","注册日 Install Date","text"),
+                  ("country","国家 Country","text"),
                   ("new_users","新用户 New Users","int"),
                   ("engaged_gt3",">3句 >3 msgs","int"),
                   ("engaged_gt3_pct",">3句 %","d1"),
@@ -467,7 +472,7 @@ SECTIONS = [
                   ("returned","回访 Returned","int"),
                   ("returned_pct","回访率 %","d1")],
             bar=["new_users","engaged_ge10_pct"],
-            note='一行一个国家,按首日句数分三档,分母都是该国当天的新用户。右边回访那组另有分母,不要拿它去除新用户。｜ Day-0 message depth by country; the return columns have their own denominator.')),
+            note='一行是某一天某个国家的新用户,按首日句数分三档,分母是该国该天的新用户。空着的百分比是分子不到十人读不出,不是没有数据。右边回访那组另有分母,它要装机满两天才判定,所以最近两天天然是零,不是回访掉了。｜ One row per install date per country; blank percentages mean the numerator is under ten.')),
    ("growth_dau", "日活跃用户数 · DAU", "line", dict(
             note="当天打开过 App 的用户(session_start) ｜ Users who opened the app that day (session_start)",val="value", cap=12,
        rollup={"country": 20},
