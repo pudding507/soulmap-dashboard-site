@@ -883,6 +883,7 @@ SECTIONS = [
                   ("intro_099","其中 0.99 Intro","int"),
                   ("trial_to_full","其中 试用转全价 Trial→Full","int"),
                   ("direct_full","其中 直接全价 Direct","int"),
+                  ("prepaid_monthly","其中 预付月包 Prepaid","int"),
                   ("revenue_usd","收入 USD","d1"),
                   ("revenue_099_usd","其中 0.99 收入","d1"),
                   ("revenue_full_usd","其中 全价收入","d1"),
