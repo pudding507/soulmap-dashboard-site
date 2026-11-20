@@ -1226,7 +1226,10 @@ SECTIONS = [
             note='一张卡四块:买过的人里第几次购买各有多少人、买的是能量包还是月卡、月卡到手之后每天花掉多少、到期有没有再买。第 2 次购买率 44.2%、第 3 次 26.7%。月卡到手是一次性 950 不是每天 80,所以第三块看的是花掉的速度,不是每天领了多少。月卡至今只有 6 个人,那几块只读绝对人数不要算比率。｜ Repeat purchase and monthly card; monthly card n=6.'
             )),
  ]),
- ("⑧ 付费墙实验 · Paywall Experiment", [
+ # 2026-11-20 改名:原「付费墙实验 · Paywall Experiment」。paywall_placement_v1 实验
+ #   2026-11-17 14:45:56 结束(所有人统一走 C 臂),分臂卡已全部下线,
+ #   本区剩下的两张都不是实验卡 —— 名字再叫「实验」会让人以为还在跑。
+ ("⑧ 付费墙 · Paywall", [
    ("paywall_triggers_side_by_side", "五道付费墙对比 · Paywall Triggers Side by Side", "table",
        # 🛑 2026-10-27 改名「四道墙」→「五道墙」。SQL 一行没动 —— 本卡从建卡起就是按 trigger
        #   动态分组、没有白名单,第五道墙 first_message_gate 一出现就自动有行。
