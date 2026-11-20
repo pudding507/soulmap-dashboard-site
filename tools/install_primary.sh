@@ -34,6 +34,12 @@ python3 -c "import sys; assert sys.version_info >= (3, 9)" 2>/dev/null \
   || { echo "  ✗ python3 版本太低(要 3.9+)"; fail=1; }
 [ "$fail" = 0 ] || { echo "❌ 前置条件没满足,不装定时任务"; exit 1; }
 
+# 🛑 2026-11-20 踩过:用 rsync 往主机同步代码时**带上了 .git/**,
+#    把主机那次跑完的 dashboard 提交整个盖掉了(产物还在工作区,提交记录没了)。
+#    ⇒ 首次部署之后,**代码更新一律走 git pull,不要再 rsync**。
+#      scheduled_refresh.sh 每轮开头就会 pull;要立刻生效就在主机上手动 git pull。
+#      非要 rsync 不可时,必须 --exclude .git/ --exclude site/ --exclude logs/。
+
 echo "== 跑一遍测试 =="
 LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 python3 -m unittest discover -s tests 2>&1 | tail -3
 

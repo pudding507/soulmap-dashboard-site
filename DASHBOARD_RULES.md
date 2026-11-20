@@ -477,6 +477,40 @@ python3 log_run.py --trend "卡名"     # 某张卡的耗时变化,带柱状图
 🛑 **这个脚本出错不能把流水线带下去。** 抓数已经跑完了,就因为记日志失败而不发布看板,
 是本末倒置 —— 读不了 / JSON 坏了一律打一行警告、返回 0。
 
+## 八之四、这条管线现在跑在哪(2026-11-20 起)
+
+GitHub Actions **跑不了** —— 账号 billing 锁住,job 1 秒就被拒(原文
+「The job was not started because your account is locked due to a billing issue」),
+11-19 那四次定时全是空跑。改成跑在公司常开的那台机器上:
+
+| | |
+|---|---|
+| 机器 | `公司常开的那台 mac`(macOS 15.8.1 · Python 3.9.6),和 cityplx、invader 两套看板同机 |
+| 目录 | `~/DataGripProjects/soulmap-upload` |
+| 定时 | launchd `com.soulmap.dashboard.refresh`,新加坡 12:20 / 14:20 / 17:20 / 21:20(和原 Actions 一致) |
+| 脚本 | `scheduled_refresh.sh`,装 / 重载用 `tools/install_primary.sh` |
+| 凭据 | `~/.soulmap_env`、`~/.lark_env`(600),**不进仓库、不随代码同步** |
+| 推送 | GitHub deploy key `~/.ssh/id_ed25519_soulmap`,只对这一个仓库有写权限 |
+| 部署 | push 到 GitHub → Cloudflare Pages 监听仓库自动部署,链接不变 |
+
+🛑 **代码更新走 `git pull`,不要 rsync。** 2026-11-20 踩过:rsync 带上了 `.git/`,
+把主机那次跑完的 dashboard 提交整个盖掉(产物还在工作区,提交记录没了,
+推上去的变成本机的提交)。`scheduled_refresh.sh` 每轮开头就会 pull,
+要立刻生效就在主机上手动 pull。首次部署之外,rsync 只在必须时用,
+且一定要 `--exclude .git/ --exclude site/ --exclude logs/`。
+
+🛑 **凭据不替用户传第二次。** 首次部署时 scp 过去就够了,之后不要再碰。
+
+常用命令(在主机上):
+
+```bash
+cd ~/DataGripProjects/soulmap-upload
+bash scheduled_refresh.sh          # 手动跑一轮
+tail -40 logs/refresh.log          # 看这一轮发生了什么
+python3 log_run.py --show 7        # 最近 7 轮抓了多少、多久
+launchctl list | grep soulmap      # 定时任务还在不在
+```
+
 ## 九、改完怎么验
 
 0. **先跑测试**(2026-11-19 起):`python3 -m unittest discover -s tests`,39 条,不到 0.1 秒。
