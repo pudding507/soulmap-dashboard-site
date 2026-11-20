@@ -1,35 +1,68 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""刷新管线的 Lark 告警。
+"""看板刷新管线的 Lark 告警(三个项目通用)。
 
-    python3 notify.py "标题" "正文(可多行)"
+    python3 notify.py --project CityPLX "抓数失败" "正文,可多行"
+    python3 notify.py "标题" "正文"          # 项目名从 DASHBOARD_PROJECT 或当前目录推断
 
-🛑 **这个脚本自己绝不能让流水线失败**:webhook 没配、网络不通、Lark 返回错误,
-   一律只打印、返回 0。告警是辅助,不是关卡。
+🛑 **这个脚本自己绝不能让流水线失败**:webhook 没配、网络不通、URL 写错,
+   一律只打印、返回 0。告警是辅助,不是关卡(三种情况都实测过)。
 
-webhook 从环境变量 `SOULMAP_ALERT_WEBHOOK` 读(写在 `~/.soulmap_env` 里)。
-🛑 **不要存成仓库里的文件** —— 本仓库是公开的,webhook URL 等于谁都能往群里发消息。
-   成本预警那条管线用的是同目录 `webhook.txt`,那个仓库不公开,这里不能照抄。
+webhook 按这个顺序找,第一个找到的生效:
+  1. 环境变量 DASHBOARD_ALERT_WEBHOOK      ← 三个项目共用,推荐
+  2. 环境变量 <项目名大写>_ALERT_WEBHOOK     ← 例如 SOULMAP_ALERT_WEBHOOK
+  3. 文件 ~/.dashboard_alert_webhook        ← 一行一个 URL
 
-没配的时候只打印不推送,所以本地跑、新机器上跑都不会炸。
+🛑 **不要把 webhook 存进任何会提交的文件。** soulmap-upload 是公开仓库,
+   webhook URL 等于谁都能往群里发消息。放环境变量或家目录下的文件。
 """
 from __future__ import annotations
+import argparse
 import json
 import os
+import pathlib
 import socket
 import sys
 import urllib.request
 
 HOST = socket.gethostname()
+HOME_FILE = pathlib.Path.home() / ".dashboard_alert_webhook"
 
 
-def send(title: str, body: str) -> bool:
-    """推一条文本消息。返回有没有推出去 —— 调用方可以不管。"""
-    hook = (os.environ.get("SOULMAP_ALERT_WEBHOOK") or "").strip()
+def guess_project() -> str:
+    """没指定项目名时,从当前目录推断 —— cityplx-dashboard → CityPLX。"""
+    env = (os.environ.get("DASHBOARD_PROJECT") or "").strip()
+    if env:
+        return env
+    name = pathlib.Path.cwd().name
+    for suffix in ("-dashboard", "-upload", "_dashboard"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+    return name or "看板"
+
+
+def find_webhook(project: str) -> str:
+    for key in ("DASHBOARD_ALERT_WEBHOOK",
+                f"{project.upper().replace('-', '_')}_ALERT_WEBHOOK"):
+        v = (os.environ.get(key) or "").strip()
+        if v:
+            return v
+    try:
+        if HOME_FILE.exists():
+            return HOME_FILE.read_text(encoding="utf-8").strip().splitlines()[0].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def send(title: str, body: str, project: str = "") -> bool:
+    project = project or guess_project()
+    hook = find_webhook(project)
     runner = "actions" if os.environ.get("GITHUB_ACTIONS") == "true" else HOST
-    text = f"【SoulMap 看板】{title}\n机器:{runner}\n\n{body}".strip()
+    text = f"【{project} 看板】{title}\n机器:{runner}\n\n{body}".strip()
     if not hook:
-        print(f"[未推送:没配 SOULMAP_ALERT_WEBHOOK]\n{text}")
+        print(f"[未推送:没找到 webhook]\n{text}")
         return False
     try:
         req = urllib.request.Request(
@@ -40,7 +73,7 @@ def send(title: str, body: str) -> bool:
         with urllib.request.urlopen(req, timeout=15) as r:
             resp = json.loads(r.read().decode("utf-8", "replace") or "{}")
         ok = resp.get("StatusCode") == 0 or resp.get("code") == 0
-        print(f"[告警已推送]" if ok else f"[告警推送失败] {resp}")
+        print("[告警已推送]" if ok else f"[告警推送失败] {resp}")
         return ok
     except Exception as ex:                      # 🛑 吞掉,绝不往上抛
         print(f"[告警推送异常,忽略] {type(ex).__name__}: {ex}")
@@ -48,10 +81,15 @@ def send(title: str, body: str) -> bool:
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
+    ap = argparse.ArgumentParser(description="看板刷新的 Lark 告警(通用)")
+    ap.add_argument("--project", default="", help="项目名,不给就从目录推断")
+    ap.add_argument("title", nargs="?", default="")
+    ap.add_argument("body", nargs="?", default="")
+    a = ap.parse_args()
+    if not a.title:
         print(__doc__)
         return 0
-    send(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "")
+    send(a.title, a.body, a.project)
     return 0                                     # 🛑 永远 0
 
 

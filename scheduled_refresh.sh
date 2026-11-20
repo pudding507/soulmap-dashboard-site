@@ -39,7 +39,7 @@ log(){ echo "$(date '+%F %T') $*" >> "$LOG"; }
 #    只写日志文件 ⇒ 看板静默停更,除非有人主动点开页面看日期才会发现。
 # 🛑 notify.py 自己永远返回 0(webhook 没配、网络不通都只打印),
 #    所以这里不加 `|| true` 也不会把流水线带下去。
-alert(){ python3 notify.py "$1" "$2" >> "$LOG" 2>&1; }
+alert(){ python3 notify.py --project SoulMap "$1" "$2" >> "$LOG" 2>&1; }
 
 # 旧锁清理:一次完整抓数约 25 分钟,超过 70 分钟还占着锁就是上次卡死了
 if [ -d logs/.lock ] && [ $(( $(date +%s) - $(stat -f %m logs/.lock) )) -gt 4200 ]; then
