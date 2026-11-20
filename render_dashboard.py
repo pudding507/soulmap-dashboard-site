@@ -622,7 +622,7 @@ SECTIONS = [
                   ("skipped_no_device_id","跳过·无设备ID Skipped","int"),
                   ("failed","发送失败 Failed","int")],
             bar=["intro_should_send"],
-            note='差不是 0 就是漏发或双算,要查。实发只数状态为已发送的,跳过和失败单独成列,算进实发会让对账永远是平的。还有第三条路要去 Events Manager 对,看板里放不进来,所以这里对平不等于对方侧没有双算。｜ Gap≠0 means missing or double-sent.')),
+            note='能量那一行的差一直是负的,不是漏发是没接:订阅首购的回传率是百分之百,能量四百九十笔一条没进,服务端按商品白名单过滤而里面只有月订阅。订阅已停售,应发归零,现在要看的是能量这一行。实发只数已发送的,跳过和失败单独成列。还有第三条路要去 Events Manager 对,这里对平不等于对方侧没有双算。｜ The energy gap is negative because that path was never wired, not because sends failed.')),
    ("acceptance_ad_host_landing", "广告用户落地角色 · Ad User Lands on Ad Host", "table",
        # 2026-11-13 新建(Metabase 卡 464)。出处:WW48 定稿 〇.8 待办 1(D-559 / D-560),
        #   验收「落地率 49% → 80%」。
