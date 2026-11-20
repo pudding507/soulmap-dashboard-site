@@ -1313,20 +1313,28 @@ SECTIONS = [
             bar=["bound_on_server"],
             note='一行一天。前六列来自客户端埋点按埋点日算,最后一列来自服务端表按绑定时间算,两边日界不同,同一天对不上是正常的。输码失败平时应该是零,不是零就要看码的下发有没有问题。每天的量只有个位数,看今天有没有就行,不要算转化率。｜ One row per day; client telemetry and server table use different day boundaries.')),
    ("invite_bonus_30msg", "30 条奖励发放 · 30-Message Bonus Grants", "table",
-       dict(cols=[("seq","#","int"),
-                  ("policy_version","策略版本 Policy","text"),
-                  ("side","侧 Side","text"),
-                  ("side_en","Side (EN)","text"),
-                  ("bindings","绑定数 Bindings","int"),
-                  ("granted","已发放 Granted","int"),
-                  ("granted_pct","发放率 %","d1"),
-                  ("lag_p50_min","延迟中位(分) p50","d1"),
-                  ("lag_max_min","延迟最大(分) max","int"),
-                  ("invitee_sent_msg","被邀请人发过消息 Sent","int"),
-                  ("sandbox_invitee","沙盒 Sandbox","int"),
-                  ("note","备注 Note","text")],
-            bar=["bindings","granted_pct"],
-            note='发放与否看绑定表里的发放时间字段,不看奖励状态。延迟同时给中位数和最大值,实测逐条从 0 分钟到两千多分钟都有,只看均值会被极值带偏。🔴 2026-11-17 14:45:56 输码这条路的门槛从朋友发 1 条改成发 5 条(邀请卡那条路一直是 5),跨这一刻比发放率不可比。｜ The redeem path threshold went from 1 to 5 friend messages on 2026-11-17 14:45.')),
+       # 2026-11-20 换数据源 + 改成一天一行。原来查的是 soulmap_invite_binding 的
+       #   invitee_bonus_at / inviter_bonus_at,而那两列**自 11-13 起不再写入**
+       #   (v2 策略 11-12 停,之后的 energy1 / card_v1 两侧都是 0)。
+       #   新链路的奖励记在 soulmap_invite_send,详见 SQL 卡头。
+       dict(top=30,
+            cols=[("date","日期 Date","text"),
+                  ("sends","发出 Sends","int"),
+                  ("send_reward_n","发出即给 Send Reward","int"),
+                  ("friend_gift_n","朋友侧已发 Friend Gift","int"),
+                  ("merit_granted","邀请人侧已发 Granted","int"),
+                  ("merit_blocked","被拦 Blocked","int"),
+                  ("blocked_same_ip","拦:同IP Same IP","int"),
+                  ("blocked_self_invite","拦:自邀 Self Invite","int"),
+                  ("blocked_duplicate_code","拦:重复码 Dup Code","int"),
+                  ("blocked_other","拦:其他 Other","int"),
+                  ("legacy_bindings","旧链路绑定 Legacy Bound","int"),
+                  ("legacy_granted","旧链路已发 Legacy Granted","int")],
+            bar=["sends","merit_granted"],
+            note='一行一天。新链路各列按邀请发出日归集,所以今天发出的邀请,它后面几天才产生的绑定和奖励会回填到今天这一行,最近一两天的已发列天然偏低,不是奖励停了。'
+                 '被拦四列是防刷结果,其他那一列平时应该是零,不是零就说明服务端加了新的拦截原因。'
+                 '最后两列是旧链路对照,它按绑定日算、是另一张表,和前面几列同一天对不上是正常的,等窗口滑过十二月中旬会归零。'
+                 '｜ One row per day. New-flow columns are grouped by invite-sent date, so recent days backfill.')),
    ("invite_redeem_by_source", "兑换结果按来源 · Redeem by Source & Reason", "table",
        # 2026-11-20 加 date:监控用,要看出哪天开始有某种失败。每天 2~4 行。
        dict(top=60,
