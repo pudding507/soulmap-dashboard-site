@@ -13,6 +13,13 @@
    "growth_version_adoption",
    "growth_dau",
    "discover_character_daily_ctr"
+  ],
+  "2026-11-21": [
+   "retention_d1_effective",
+   "growth_version_adoption",
+   "discover_character_coverage",
+   "growth_dau",
+   "growth_new_user"
   ]
  }
 }
