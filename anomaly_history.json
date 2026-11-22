@@ -20,6 +20,13 @@
    "discover_character_coverage",
    "growth_dau",
    "growth_new_user"
+  ],
+  "2026-11-22": [
+   "chat_engaged_new_user_rate",
+   "growth_version_adoption",
+   "growth_dau",
+   "discover_character_coverage",
+   "discover_character_daily_ctr"
   ]
  }
 }
