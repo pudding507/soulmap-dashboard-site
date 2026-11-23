@@ -1111,6 +1111,47 @@ SECTIONS = [
        # 🛑 `5_撞墙` 跨 10-28 不可比:旧免费额度墙正在被能量制替换,人数已腰斩。
        #   (原来这里写的「20/40/60 三档随机实验」2026-11-04 已实测不成立,只剩 20 和 30 两档。)
        dict(gsort="version", note='九步按 App 版本分组,队列是 2026-09-12 起新装的设备,装机量不足 200 的版本并入其它。第 1 步是埋点、按设备数,第 2 步起是服务端、按账号数。装机设备里只有七成三接得回账号,接不回的从第 3 步起一律算未达,所以第 2 步那段落差是桥接丢的,不是用户不点。旧免费额度墙正被能量制替换,撞墙那一步跨 10-28 不要直接比。｜ Nine steps by version; step 1 device-level, step 2 onward account-level.')),
+   ("checkout_chain_server", "结账链路(服务端) · Checkout Chain (Server)", "table",
+       # 2026-11-23 新建(Metabase 卡 477)。数据源 soulmap_energy_order,服务端 11-16 上线,
+       #   此前看板上一张卡都没用过它。和下面那张「付款页成功率与真实失败」**并存不替代**:
+       #   客户端那张有 ms_in_sheet 和 trigger,这张有完整时间戳、不漏报、带实验臂和档位。
+       # 🔴 两个坑写在 SQL 卡头:① 11-19 之前没有客户端上报的链路字段(3.9.7 才上报);
+       #   ② tapped_at 为空的是服务端回调补记的成交(全是 credited),混进分母会把到账率抬高。
+       dict(top=45,
+            cols=[("date","日期 Date","text"),
+                  ("arm","弹窗 Arm","text"),
+                  ("orders","订单 Orders","int"),
+                  ("users","人数 Users","int"),
+                  ("reported","走完流程 Reported","int"),
+                  ("sheet_opened","开付款页 Sheet","int"),
+                  ("got_result","有结果 Result","int"),
+                  ("credited","到账 Credited","int"),
+                  ("credited_rate","到账率 %","d1"),
+                  ("user_cancel","用户取消 Cancel","int"),
+                  ("err_not_allowed","错:不允许购买 Not Allowed","int"),
+                  ("err_already_owned","错:已经买过 Owned","int"),
+                  ("err_other","错:其他 Other","int"),
+                  ("still_open","还没结束 Open","int"),
+                  ("credited_backfill","补记到账 Backfill","int")],
+            bar=["reported","credited_rate"],
+            note='一行是一天里的一个弹窗实验臂。走完流程指客户端上报了点击时间的单,安卓 3.9.7 起才有,所以这张卡从十一月十九日算起。最后一列是服务端回调补记的成交,它们没经过客户端上报、状态全是已到账,所以不进前面几级的分母,否则到账率会被抬高。到账率的分子不足十笔时留空。｜ One row per day per paywall arm; backfilled orders are kept out of the funnel denominator.')),
+   ("checkout_by_tier", "结账档位对比 · Checkout by Tier", "table",
+       # 2026-11-23 新建(Metabase 卡 478)。和上面那张同源,那张按天、这张按档位横向比。
+       # 🛑 **不拆天的理由是「比较档位需要分母」,不是「量小」** ——
+       #   每档每天只有几单,按天拆比率全部读不出。要看逐日变化用上面那张。
+       dict(top=12,
+            cols=[("tier","档位 Tier","text"),
+                  ("orders","订单 Orders","int"),
+                  ("users","人数 Users","int"),
+                  ("credited","到账 Credited","int"),
+                  ("credited_rate","到账率 %","d1"),
+                  ("user_cancel","用户取消 Cancel","int"),
+                  ("cancel_rate","取消率 %","d1"),
+                  ("errors","错误 Errors","int"),
+                  ("err_not_allowed","错:不允许购买 Not Allowed","int"),
+                  ("err_other","错:其他 Other","int")],
+            bar=["orders","credited_rate"],
+            note='只统计走完流程的单,十一月十九日起。最便宜的那一档掉得最多,而且失败几乎全是用户主动取消不是报错。空着的比率是分子不足十笔读不出,不是没有数据。要看某一档的逐日变化请用上面那张按天的卡。｜ Completed-flow orders only; the cheapest tier drops the most, mostly via user cancellation.')),
    ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
        # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
        #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。

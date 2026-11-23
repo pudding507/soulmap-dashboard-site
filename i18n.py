@@ -96,6 +96,8 @@ COLUMN_EN = {
     "占上一步 %": "% of Previous Step", "曝光→发起": "Impression → Start",
     "打开→选角色 %": "Open → Pick Host %", "建号率 %": "Account Created %",
     "开口率 %": "First Msg %", "成功率 %": "Success %", "正常启动率 %": "Normal Launch %",
+    # 2026-11-23 新增:结账两张卡(Metabase 477 / 478)
+    "到账率 %": "Credited %", "取消率 %": "Cancel %",
     "推进率 %": "Advance %", "投入率 %": "Engaged %", "入戏率 %": "In-Character %",
     "接受率 %": "Accept %", "发放率 %": "Grant %", "实发率 %": "Actual Grant %",
     "落地率(全部)%": "Landing % (all)", "落地率(说过话的)%": "Landing % (spoke)",

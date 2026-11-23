@@ -160,6 +160,9 @@ KEY_OVERRIDE = {
     # 它们由 render_energy_ab.py 渲染成单独的一页 site/energy-ab.html,
     # 抓数也走单独一轮(`--dashboard-ids 25 --out raw_energy_ab.json`),和 18/24 完全隔离。
     # 🛑 混进主看板的 raw_metrics.json 会让页头「今天变化最大的 5 个数」把实验卡也算进去。
+    # 2026-11-23 新建。数据源 soulmap_energy_order(服务端 11-16 上线),此前没有卡用它。
+    477: "checkout_chain_server",      # 结账链路(服务端):一天一行 × 弹窗实验臂
+    478: "checkout_by_tier",           # 结账档位对比:整段 × 档位
     467: "energy_ab_arms",             468: "energy_ab_purchase",
     469: "energy_ab_net_revenue",      470: "energy_ab_margin_band",
     471: "energy_ab_engagement",       472: "energy_ab_conversation_length",
