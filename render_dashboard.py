@@ -839,17 +839,6 @@ SECTIONS = [
                   ("community_ctr_pct","社区 CTR %","d1")],
             bar=["impressions","community_pct"],
             note='For You 推荐位里社区角色的占比,数的是曝光和点击次数、没有去重到人,埋点次日入库。这一列至今恒为 0,但同期社区角色在聊天表里有上千条消息、上百人在聊,聊得到却曝光不到,基本可以判定是曝光埋点少带了前缀,判据要改,不能读成没有混入。｜ Community share is still 0; likely a telemetry prefix issue.')),
-   ("host_three_metrics", "角色的参与深度回访 · Per-Host Engage/Depth/Return", "table",
-       # 2026-10-22 新建(Metabase 卡 437)。对应 Michael 10-21 反馈 P1 第 7 项(D-181/D-182)。
-       dict(top=60,
-            cols=[("host_name","角色 Host","text"),("char_class","类型 Class","text"),
-                  ("new_chatters","首次聊 New","int"),
-                  ("engaged_gt3",">3条 Engaged","int"),("engage_rate","入戏率 %","pct1"),
-                  ("deep_ge10","≥10条 Deep","int"),("deep_rate","聊深率 %","pct1"),
-                  ("heavy_ge100","≥100句 Heavy","int"),("heavy_rate","≥100句 %","pct1"),
-                  ("returned","24~48h回来 Returned","int"),("return_rate","回来率 %","pct1")],
-            bar=["new_chatters","deep_rate"],
-            note='本卡只统计 SoulMap,不含 CityPLX。另有几张卡把两者并列成业务线两栏,本卡没有,不要和那些卡的合计相加或互相对比。一行一个角色,分母是当天第一次和该角色聊的人,不足 10 人的角色不出。三个门槛都和别的卡不同,不可直接对。｜ SoulMap only; all three thresholds differ from other cards.')),
    ("discover_character_leaderboard", "角色表现榜 · Character Leaderboard", "table",
        dict(top=20, sort="ctr",
             # host_id 排最后:它最长、也最不常看,放前面会把关键列挤出可视区
@@ -942,7 +931,7 @@ SECTIONS = [
                   ("price_usd","折美元 USD","d1"),
                   ("purchases","笔数 Purchases","int")],
             bar=["purchases"],
-            note='看实际成交价什么时候真的统一,商店价格改动有生效延迟,配置改了不等于用户看到的价变了。同一天同一国家可能有两个价,本卡每个价单独一行、不取均值,取均值会算出一个谁都没付过的数。本地价一般含当地税,折回美元不会正好等于标价。｜ Actual transacted price by market.')),
+            note='🛑 本卡只统计月订阅首购,能量包和续费都不在内 —— 实测月订阅首购 11-21 起连续多日为 0,而同期能量包每天四五十笔,所以这张卡停更不代表收入停了,只代表这条路基本没人走。看实际成交价什么时候真的统一,商店价格改动有生效延迟,配置改了不等于用户看到的价变了。同一天同一国家可能有两个价,本卡每个价单独一行、不取均值,取均值会算出一个谁都没付过的数。本地价一般含当地税,折回美元不会正好等于标价。｜ Actual transacted price by market.')),
    ("energy_waterfall", "能量系统瀑布表 · Energy Waterfall", "table",
        # 2026-10-27 新建(Metabase 卡 444)。建卡时 soulmap_energy_offer_event 为 0 行。
        # 🔴 2026-10-29:**不再是壳** —— 能量系统 10-28 14:32:20 已上线,本卡出数了。
@@ -1158,6 +1147,11 @@ SECTIONS = [
    ("billing_sheet_success", "付款页成功率与真实失败 · Billing Sheet Success", "table",
        # 2026-10-22 新建(Metabase 卡 433)。合并了 Michael P1「付款页成功率」与文档 A-7
        #   「购买失败真实率」—— 同一条链路的两头,分两张会让人跨卡相减、把分母弄错。
+       # 🔴 2026-11-24:**这条链路正在退役,本卡事实上已停更**。实测服务端
+       #   soulmap_interaction_event:`paywall_billing_succeeded` **自 11-13 18:28 起不再出现**,
+       #   而同表的 opened / failed 仍写到今天;opened 的量从 11-12 的 48/天塌到现在 2/天。
+       #   ⇒ 旧订阅付费墙被能量体系接管。**按印度软墙同样的理由保留,不下线** ——
+       #     它是换之前的基线,但分子(成功)已经没有了,不会再有新数据。
        dict(top=60,
             cols=[("date","日期 Date","text"),("country","国家 Country","text"),
                   ("opened_users","打开付款页 Opened","int"),
@@ -1173,10 +1167,14 @@ SECTIONS = [
                   ("recovered_events","自动找回 Recovered","int"),
                   ("true_fail_events","真实失败 True Fail","int")],
             bar=["opened_users","success_rate"],
-            note='分母是打开过付款页的人;从付费墙到付款页之间还有一层流失,那层看五道墙并排。真实失败等于失败减去自动找回,失败后找回时那条失败事件照发、不撤销,直接拿失败数算会高估。四列失败原因按人去重,之和可能大于其他错误,不要相减。｜ True failure = failed − recovered.')),
+            note='🛑 本卡事实上已停更:成功事件自二〇二六年十一月十三日起不再出现,打开付款页的量也从每天四十多塌到个位数,旧订阅付费墙正被能量体系接管。保留它是为了留住换之前的基线,不是故障。分母是打开过付款页的人;从付费墙到付款页之间还有一层流失,那层看五道墙并排。真实失败等于失败减去自动找回,失败后找回时那条失败事件照发、不撤销,直接拿失败数算会高估。四列失败原因按人去重,之和可能大于其他错误,不要相减。｜ True failure = failed − recovered.')),
    # 软墙只挂在客户端 paywall_viewed 上 ⇒ 本卡走 host.firebase_event(T+1,最后一天偏低)。
    # 🛑 印度软墙将来要换成能量系统的内联首充卡,换完曝光归零 —— 留着这张才有「换之前」的基线。
    #   换的那天 CUTOVERS、卡头 note、台账切点表三处都要记日期。
+   # 🔴 2026-11-24:**换已经发生了**。`trigger='quota_soft_wall'` 自 **2026-11-17 起恒为 0**
+   #   (最后一次 11-16,只有 2 条;在那之前也只有每天 1~2 条),对应变更表里 11-17 14:45
+   #   「免费额度 · 首充 · 付费墙统一」那一条。
+   #   ⇒ **按上面这条既有决定保留,不下线** —— 它是换之前的基线,但**不会再有新数据**。
    ("india_soft_wall", "印度软墙转化 · India Soft Wall", "table",
        dict(top=30,
             cols=[("date","日期 Date","text"),
@@ -1190,7 +1188,7 @@ SECTIONS = [
                   ("completed","成交 Completed","int"),
                   ("failed","失败 Failed","int")],
             bar=["shown_events","dismiss_rate_pct"],
-            note='印度非会员聊到第 10、20 条时弹的可关掉的弹窗。成交一直是 0,曝光数与关掉数精确相等。曝光正在快速衰减,能量系统的内联首充卡正在替换它,换完这张卡会归零,保留是为了留住旧机制的基线。两行的曝光设备数不能相加。埋点次日入库,最后一天天然缺。｜ Soft wall: zero conversions, impressions decaying.')),
+            note='🛑 本卡自二〇二六年十一月十七日起不再更新:软墙在那天随免费额度与付费墙统一被取消,曝光归零。保留它是为了留住换之前的基线,不是故障。印度非会员聊到第 10、20 条时弹的可关掉的弹窗。成交一直是 0,曝光数与关掉数精确相等。曝光正在快速衰减,能量系统的内联首充卡正在替换它,换完这张卡会归零,保留是为了留住旧机制的基线。两行的曝光设备数不能相加。埋点次日入库,最后一天天然缺。｜ Soft wall: zero conversions, impressions decaying.')),
    ("energy_free_voice_trial", "免费语音体验 · Energy Free Voice Trial", "table",
        # 2026-10-29 新建(Metabase 卡 454)。出处:产品玩法 §15.5 末「免费语音体验单独计数,不用能量」。
        dict(top=30,
@@ -1580,7 +1578,7 @@ SECTIONS = [
                   ('buyers', '买过的人 Buyers', 'int'),
                   ],
             bar=['users', 'net_usd_per_user_capped50'],
-            note='分母是注册满 14 天的新用户,判定用封顶 50 美元那一列。成本从 11-06 中午才记齐,第一个完整的 14 天队列要到 11-20 才出现,在那之前只有 7 天那一列能读。净额不含广告花费。 ｜ New users whose first 14 days are complete. The decision uses the capped column. Cost logging is complete only from 11-06, so read the 7-day column until 11-20.')),
+            note='🛑 这张卡现在是空的,不是坏了 —— 能量定价实验 11-20 16:50 才开始分组,14 天口径最早 12-04 成熟,7 天口径最早 11-27。在那之前它显示的是上一次抓到的旧值。分母是注册满 14 天的新用户,判定用封顶 50 美元那一列。成本从 11-06 中午才记齐,第一个完整的 14 天队列要到 11-20 才出现,在那之前只有 7 天那一列能读。净额不含广告花费。 ｜ New users whose first 14 days are complete. The decision uses the capped column. Cost logging is complete only from 11-06, so read the 7-day column until 11-20.')),
    ('energy_ab_purchase', '首购与再购 · Purchase Funnel', 'table',
        dict(top=10,
             cols=[('arm', '组 Arm', 'text'),
