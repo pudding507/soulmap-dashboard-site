@@ -1205,25 +1205,6 @@ SECTIONS = [
                   ("refunded_uses","退回 Refunded","int")],
             bar=["uses","users"],
             note='免费语音体验不消耗能量,单独计数,两类各免费 4 次。不要和每天能量进出里的语音扣费相加,那是免费额度用完之后才开始扣的。人均次数接近 4 说明这批人快用完了。语音回复连续多天退回两到四成,而另一类几乎不退,问题出在语音生成那一路。｜ Free trial does not consume energy.')),
-   ("energy_winback_list", "付费流失召回 · Energy Win-back List", "table",
-       # 2026-10-29 新建(Metabase 卡 453)。出处:倡议书 §四「因付款失败走掉的入戏用户」。
-       # 🔴 2026-11-02:建卡时写的「一次性批次」已不成立 —— 10-27 / 10-31 / 11-02 三批,
-       #   而且多了一个分组 C。本卡仍固定读全表(总共才 509 人),加窗口会把早批次切掉,
-       #   而早批次正是要看长期回流的那批。
-       dict(top=30,
-            cols=[("date","名单日 Listed","text"),
-                  ("app_line","业务线 Line","text"),
-                  ("grp","分组 Group","text"),
-                  ("listed_users","名单人数 Listed","int"),
-                  ("granted_users","真发了 Granted","int"),
-                  ("granted_pct","发放率 Granted %","d1"),
-                  ("returned_to_chat_users","回来聊了 Returned","int"),
-                  ("returned_pct","回来率 Returned %","d1"),
-                  ("paid_subscription_users","回来买订阅 Sub","int"),
-                  ("paid_consumable_users","回来买消耗型 Consumable","int"),
-                  ("distinct_last_hosts","涉及角色数 Hosts","int")],
-            bar=["listed_users","returned_pct"],
-            note='付费流失召回名单,滚动多批,每人一行。分组是名单自带的,不是随机分桶,拿它谈因果前要先确认分组规则和依从率,两者目前都没有。各组发放率差很远但人数都极小,不要读成哪套文案更好。回来聊了只数用户自己发的消息。｜ Rolling win-back list; group is not a random arm.')),
    ("churn_before_after_speaking", "退订时点分讲话前后 · Churn Before/After Speaking", "table",
        # 2026-10-22 新建(Metabase 卡 436)。对应 Michael 10-21 反馈 P1 第 8 项(D-210)。
        dict(top=60,
@@ -1505,21 +1486,6 @@ SECTIONS = [
                   ("mismatch_pct","错配率 %","d1")],
             bar=["pairs","mismatch_pct"],
             note='本卡只统计 SoulMap,不含 CityPLX,不要和把两者并列的那些卡相加或对比。判的是书写系统不是语言,所以拉丁字母内部的错配判不出来,错配数是下界不是真实量,不要当语言错配率对外报。只看文字消息,语音那侧是转写文本。分母不足 30 的格子整行不出。｜ Lower-bound mismatch by writing system.')),
-   ("risk_ref_photo_uploads", "合照参考图在库量 · Reference Photo Uploads", "table",
-       # 2026-10-20 新建(Metabase 卡 426)。🔴 合照功能还不存在,但用户已经在上传真人照片。
-       #   10-17 起累计 36 张在库,10-20 单日 20 张(15 人),在加速。
-       #   这张卡盯的是存量风险,不是增长 —— 产品要定先关入口还是加文案。
-       dict(top=30,
-            cols=[("date","日期 Date","text"),
-                  ("uploaded","当天上传 Uploaded","int"),
-                  ("uploaded_users","上传人数 Users","int"),
-                  ("later_deleted","其中后被删 Deleted","int"),
-                  ("active_cumulative","累计仍在库 Active","int"),
-                  ("card_shown_devices","客户端·卡片展示 Shown","int"),
-                  ("add_tap_devices","客户端·点添加 Add","int"),
-                  ("set_ok_devices","客户端·设置成功 Set OK","int")],
-            bar=["active_cumulative","uploaded"],
-            note='这张卡看的是风险不是增长:合照功能还没做,但真人照片已经在进库,累计仍在库是按天滚动的存量,产品决定前应该盯着它。服务端那一列是权威数,客户端三列只做补充,且次日入库,最后一天通常是 0,不是没人用。｜ Risk monitor, not a growth metric.')),
  ]),
  ("⑫ Super Power", [
    ("power_modes_entry_funnel", "四种模式入口三层 · Power Modes — Entry Funnel", "table",
