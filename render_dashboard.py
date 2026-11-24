@@ -1133,9 +1133,11 @@ SECTIONS = [
                   ("err_already_owned","错:已经买过 Owned","int"),
                   ("err_other","错:其他 Other","int"),
                   ("still_open","还没结束 Open","int"),
+                  ("declined_insufficient_funds","被拒:余额不足 Declined","int"),
+                  ("declined_then_no_retry","其中没再尝试 No Retry","int"),
                   ("credited_backfill","补记到账 Backfill","int")],
             bar=["reported","credited_rate"],
-            note='一行是一天里的一个弹窗实验臂。走完流程指客户端上报了点击时间的单,安卓 3.9.7 起才有,所以这张卡从十一月十九日算起。最后一列是服务端回调补记的成交,它们没经过客户端上报、状态全是已到账,所以不进前面几级的分母,否则到账率会被抬高。到账率的分子不足十笔时留空。｜ One row per day per paywall arm; backfilled orders are kept out of the funnel denominator.')),
+            note='一行是一天里的一个弹窗实验臂。走完流程指客户端上报了点击时间的单,安卓 3.9.7 起才有,所以这张卡从十一月十九日算起。补记到账是服务端回调记下的成交,它们没经过客户端上报、状态全是已到账,所以不进前面几级的分母,否则到账率会被抬高。被拒那两列按人数算:前一列是当天被商店以余额不足挡下的人,后一列是其中到现在为止再没下过单的人,这一列会随着他们回来购买而变小。到账率的分子不足十笔时留空。｜ One row per day per paywall arm; the two decline columns count people, and the second shrinks as they come back.')),
    ("checkout_by_tier", "结账档位对比 · Checkout by Tier", "table",
        # 2026-11-23 新建(Metabase 卡 478)。和上面那张同源,那张按天、这张按档位横向比。
        # 🛑 **不拆天的理由是「比较档位需要分母」,不是「量小」** ——
