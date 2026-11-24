@@ -37,8 +37,8 @@
   ],
   "2026-11-24": [
    "growth_new_user",
-   "retention_d1_effective",
    "growth_dau",
+   "retention_d1_effective",
    "chat_engaged_new_user_rate",
    "discover_character_daily_ctr"
   ]
