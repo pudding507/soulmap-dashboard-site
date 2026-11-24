@@ -39,8 +39,8 @@
    "growth_new_user",
    "growth_dau",
    "chat_engaged_new_user_rate",
-   "retention_d1_effective",
-   "discover_character_daily_ctr"
+   "discover_character_daily_ctr",
+   "retention_d1_effective"
   ]
  }
 }
