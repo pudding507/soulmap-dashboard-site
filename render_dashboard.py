@@ -981,13 +981,13 @@ SECTIONS = [
                   ("g_refill","定时回满 Refill","int"),
                   ("g_push_enable","开推送 Push","int"),
                   ("g_recall","召回 Win-back","int"),
-                  ("g_other_bonus","其他赠送 Other","int"),
+                  ("g_other_bonus","其他来源 Other","int"),
                   ("g_purchase","购买 Purchase","int"),
                   ("g_subscription","订阅额度 Plan","int"),
                   ("g_total","合计发放 Total","int"),
                   ("granted_users","拿到能量的人 Users","int")],
             bar=["g_total","granted_users"],
-            note='一行一天,来源做列:今天一共发了多少能量、从哪来。改价补偿和换单位不算发放,整个排除在本卡之外。三层能量的过期规则不同,本卡只数发出去多少,不要拿合计当用户手上还有多少,那看能量钱包现状。商品名已不带数字,不能从名字推能量数。｜ Daily energy grants by source.'
+            note='一行一天,来源做列:今天一共发了多少能量、从哪来。其他来源是兜底列,没单独成列的来源都在里面,所以八个来源列加起来正好等于合计。改价补偿和换单位不算发放,整个排除在本卡之外。三层能量的过期规则不同,本卡只数发出去多少,不要拿合计当用户手上还有多少,那看能量钱包现状。商品名已不带数字,不能从名字推能量数。｜ Daily energy grants by source. Other is a catch-all, so the eight source columns add up to the total.'
             )),
    ("energy_wallet_snapshot", "能量钱包现状 · Energy Wallet Snapshot", "table",
        # 2026-11-04 新建(Metabase 卡 460)。原「钱包三层」的存量那一半,一行一个层、没有日期。
@@ -1126,7 +1126,7 @@ SECTIONS = [
                   ("declined_then_no_retry","其中没再尝试 No Retry","int"),
                   ("credited_backfill","补记到账 Backfill","int")],
             bar=["reported","credited_rate"],
-            note='一行是一天里的一个弹窗实验臂。走完流程指客户端上报了点击时间的单,安卓 3.9.7 起才有,所以这张卡从十一月十九日算起。补记到账是服务端回调记下的成交,它们没经过客户端上报、状态全是已到账,所以不进前面几级的分母,否则到账率会被抬高。被拒那两列按人数算:前一列是当天被商店以余额不足挡下的人,后一列是其中到现在为止再没下过单的人,这一列会随着他们回来购买而变小。到账率的分子不足十笔时留空。｜ One row per day per paywall arm; the two decline columns count people, and the second shrinks as they come back.')),
+            note='一行是一天里的一个弹窗实验臂。走完流程指客户端上报了点击时间的单,安卓 3.9.7 起才有,所以这张卡从十一月十九日算起。补记到账是服务端回调记下的成交,它们没经过客户端上报、状态全是已到账,所以不进前面几级的分母,否则到账率会被抬高。被拒那两列按人数算:前一列是当天被商店以余额不足挡下的人,后一列是其中到现在为止再没下过单的人,这一列会随着他们回来购买而变小。到账率的分子不足十笔时留空。全屏那一组十一月二十三日傍晚已经停了,所有人统一走半屏,所以全屏那几行是十一月十九日到二十三日的历史值,不会再增长,不要拿它和半屏比;两组都在的那几天按人去重是全屏百分之十三点七、半屏百分之十二点七,差别读不出来。｜ One row per day per paywall arm; the full-screen arm ended Nov 23 and everyone is on half, so those rows are history. The two decline columns count people, and the second shrinks as they come back.')),
    ("checkout_by_tier", "结账档位对比 · Checkout by Tier", "table",
        # 2026-11-23 新建(Metabase 卡 478)。和上面那张同源,那张按天、这张按档位横向比。
        # 🛑 **不拆天的理由是「比较档位需要分母」,不是「量小」** ——
