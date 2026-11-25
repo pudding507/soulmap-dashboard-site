@@ -37,18 +37,6 @@
    "on_board": true
   },
   {
-   "at": "2026-11-20 17:54",
-   "date": "2026-11-20",
-   "mmdd_hhmm": "11-20 17:54",
-   "what": "Yui 与 Mashael 的开场白缩短",
-   "what_en": "Opening messages shortened for Yui and Mashael",
-   "note": "开场白由 845 字符改为 632 字符,英语、Hinglish、印地语、阿拉伯语同步调整;只改数据,没有开关。这两个角色「一条都没发」的比例(此前 22.6%)在这里断开。出处:SoulMap 变更记录 11-13~20",
-   "note_en": "",
-   "type": "运营",
-   "is_cutover": true,
-   "on_board": true
-  },
-  {
    "at": "2026-11-19 18:23",
    "date": "2026-11-19",
    "mmdd_hhmm": "11-19 18:23",
@@ -81,30 +69,6 @@
    "note": "soulmap_energy_offer_event 新增 action=warn_delivered(surface=warn10 / warn3),此前没有记录;plus_declined、premium_declined 在 14:33 之前为 0 是没有记到,不是没有人拒绝。半屏 / 全屏弹窗实验的提醒差异从 14:33 起读。出处:服务端周报 11-16~20、SoulMap 变更记录 11-13~20",
    "note_en": "",
    "type": "其他",
-   "is_cutover": true,
-   "on_board": true
-  },
-  {
-   "at": "2026-11-19 12:35",
-   "date": "2026-11-19",
-   "mmdd_hhmm": "11-19 12:35",
-   "what": "印度以外用户的邀请分享文案改为英文",
-   "what_en": "Invite share copy switched to English outside India",
-   "note": "按 user.country_code 判断,印度仍用印地英语;已生成的链接不变。按国家看邀请链接点击率要在这里切开。出处:服务端周报 11-16~20",
-   "note_en": "",
-   "type": "运营",
-   "is_cutover": true,
-   "on_board": true
-  },
-  {
-   "at": "2026-11-19 12:29",
-   "date": "2026-11-19",
-   "mmdd_hhmm": "11-19 12:29",
-   "what": "Type B 回访用户重新带上与该角色的记忆",
-   "what_en": "Type B returning users regain per-character memory",
-   "note": "🛑 此前约 39% 的回访会话从零开始。长聊深度与留存在这里断开",
-   "note_en": "About 39% of returning sessions previously started from scratch.",
-   "type": "运营",
    "is_cutover": true,
    "on_board": true
   },
@@ -157,18 +121,6 @@
    "on_board": true
   },
   {
-   "at": "2026-11-17 15:02",
-   "date": "2026-11-17",
-   "mmdd_hhmm": "11-17 15:02",
-   "what": "老 Plus 续费未发放 950 能量的问题修复",
-   "what_en": "Fixed: legacy Plus renewals never credited 950 Energy",
-   "note": "🛑 修复前老 Plus 的能量入账是少记的,不要跨这个点比。同日脚本账号不再计消息事件",
-   "note_en": "Legacy Plus Energy credits were undercounted before this; do not compare across it.",
-   "type": "维护",
-   "is_cutover": true,
-   "on_board": true
-  },
-  {
    "at": "2026-11-17 14:50",
    "date": "2026-11-17",
    "mmdd_hhmm": "11-17 14:50",
@@ -189,7 +141,7 @@
    "note": "免费额度统一为 20 条;首充统一为预付,此前澳大利亚不要求;付费墙统一为 C 版。三项同一时刻生效,跨此刻的付费对比不成立。出处:算法侧实验配置",
    "note_en": "",
    "type": "支付",
-   "is_cutover": false,
+   "is_cutover": true,
    "on_board": true
   },
   {
@@ -202,42 +154,6 @@
    "note_en": "Legacy experiment groups stop; invite threshold 1 -> 5 messages.",
    "type": "运营",
    "is_cutover": true,
-   "on_board": true
-  },
-  {
-   "at": "2026-11-17 11:30",
-   "date": "2026-11-17",
-   "mmdd_hhmm": "11-17 11:30",
-   "what": "第 5 / 8 / 15 条消息事件开始发给 Adjust",
-   "what_en": "5th/8th/15th message events start firing to Adjust",
-   "note": "写入 soulmap_msg_milestone_event。之前已到节点的不补发,这一刻前没有数据",
-   "note_en": "Writes to soulmap_msg_milestone_event. No backfill before this point.",
-   "type": "其他",
-   "is_cutover": true,
-   "on_board": true
-  },
-  {
-   "at": "2026-11-17 10:25",
-   "date": "2026-11-17",
-   "mmdd_hhmm": "11-17 10:25",
-   "what": "邀请:同一邀请人加同一 IP 只奖励第一个朋友",
-   "what_en": "Invite: only first friend per inviter+IP is rewarded",
-   "note": "🛑 奖励数从这里下降是规则收紧,不是用户变少。同一朋友也不能用两种方式各拿一次",
-   "note_en": "Reward counts drop here because the rule tightened, not fewer users.",
-   "type": "运营",
-   "is_cutover": true,
-   "on_board": true
-  },
-  {
-   "at": "2026-11-16 18:18",
-   "date": "2026-11-16",
-   "mmdd_hhmm": "11-16 18:18",
-   "what": "邀请落地页修复(此前点击未被记录)",
-   "what_en": "Invite landing page fixed (clicks were not recorded before)",
-   "note": "此前邀请链接打开为 404,点击一次都没有记录。修复前的邀请点击数据不可用,不要与修复后比较。出处:服务端周报",
-   "note_en": "",
-   "type": "维护",
-   "is_cutover": false,
    "on_board": true
   },
   {
@@ -440,5 +356,5 @@
   }
  },
  "stale": false,
- "fetched_at": "2026-11-25 10:50"
+ "fetched_at": "2026-11-25 10:56"
 }
