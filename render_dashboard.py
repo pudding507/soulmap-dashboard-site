@@ -1555,7 +1555,7 @@ SECTIONS = [
  #    🛑 跨 11-24 14:10 比每条单价、能量消耗、付费率都不可比。
  ("⑬ 能量定价实验 · Energy Pricing A/B", [
    # —— 原独立页的「① 分组是否均衡 · Are the arms balanced」——
-   ('energy_ab_arms', '分组概况 · Arms Overview（实验已于 11-24 停止）', 'table',
+   ('energy_ab_arms', '分组概况（实验已于 11-24 停止） · Arms Overview (experiment stopped Nov 24)', 'table',
        dict(top=10,
             cols=[('arm', '组 Arm', 'text'),
                   ('users_assigned', '人数 Users', 'int'),
