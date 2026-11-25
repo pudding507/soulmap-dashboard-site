@@ -1546,11 +1546,16 @@ SECTIONS = [
  # 原来是独立的一页 site/energy-ab.html,按 Chris 的决定并进主看板成为一个区。
  # 🛑 这十张全是 table ⇒ 不会进页头的「变化最大的 5 个数」(_movers 跳过 table/funnel),
  #    所以混进主看板的 raw_metrics.json 是安全的。
- # 🛑 分组来源是 soulmap_energy_pricing_arm(服务端 11-18 16:42 新建),
- #    写入逻辑未上线前所有人落在 unassigned 一行,卡照常出数 —— 这是计划里的「空跑对账」。
+ # 🛑 分组来源是 soulmap_energy_pricing_arm(服务端 11-18 16:42 新建)。
+ # 🔴 **2026-11-24 14:10 实验已整体停止**,Javier 决定,所有人回到每条 1 能量。
+ #    停的理由不是数据而是公平性:被收 3.5 的正好是最忠实的用户,刚开始付钱(约第 30 条)
+ #    价格就涨,像被误导。实验整段 11-20 16:50 ~ 11-24 14:10,约 3.9 天,A 775 人 / B 793 人。
+ #    ⇒ 这十张卡**之后不会再有新数据,但不下线** —— 它们是这次实验的完整记录,
+ #      将来回看「为什么停」「停之前两组差多少」时只有这里有。
+ #    🛑 跨 11-24 14:10 比每条单价、能量消耗、付费率都不可比。
  ("⑬ 能量定价实验 · Energy Pricing A/B", [
    # —— 原独立页的「① 分组是否均衡 · Are the arms balanced」——
-   ('energy_ab_arms', '分组概况 · Arms Overview', 'table',
+   ('energy_ab_arms', '分组概况 · Arms Overview（实验已于 11-24 停止）', 'table',
        dict(top=10,
             cols=[('arm', '组 Arm', 'text'),
                   ('users_assigned', '人数 Users', 'int'),
@@ -1578,7 +1583,7 @@ SECTIONS = [
                   ('buyers', '买过的人 Buyers', 'int'),
                   ],
             bar=['users', 'net_usd_per_user_capped50'],
-            note='🛑 这张卡现在是空的,不是坏了 —— 能量定价实验 11-20 16:50 才开始分组,14 天口径最早 12-04 成熟,7 天口径最早 11-27。在那之前它显示的是上一次抓到的旧值。分母是注册满 14 天的新用户,判定用封顶 50 美元那一列。成本从 11-06 中午才记齐,第一个完整的 14 天队列要到 11-20 才出现,在那之前只有 7 天那一列能读。净额不含广告花费。 ｜ New users whose first 14 days are complete. The decision uses the capped column. Cost logging is complete only from 11-06, so read the 7-day column until 11-20.')),
+            note='🛑 这张卡永远不会有数了 —— 能量定价实验 11-20 16:50 开始分组、11-24 14:10 就被停掉,只跑了约 3.9 天,14 天队列凑不齐了。它显示的是实验期间最后一次抓到的值。分母是注册满 14 天的新用户,判定用封顶 50 美元那一列。成本从 11-06 中午才记齐,第一个完整的 14 天队列要到 11-20 才出现,在那之前只有 7 天那一列能读。净额不含广告花费。 ｜ New users whose first 14 days are complete. The decision uses the capped column. Cost logging is complete only from 11-06, so read the 7-day column until 11-20.')),
    ('energy_ab_purchase', '首购与再购 · Purchase Funnel', 'table',
        dict(top=10,
             cols=[('arm', '组 Arm', 'text'),
