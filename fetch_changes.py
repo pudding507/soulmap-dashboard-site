@@ -46,7 +46,13 @@ def main() -> int:
     out = Path(a.out)
 
     try:
-        sys.path.insert(0, str(Path.home() / ".claude/skills/lark"))
+        # 🔴 2026-11-25 修:原来只找 ~/.claude/skills/lark(我本机的 skill 目录),
+        #    **主机上没有这个目录**,于是从 11-19 起每轮都 ModuleNotFoundError,
+        #    被下面的兜底吞掉 ——「保留上一次的 changes.json,渲染照常」——
+        #    页面照常出、不报错,但变更列表整整冻了六天没人发现。
+        #    改成优先用仓库自带的 lib/lark.py(随 git pull 到主机),本机 skill 作为回退。
+        sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+        sys.path.append(str(Path.home() / ".claude/skills/lark"))
         import lark
         tok = lark.token()
         rows = lark.paged("POST",
