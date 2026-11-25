@@ -1,6 +1,126 @@
 {
  "items": [
   {
+   "at": "2026-11-24 14:10",
+   "date": "2026-11-24",
+   "mmdd_hhmm": "11-24 14:10",
+   "what": "能量定价实验 D-594 停止,所有人回到每条 1 Energy",
+   "what_en": "Pricing experiment D-594 stopped; everyone back to 1 Energy per message",
+   "note": "Javier 11-24 决定停掉,理由不是数据而是公平性:被收 3.5 的正好是最忠实的用户,刚开始付钱(约第 30 条)价格就涨,像被误导。实测分组表 soulmap_energy_pricing_arm 最后一条是 2026-11-24 14:10:23,之后无新分组。实验整段 11-20 16:50 ~ 11-24 14:10,约 3.9 天,A 组 775 人 / B 组 793 人 / 不在实验 245 人。🛑 跨这个时刻比每条单价、能量消耗、付费率都不可比。看板第十三板块那十张卡在此之后不再有新数据。同时取消:原定 11-27 的 7 天读数和 12-04 的 14 天净收入读数",
+   "note_en": "",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-23 20:48",
+   "date": "2026-11-23",
+   "mmdd_hhmm": "11-23 20:48",
+   "what": "网页版账号开始写入 app_source=web",
+   "what_en": "Website accounts start being written with app_source=web",
+   "note": "user.app_source 新增第三个取值 web(此前只有空=App 和 city)。实测首条 2026-11-23 20:48:43,到 11-24 20:44 共 69 个账号,目前都是测试产生的。🛑 看板现有卡的过滤条件是 app_source IS NULL OR ='',所以 web 账号会被自动排除 —— 12-01 网页版上线后,看板默认是纯 App 口径。正在改成按端拆开看",
+   "note_en": "",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-21 02:27",
+   "date": "2026-11-21",
+   "mmdd_hhmm": "11-21 02:27",
+   "what": "安卓 3.9.8 上架(build 227)",
+   "what_en": "Android 3.9.8 (build 227) released",
+   "note": "仅安卓,iOS 没有 3.9.8。首单 client_build=android:227 在 11-21 02:27。四个口径起点:一、client_timeout 占比从 11-21 起上升,是口径修正(此前超时记成 client_error),不是语音变差;二、ad_host_popup 从 11-21 起消失(11-20 255 人 → 11-21 48 → 11-22 10),ad_install_chat_opened 不再带 via,新增 loader_wait_ms、from_cold_start_ms;三、广告装机 10 秒内认出的直接进角色聊天,对照组是 10 秒内没有认出的人,不是随机分组,两组设备与网络条件本身不同;四、能量定价实验 D-594 的分组不随 3.9.8 上架开始,而是 2026-11-20 16:50 服务端打开时就开始(与已登的 11-20 16:47 定价实验打开同一时刻),start_at 2026-11-24 00:00 未生效;11-21 起分组量随 3.9.8 放量抬升,A / B 两组到 11-23 各约 400 人。出处:客户端周报 11-16~20、生产数据核对",
+   "note_en": "",
+   "type": "发版",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-20 17:54",
+   "date": "2026-11-20",
+   "mmdd_hhmm": "11-20 17:54",
+   "what": "Yui 与 Mashael 的开场白缩短",
+   "what_en": "Opening messages shortened for Yui and Mashael",
+   "note": "开场白由 845 字符改为 632 字符,英语、Hinglish、印地语、阿拉伯语同步调整;只改数据,没有开关。这两个角色「一条都没发」的比例(此前 22.6%)在这里断开。出处:SoulMap 变更记录 11-13~20",
+   "note_en": "",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-19 18:23",
+   "date": "2026-11-19",
+   "mmdd_hhmm": "11-19 18:23",
+   "what": "试用推送改为 100% 发送;角色来信关闭;11-20 16:47 能量定价实验打开",
+   "what_en": "Trial push to 100%; character letters off; energy pricing experiment opened",
+   "note": "试用推送 A/B 到 18:23 结束、来信实验 18:28 结束;11-20 16:47 能量定价实验打开。实测分组从 2026-11-20 16:50:30 起即产生记录,早于计划中的 start_at 2026-11-24 00:00。按分组看数的起点用 11-20 16:50,不要用 11-24。分组来源是服务端表 soulmap_energy_pricing_arm(arm 取 A / B / out)",
+   "note_en": "Two experiments ended; energy pricing experiment opened, enrolls only from 3.9.8.",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-19 16:50",
+   "date": "2026-11-19",
+   "mmdd_hhmm": "11-19 16:50",
+   "what": "Type B 英语回复改用更便宜的服务商(同一模型)",
+   "what_en": "Type B English replies moved to cheaper providers (same model)",
+   "note": "🔴 每条 $0.0043 → $0.0014,每周约省 $200。16:50 起切、17:24 切完,成本数据取 17:24 之后。10% 新注册留原服务商作对照;印地语阿拉伯语不变。按 soulmap_cost_call.provider 切",
+   "note_en": "$0.0043 -> $0.0014 per reply. Switch 16:50-17:24; 10% of new users kept as control.",
+   "type": "维护",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-19 14:33",
+   "date": "2026-11-19",
+   "mmdd_hhmm": "11-19 14:33",
+   "what": "剩 10 / 剩 3 提醒开始记录;拒绝月卡与 Premium 的事件不再丢失",
+   "what_en": "Low-balance reminders start being logged; plan-decline events no longer dropped",
+   "note": "soulmap_energy_offer_event 新增 action=warn_delivered(surface=warn10 / warn3),此前没有记录;plus_declined、premium_declined 在 14:33 之前为 0 是没有记到,不是没有人拒绝。半屏 / 全屏弹窗实验的提醒差异从 14:33 起读。出处:服务端周报 11-16~20、SoulMap 变更记录 11-13~20",
+   "note_en": "",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-19 12:35",
+   "date": "2026-11-19",
+   "mmdd_hhmm": "11-19 12:35",
+   "what": "印度以外用户的邀请分享文案改为英文",
+   "what_en": "Invite share copy switched to English outside India",
+   "note": "按 user.country_code 判断,印度仍用印地英语;已生成的链接不变。按国家看邀请链接点击率要在这里切开。出处:服务端周报 11-16~20",
+   "note_en": "",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-19 12:29",
+   "date": "2026-11-19",
+   "mmdd_hhmm": "11-19 12:29",
+   "what": "Type B 回访用户重新带上与该角色的记忆",
+   "what_en": "Type B returning users regain per-character memory",
+   "note": "🛑 此前约 39% 的回访会话从零开始。长聊深度与留存在这里断开",
+   "note_en": "About 39% of returning sessions previously started from scratch.",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-19 04:05",
+   "date": "2026-11-19",
+   "mmdd_hhmm": "11-19 04:05",
+   "what": "安卓 3.9.7 上架",
+   "what_en": "Android 3.9.7 released",
+   "note": "弹窗实验从这里才有人进组(11-16 打开但只对 3.9.7+);结账步骤字段也只有 3.9.7+ 上报。半屏 / 全屏要按 popupStyle 拆,不要按 surface(full 组聊天卡整页显示仍记 sheet);剩 10 / 剩 3 提醒 11-19 14:33 起才有记录,弹窗实验的提醒差异从 14:33 起读。看广告入口改为等加载完成并最多补要 4 次,3.9.7 的广告请求数与展示数高于 3.9.5 / 3.9.6",
+   "note_en": "Paywall popup experiment only enrolls from here; checkout fields need 3.9.7+.",
+   "type": "发版",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
    "at": "2026-11-18 16:42",
    "date": "2026-11-18",
    "mmdd_hhmm": "11-18 16:42",
@@ -9,6 +129,54 @@
    "note": "服务端 · 表结构已改 · 写入逻辑未上线",
    "note_en": "Server · 表结构已改 · 写入逻辑未上线",
    "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-18 10:18",
+   "date": "2026-11-18",
+   "mmdd_hhmm": "11-18 10:18",
+   "what": "For You 新规则上线;激励广告对 3.9.5 及以上开放",
+   "what_en": "New For You rules; rewarded ads live for 3.9.5+",
+   "note": "约 3,500 人的 For You 构成从这里变;ad 来源的能量入账也从这里开始有数据。此前 soulmap_energy_ad_callback 里全是 disabled;安卓广告位的 SSV 回调地址 11-19 上午填好(11:41 收到第一条回调),安卓到账从 11-19 起算,分平台看要用这个起点",
+   "note_en": "For You changes for ~3,500 users; Energy from 'ad' source starts here.",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-17 15:46",
+   "date": "2026-11-17",
+   "mmdd_hhmm": "11-17 15:46",
+   "what": "Type A 的 System A 三个 50/50 开启,19:12 全部转 100%",
+   "what_en": "Type A System A: three 50/50 splits opened, all to 100% at 19:12",
+   "note": "🛑 有对照的只有 16:04 至 19:12 约三小时,之后只能前后比。19:12 起 a_card_follows_chat_v1 开始。11-19 10:33 关闭「前 10 条先听」,之后不再有 a_listen_first10_v1 记录,Type A 前 10 条口径在这里再切一次",
+   "note_en": "Control window is only ~3h (16:04-19:12); before/after only afterwards.",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-17 15:02",
+   "date": "2026-11-17",
+   "mmdd_hhmm": "11-17 15:02",
+   "what": "老 Plus 续费未发放 950 能量的问题修复",
+   "what_en": "Fixed: legacy Plus renewals never credited 950 Energy",
+   "note": "🛑 修复前老 Plus 的能量入账是少记的,不要跨这个点比。同日脚本账号不再计消息事件",
+   "note_en": "Legacy Plus Energy credits were undercounted before this; do not compare across it.",
+   "type": "维护",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-17 14:50",
+   "date": "2026-11-17",
+   "mmdd_hhmm": "11-17 14:50",
+   "what": "印度安卓月卡改为自动续费",
+   "what_en": "India Android monthly pass switched to auto-renew",
+   "note": "月卡购买数据从这里断开",
+   "note_en": "Monthly pass purchase data breaks here.",
+   "type": "支付",
    "is_cutover": true,
    "on_board": true
   },
@@ -25,6 +193,42 @@
    "on_board": true
   },
   {
+   "at": "2026-11-17 14:45",
+   "date": "2026-11-17",
+   "mmdd_hhmm": "11-17 14:45",
+   "what": "三个旧实验结束;邀请改为朋友发满 5 条才算",
+   "what_en": "Three legacy experiments ended; invite requires 5 friend messages",
+   "note": "免费额度、首充、付费墙三项统一(澳洲也改 paid);邀请转化门槛 1 条改 5 条。实验分组与邀请转化数在这里断开",
+   "note_en": "Legacy experiment groups stop; invite threshold 1 -> 5 messages.",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-17 11:30",
+   "date": "2026-11-17",
+   "mmdd_hhmm": "11-17 11:30",
+   "what": "第 5 / 8 / 15 条消息事件开始发给 Adjust",
+   "what_en": "5th/8th/15th message events start firing to Adjust",
+   "note": "写入 soulmap_msg_milestone_event。之前已到节点的不补发,这一刻前没有数据",
+   "note_en": "Writes to soulmap_msg_milestone_event. No backfill before this point.",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-17 10:25",
+   "date": "2026-11-17",
+   "mmdd_hhmm": "11-17 10:25",
+   "what": "邀请:同一邀请人加同一 IP 只奖励第一个朋友",
+   "what_en": "Invite: only first friend per inviter+IP is rewarded",
+   "note": "🛑 奖励数从这里下降是规则收紧,不是用户变少。同一朋友也不能用两种方式各拿一次",
+   "note_en": "Reward counts drop here because the rule tightened, not fewer users.",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
    "at": "2026-11-16 18:18",
    "date": "2026-11-16",
    "mmdd_hhmm": "11-16 18:18",
@@ -34,6 +238,42 @@
    "note_en": "",
    "type": "维护",
    "is_cutover": false,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-16 14:21",
+   "date": "2026-11-16",
+   "mmdd_hhmm": "11-16 14:21",
+   "what": "安卓 3.9.6 成为最新版,低于 build 203 强制更新",
+   "what_en": "Android 3.9.6 latest; forced update below build 203",
+   "note": "按 app_version 切",
+   "note_en": "Split by app_version.",
+   "type": "发版",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-16 12:19",
+   "date": "2026-11-16",
+   "mmdd_hhmm": "11-16 12:19",
+   "what": "商店档位与 For You 改为按国家分",
+   "what_en": "Store tiers and For You split by country",
+   "note": "三个时点:澳洲 12:19、结账步骤记录 16:28、澳美价格与 For You 18:16。按国家读付费的口径从这段开始变,印度不变",
+   "note_en": "Three steps: AU 12:19, checkout logging 16:28, AU/US pricing 18:16. India unchanged.",
+   "type": "商城",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-16 11:59",
+   "date": "2026-11-16",
+   "mmdd_hhmm": "11-16 11:59",
+   "what": "公开自建角色创建改为扣 5 能量",
+   "what_en": "Public user-created character now costs 5 Energy",
+   "note": "创建时扣一次,原为 1 能量。自建角色的创建数与能量消耗从这里断开",
+   "note_en": "Charged once at creation (was 1). Creation counts and Energy spend break here.",
+   "type": "运营",
+   "is_cutover": true,
    "on_board": true
   },
   {
@@ -200,5 +440,5 @@
   }
  },
  "stale": false,
- "fetched_at": "2026-11-19 16:34"
+ "fetched_at": "2026-11-25 10:50"
 }
