@@ -25,7 +25,12 @@ def body_of(path: str) -> str:
     """跳过头部注释,取 SQL 主体。"""
     lines = open(path, encoding="utf-8").read().splitlines(True)
     for i, l in enumerate(lines):
-        if l.startswith("WITH ") or l.startswith("SELECT "):
+        # 🛑 2026-11-25 修:原来匹配的是 "WITH "(带空格),而「复购与月卡」第 39 行是
+        #    **单独一个 `WITH`**、后面直接换行 —— 匹配不上就跳到后面的 SELECT,
+        #    把所有 CTE 都切掉了,报 "Table 'soul_map.buy_seq' doesn't exist"。
+        #    看着像卡坏了,其实是这里截错。改成按首个词判断。
+        head = l.strip().split("(")[0].strip().upper()
+        if head in ("WITH", "SELECT") or head.startswith(("WITH ", "SELECT ")):
             return "".join(lines[i:])
     raise SystemExit(f"{path} 里找不到以 WITH / SELECT 开头的行")
 
@@ -53,6 +58,11 @@ def main() -> int:
     conn = pymysql.connect(
         host=os.environ["SOULMAP_DB_HOST"], user=os.environ["SOULMAP_DB_USER"],
         password=os.environ["SOULMAP_DB_PASS"], charset="utf8mb4",
+        # 🛑 2026-11-25 加 database:原来不选默认库,凡是**不带库名就能解析**的写法在这里会报
+        #    `No database selected`,而 Metabase 的连接选了 soul_map 所以线上正常 ——
+        #    本地验不了、线上却是好的,是个盲点。实测「复购与月卡」的
+        #    `JOIN JSON_TABLE(...) ON TRUE` 就是这么卡住的。选和 Metabase 同一个默认库。
+        database="soul_map",
         cursorclass=pymysql.cursors.DictCursor,
         connect_timeout=20, read_timeout=a.timeout)
     import time
