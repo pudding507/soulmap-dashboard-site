@@ -13,3 +13,6 @@ site/energy-ab-artifact.html
 # 从 Lark 拉的变更,每轮重新拉;但保留本地副本做降级兜底
 logs/tests*.log
 
+
+# fetch_changes 的连续失败计数,只在本机/主机各自计数,不同步
+.changes_fail_count
