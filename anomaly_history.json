@@ -44,8 +44,8 @@
   ],
   "2026-11-25": [
    "growth_new_user",
-   "retention_d1_effective",
    "growth_dau",
+   "retention_d1_effective",
    "growth_version_adoption",
    "discover_character_daily_ctr"
   ]
