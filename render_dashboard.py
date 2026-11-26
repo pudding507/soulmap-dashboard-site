@@ -526,7 +526,6 @@ SECTIONS = [
                   ("reached_20msg","累计 20 句","int"),
                   ("msg20_rate","装机→20句","pct1"),
                   ("purchase_started_users","发起购买 Started","int"),
-                  ("trial_effective_users","开过订阅(已停售) Sub Started","int"),
                   ("energy_buyers","买过能量 Energy Buyers","int"),
                   ("energy_revenue_usd","能量实收 USD","d2"),
                   ("paid_users","付费 Paid","int"),
@@ -550,7 +549,6 @@ SECTIONS = [
                   ("reached_20msg","累计 20 句","int"),
                   ("msg20_rate","装机→20句","pct1"),
                   ("purchase_started_users","发起购买 Started","int"),
-                  ("trial_effective_users","开过订阅(已停售) Sub Started","int"),
                   ("energy_buyers","买过能量 Energy Buyers","int"),
                   ("energy_revenue_usd","能量实收 USD","d2"),
                   ("paid_users","付费 Paid","int"),
@@ -754,7 +752,7 @@ SECTIONS = [
        # 🔴 三个比率列的分母是**当天**进聊天页的设备,分子是这些人的**全历史**状态 ——
        #   它回答「今天来的人里有多少已经聊到 N 句」,不是「今天来的人发了 N 句」。
        #   逐日比率因此比整段高(B 类 msg20 逐日 0.50 vs 整段 0.364),**两者不可对比**。
-       dict(top=60, cols=[("date","日期 Date","text"), ("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("trial_effective_users","开过订阅(已停售) Sub Started","int"),
+       dict(top=60, cols=[("date","日期 Date","text"), ("group_name","分组 Group","text"), ("entered_users","进过聊天页 Entered","int"), ("replied_users","回复 Replied","int"), ("replied_rate","回复率","pct1"), ("msg6_users","累计≥6句","int"), ("msg6_rate","6句率","pct1"), ("msg20_users","累计≥20句","int"), ("msg20_rate","20句率","pct1"), ("ever_subscribed_users","曾开过订阅 Ever Subscribed","int"),
                   ("paid_users","付费 Paid","int")], bar=["entered_users","msg20_rate"], note='一行是一天里的一组。A 是真实类、B 是幻想类,按当天进过哪类角色的聊天页分组,同一天里每台设备只进一组。三个比率列的分母是当天进来的设备,分子是这些人的终身累计状态,所以它读作今天来的人里有多少已经聊到那么多句,不是今天发了那么多句,也因此逐日比率会比整段高,两者不能对比。跨天不要把进过聊天页那一列相加,同一台设备每天来都算一次。试用和付费是靠进过哪类聊天页反推的,合计小于付费漏斗卡是预期不是漏数。｜ A = realistic, B = fictional; rates use today as denominator but lifetime state as numerator.')),
    # —— 参与广度 · Engagement breadth ——
    ("chat_engaged_new_user_rate", "新用户投入率 · Engaged New-User Rate", "rate",
@@ -1073,7 +1071,6 @@ SECTIONS = [
                   ("energy_pack_users","能量包 Energy","int"),
                   ("pass3day_users","3天通行证 Pass","int"),
                   ("purchase_canceled_users","用户取消 Canceled","int"),
-                  ("trial_effective_users","开过订阅(试用或0.99) Sub Started","int"),
                   ("intro_users","其中 0.99 Intro","int"),
                   ("paid_users","付费 Paid","int"),
                   ("new_subscription_apple","Apple","int"),
