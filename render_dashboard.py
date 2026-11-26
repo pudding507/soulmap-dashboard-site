@@ -1542,6 +1542,7 @@ SECTIONS = [
  ]),
  # ╔══════════════════════════════════════════════════════════════════════════╗
  # ║ 2026-11-19 新增:能量定价实验(Metabase 看板 25,卡 467~476)              ║
+ # ║ 2026-11-26 按 arm 分组的七张全部下线,本区只剩下面三张通用卡          ║
  # ╚══════════════════════════════════════════════════════════════════════════╝
  # 原来是独立的一页 site/energy-ab.html,按 Chris 的决定并进主看板成为一个区。
  # 🛑 这十张全是 table ⇒ 不会进页头的「变化最大的 5 个数」(_movers 跳过 table/funnel),
@@ -1550,108 +1551,17 @@ SECTIONS = [
  # 🔴 **2026-11-24 14:10 实验已整体停止**,Javier 决定,所有人回到每条 1 能量。
  #    停的理由不是数据而是公平性:被收 3.5 的正好是最忠实的用户,刚开始付钱(约第 30 条)
  #    价格就涨,像被误导。实验整段 11-20 16:50 ~ 11-24 14:10,约 3.9 天,A 775 人 / B 793 人。
- #    ⇒ 这十张卡**之后不会再有新数据,但不下线** —— 它们是这次实验的完整记录,
- #      将来回看「为什么停」「停之前两组差多少」时只有这里有。
+ #
+ # 🔴 **2026-11-26:按 arm 分组的七张(467~472 / 474)全部下线。**
+ #    11-25 曾定「十张全保留,是实验的完整记录」,但那时漏了一件 ——
+ #    卡的取数窗口是「11-20 以后注册的人」,**没有上界**。实验停的是分组,卡没停:
+ #    A / B / out 三行冻在 11-24,而 `unassigned` 那一行**每天还在涨 900+**
+ #    (11-26 已到 1,881 人,11-25 起就是当天全部新注册)。
+ #    它和冻住的 A 722 / B 735 并排显示,很容易被读成「实验的第三组」。
+ #    ⇒ 七张一起下线。**实验结论在文档里**(台账 2026-11-26 一节 + 口径 24.3x),
+ #      卡在 Metabase 归档区可恢复,SQL 在 `Metabase/old/下线的卡/`。
  #    🛑 跨 11-24 14:10 比每条单价、能量消耗、付费率都不可比。
- ("⑬ 能量定价实验 · Energy Pricing A/B", [
-   # —— 原独立页的「① 分组是否均衡 · Are the arms balanced」——
-   ('energy_ab_arms', '分组概况（实验已于 11-24 停止） · Arms Overview (experiment stopped Nov 24)', 'table',
-       dict(top=10,
-            cols=[('arm', '组 Arm', 'text'),
-                  ('users_assigned', '人数 Users', 'int'),
-                  ('first_signup_date', '最早注册 First Signup', 'text'),
-                  ('last_signup_date', '最晚注册 Last Signup', 'text'),
-                  ('countries', '国家数 Countries', 'int'),
-                  ('users_who_chatted', '聊过天 Chatted', 'int'),
-                  ('chatted_pct', '聊过天 %', 'd1'),
-                  ('messages_per_user', '人均消息 Msgs/User', 'd1'),
-                  ('energy_spent_per_user', '人均耗能量 Energy/User', 'd1'),
-                  ],
-            bar=['users_assigned', 'messages_per_user'],
-            note='分母是实验开始后注册的新用户,已排掉 CityPLX 的游戏账号。先看两组人数差多少,50/50 分组下相差超过 5% 说明分组偏了,后面几张卡的对比都不成立。实验开始前所有人显示在 unassigned 一行。 ｜ New users who signed up after the start, excluding CityPLX accounts. A headcount gap above 5% under a 50/50 split means the split is skewed.')),
-   # —— 原独立页的「② 钱 · Money」——
-   ('energy_ab_net_revenue', '每新用户 14 天净收入 · Net Revenue per User (14d)', 'table',
-       dict(top=10,
-            cols=[('arm', '组 Arm', 'text'),
-                  ('cohort_maturity', '队列成熟度 Maturity', 'text'),
-                  ('users', '人数 Users', 'int'),
-                  ('takehome_usd', '到手 Takehome $', 'd2'),
-                  ('cost_usd', '服务成本 Cost $', 'd2'),
-                  ('net_usd', '净额 Net $', 'd2'),
-                  ('net_usd_per_user_capped50', '人均净额 封顶 Net/User capped', 'd4'),
-                  ('net_usd_per_user', '人均净额 不封顶 Net/User uncapped', 'd4'),
-                  ('buyers', '买过的人 Buyers', 'int'),
-                  ],
-            bar=['users', 'net_usd_per_user_capped50'],
-            note='🛑 这张卡永远不会有数了 —— 能量定价实验 11-20 16:50 开始分组、11-24 14:10 就被停掉,只跑了约 3.9 天,14 天队列凑不齐了。它显示的是实验期间最后一次抓到的值。分母是注册满 14 天的新用户,判定用封顶 50 美元那一列。成本从 11-06 中午才记齐,第一个完整的 14 天队列要到 11-20 才出现,在那之前只有 7 天那一列能读。净额不含广告花费。 ｜ New users whose first 14 days are complete. The decision uses the capped column. Cost logging is complete only from 11-06, so read the 7-day column until 11-20.')),
-   ('energy_ab_purchase', '首购与再购 · Purchase Funnel', 'table',
-       dict(top=10,
-            cols=[('arm', '组 Arm', 'text'),
-                  ('users_total', '人数 Users', 'int'),
-                  ('buyers', '买过 Buyers', 'int'),
-                  ('first_purchase_pct', '首购率 %', 'd2'),
-                  ('hit_first_runout', '用完过额度 Ran Out', 'int'),
-                  ('bought_after_runout', '用完后买 Bought After', 'int'),
-                  ('bought_after_runout_pct', '用完后买 %', 'd2'),
-                  ('repeat_buyers', '又买过 Repeat', 'int'),
-                  ('repeat_purchase_pct', '又买比例 %', 'd2'),
-                  ],
-            bar=['buyers', 'first_purchase_pct'],
-            note='分母是实验期注册的新用户。买的定义是服务端有金额的成交记录,订单表的金额和国家列是空的,用不了。又买比例的分母是买过的人,不是全部用户。用完后买这一列分子只有 12,现在读不出。 ｜ Denominator is new users in the experiment window. Purchases come from the server-side billing log. The repeat rate is over buyers, not over all users.')),
-   ('energy_ab_margin_band', '分条数段的每条毛利 · Margin by Message Number', 'table',
-       dict(top=20,
-            cols=[('arm', '组 Arm', 'text'),
-                  ('message_band', '第几条 Message No.', 'text'),
-                  ('messages', '消息数 Messages', 'int'),
-                  ('users', '人数 Users', 'int'),
-                  ('cost_per_message_usd', '每条成本 Cost/Msg $', 'd6'),
-                  ('revenue_per_message_now_usd', '每条收入(现价)Rev/Msg $', 'd6'),
-                  ('margin_pct_now', '毛利率(现价)%', 'd1'),
-                  ('avg_energy_if_d594', 'D-594 每条能量 Energy', 'd2'),
-                  ('margin_pct_if_d594', '毛利率(D-594)%', 'd1'),
-                  ],
-            bar=['messages', 'margin_pct_now'],
-            note='一行一个条数档,分母是该档内的消息数。聊得越久每条成本越高,毛利率从前 10 条的 39% 降到第 101 条以后的 4.5%。右边两列是静态模拟,同样这批消息按 D-594 曲线会收多少能量,它假设用户行为不变,而涨价本身会让人少聊,不能当成改价后的预期收入。 ｜ One row per message band. The right-hand columns simulate the D-594 curve on the same messages, assuming behaviour does not change.')),
-   ('energy_ab_country', '分国家每能量到手 · Revenue per Energy by Country', 'table',
-       dict(top=25,
-            cols=[('country_code', '国家 Country', 'text'),
-                  ('arm', '组 Arm', 'text'),
-                  ('users', '人数 Users', 'int'),
-                  ('buyers', '买过 Buyers', 'int'),
-                  ('energy_consumed', '消耗能量 Energy', 'int'),
-                  ('takehome_usd', '到手 Takehome $', 'd2'),
-                  ('takehome_usd_per_energy', '每能量到手 $/Energy', 'd6'),
-                  ('numerator_over_denominator', '分子/分母 Numerator', 'text'),
-                  ('net_usd', '净额 Net $', 'd2'),
-                  ],
-            bar=['energy_consumed', 'takehome_usd_per_energy'],
-            note="一行一个国家,国家取注册国家不是商店国家。每能量到手等于该国到手收入除以该国消耗的能量,同样 1 能量印度值 0.0053 美元、美国 0.0031、英国 0.0023。消耗不足 100 能量的标读不出,净额不含广告花费。 ｜ One row per signup country. Revenue per energy is that country's takehome divided by its energy spent. Under 100 energy spent is marked unreadable.")),
-   # —— 原独立页的「③ 用户还聊不聊 · Do they keep chatting」——
-   ('energy_ab_engagement', '参与度与留存 · Engagement & Retention', 'table',
-       dict(top=10,
-            cols=[('arm', '组 Arm', 'text'),
-                  ('users_total', '人数 Users', 'int'),
-                  ('sent_1_plus', '发过消息 Sent ≥1', 'int'),
-                  ('sent_10_plus_pct', '聊到10条 %', 'd1'),
-                  ('sent_30_plus_pct', '聊到30条 %', 'd1'),
-                  ('messages_per_user', '人均消息 Msgs/User', 'd1'),
-                  ('active_days_per_chatter', '活跃天数 Active Days', 'd2'),
-                  ('day7_denominator', '第7天分母 D7 Denom', 'int'),
-                  ('still_messaging_day7_pct', '第7天还在聊 %', 'd1'),
-                  ],
-            bar=['users_total', 'sent_30_plus_pct'],
-            note="分母是实验期注册的新用户。第 7 天这一列按账号算,口径是注册后第 7 天还在发消息,和主看板那张按设备算的留存卡不是一回事,两边的数不要互相对。人均活跃天数只有 1.3 天,多数新用户只来一天,第 7 天的数低是这个结构决定的。 ｜ Day 7 here counts accounts still sending messages, not devices. It is a different definition from the main dashboard's retention card.")),
-   ('energy_ab_conversation_length', '对话长度分布 · Conversation Length', 'table',
-       dict(top=20,
-            cols=[('arm', '组 Arm', 'text'),
-                  ('final_length_band', '最终聊了多少条 Final Length', 'text'),
-                  ('conversations', '对话数 Conversations', 'int'),
-                  ('pct_of_conversations', '占比 %', 'd1'),
-                  ('users', '人数 Users', 'int'),
-                  ],
-            bar=['conversations', 'pct_of_conversations'],
-            note='一行一个档位,分母是对话数不是人数,一个人可以有多个角色对话。免费额度正好 30 条,所以 26 到 30 这一档本来就偏高;D-594 的涨价点也在第 30 条,两件事落在同一条消息上,单看一组分不清堆积是哪一件造成的,只能比两组在同一档的占比差。 ｜ One row per final-length band; the denominator is conversations, not people. The free allowance and the D-594 price step both fall on message 30.')),
-   # —— 原独立页的「④ 成本与大客户 · Cost and top users」——
+ ("⑬ 能量成本与毛利 · Energy Cost & Margin", [
    ('energy_voice_per_charge', '语音生成与扣费比 · Voice Generations per Charge', 'table',
        dict(top=30,
             cols=[('activity_date', '日期 Date', 'text'),
