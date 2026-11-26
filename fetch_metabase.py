@@ -262,6 +262,9 @@ KEY_OVERRIDE = {
     463: "attribution_ad_source_coverage",  # §4.3 归因覆盖率,设备口径 + D-565 账号口径对照
     464: "acceptance_ad_host_landing",      # WW48 待办 1:广告用户第一条消息有没有发给广告里那个角色
     465: "acceptance_power_charges",        # WW48 待办 8:Super Power 三档扣费上没上
+    # 🔴 2026-11-26 新建两张:接替随实验下线的 470 / 474,去掉 arm 维度
+    479: "energy_margin_band",             # 分条数段的每条毛利(14 天窗口,只看窗口内注册的人)
+    480: "energy_per_energy_country",      # 分国家每能量到手(14 天窗口,全部活跃用户)
 }
 
 HERE = Path(__file__).resolve().parent
