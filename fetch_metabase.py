@@ -264,7 +264,8 @@ KEY_OVERRIDE = {
     465: "acceptance_power_charges",        # WW48 待办 8:Super Power 三档扣费上没上
     # 🔴 2026-11-26 新建两张:接替随实验下线的 470 / 474,去掉 arm 维度
     479: "energy_margin_band",             # 分条数段的每条毛利(14 天窗口,只看窗口内注册的人)
-    480: "energy_per_energy_country",      # 分国家每能量到手(14 天窗口,全部活跃用户)
+    480: "energy_per_energy_country",
+    481: "energy_start_arm",      # 分国家每能量到手(14 天窗口,全部活跃用户)
 }
 
 HERE = Path(__file__).resolve().parent

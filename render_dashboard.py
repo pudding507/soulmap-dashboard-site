@@ -1630,6 +1630,27 @@ SECTIONS = [
                   ],
             bar=['takehome_usd', 'net_usd'],
             note='一行一个人,近 30 天按到手收入排序,占比的分母是全部到手收入,不是前 20 名的和。净额出现负数不是算错,聊得多的人服务成本会高过他付的钱。取消续费不是退款,关掉自动续费时这一期的钱并没有退回去,真正的退款现在没有数据源。 ｜ One row per person, ranked by takehome over 30 days. Negative net is not an error. Cancellations are not refunds.')),
+   ('energy_start_arm', '起始能量两臂对照 · Starting Energy Arm Comparison', 'table',
+       # 2026-11-28 新建(Metabase 卡 481)。起始能量 A/B 11-25 18:05 开跑,此前看板零覆盖。
+       #   只建这一张:上一个实验(能量定价 D-594)建了十张,停掉时七张要一起下线。
+       dict(top=10,
+            cols=[('arm', '分组 Arm', 'text'),
+                  ('surface', '端 Surface', 'text'),
+                  ('start_energy', '起始能量 Start Energy', 'int'),
+                  ('users', '分组人数 Users', 'int'),
+                  ('msg5_rate', '发满5条 Sent 5+', 'pct1'),
+                  ('msg10_rate', '发满10条 Sent 10+', 'pct1'),
+                  ('msg20_rate', '发满20条 Sent 20+', 'pct1'),
+                  ('day1_denominator', '次日分母 D1 Base', 'int'),
+                  ('return_d1_rate', '次日回访 D1 Return', 'pct1'),
+                  ('payers', '付费人数 Payers', 'int'),
+                  ('pay_rate', '付费率 Pay Rate', 'pct1'),
+                  ('takehome_usd', '到手 Takehome $', 'd2'),
+                  ('takehome_per_user', '人均到手 Per User $', 'd4'),
+                  ('numerator_over_denominator', '分子/分母 Numerator', 'text'),
+                  ],
+            bar=['users', 'msg5_rate'],
+            note='一行一组,A 组起始 20 能量、B 组 10,实验 11-25 18:05 开跑。发满几条的分母是该组全部人,不是聊过天的人。次日回访另算一个分母,只含已经过完次日的人,所以那一列的分母比人数小。付费走服务端口径,到手按实收比例算,取不到时用 0.85。网页和 App 要分开看,不要把两端合起来比两臂。 ｜ One row per arm and surface. The message columns are shared over everyone in the arm; D1 return has its own smaller, matured denominator.'))
  ]),
  ("⑭ 附录 · Appendix", [
    ("retention_d1", "留存 D1(设备) · Retention D1", "long_dim",

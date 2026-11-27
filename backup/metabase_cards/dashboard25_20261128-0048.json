@@ -1,0 +1,1795 @@
+{
+ "description": "Javier《修改后的能量定价计划》2026-11-18 第 6 节「看板(Chris)」。A 组现价 vs B 组 D-594 曲线。实验未上线前所有人落在 unassigned 一行(空跑对账用)。",
+ "archived": false,
+ "collection_position": null,
+ "dashcards": [
+  {
+   "size_x": 24,
+   "dashboard_tab_id": null,
+   "series": [],
+   "action_id": null,
+   "collection_authority_level": null,
+   "card": {
+    "description": null,
+    "archived": false,
+    "collection_position": null,
+    "table_id": null,
+    "result_metadata": [
+     {
+      "display_name": "activity_date",
+      "field_ref": [
+       "field",
+       "activity_date",
+       {
+        "base-type": "type/Date"
+       }
+      ],
+      "name": "activity_date",
+      "base_type": "type/Date",
+      "effective_type": "type/Date",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 15,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/DateTime": {
+         "earliest": "2026-11-04T00:00:00+08:00",
+         "latest": "2026-11-18T00:00:00+08:00"
+        }
+       }
+      }
+     },
+     {
+      "display_name": "voice_kind",
+      "field_ref": [
+       "field",
+       "voice_kind",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "voice_kind",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 2,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 4.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "shadow_charges",
+      "field_ref": [
+       "field",
+       "shadow_charges",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "shadow_charges",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 30,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 259.0,
+         "q1": 707.0,
+         "q3": 1065.0,
+         "max": 1545.0,
+         "sd": 327.3096270414651,
+         "avg": 897.8333333333334
+        }
+       }
+      }
+     },
+     {
+      "display_name": "energy_charges",
+      "field_ref": [
+       "field",
+       "energy_charges",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "energy_charges",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 28,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.0,
+         "q1": 13.0,
+         "q3": 372.0,
+         "max": 1013.0,
+         "sd": 276.61305601619875,
+         "avg": 246.1
+        }
+       }
+      }
+     },
+     {
+      "display_name": "vendor_calls",
+      "field_ref": [
+       "field",
+       "vendor_calls",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "vendor_calls",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": "type/Company",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 27,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.0,
+         "q1": 529.0,
+         "q3": 2277.0,
+         "max": 3618.0,
+         "sd": 1130.0037107049236,
+         "avg": 1389.4
+        }
+       }
+      }
+     },
+     {
+      "display_name": "vendor_calls_per_charge",
+      "field_ref": [
+       "field",
+       "vendor_calls_per_charge",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "vendor_calls_per_charge",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 26,
+        "nil%": 0.1666666666666667
+       },
+       "type": {
+        "type/Number": {
+         "min": 1.42,
+         "q1": 2.0625,
+         "q3": 41.9825,
+         "max": 301.5,
+         "sd": 96.52517230063185,
+         "avg": 49.8172
+        }
+       }
+      }
+     },
+     {
+      "display_name": "numerator_over_denominator",
+      "field_ref": [
+       "field",
+       "numerator_over_denominator",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "numerator_over_denominator",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 29,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 10.8
+        }
+       }
+      }
+     },
+     {
+      "display_name": "vendor_cost_usd",
+      "field_ref": [
+       "field",
+       "vendor_cost_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "vendor_cost_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 27,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.0,
+         "q1": 6.69,
+         "q3": 15.97,
+         "max": 25.6,
+         "sd": 7.559098506428201,
+         "avg": 11.855666666666666
+        }
+       }
+      }
+     }
+    ],
+    "initially_published_at": null,
+    "can_write": true,
+    "database_id": 2,
+    "enable_embedding": false,
+    "collection_id": 41,
+    "query_type": "native",
+    "name": "语音生成与扣费比",
+    "type": "question",
+    "query_average_duration": 9986,
+    "creator_id": 17,
+    "moderation_reviews": [],
+    "updated_at": "2026-11-19T15:29:01.317141+08:00",
+    "made_public_by_id": null,
+    "embedding_params": null,
+    "cache_ttl": null,
+    "dataset_query": {
+     "type": "native",
+     "database": 2,
+     "native": {
+      "query": "-- 能量 · 语音生成次数 ÷ 扣费次数 · Energy — Voice Generations per Charge\n--\n-- 2026-11-18 新建。计划第 6 节看板「语音生成 ÷ 扣费」,也是第 6 节请 Kang 查的那个问题的度量。\n--   Javier 的说法:每扣一次能量,背后平均约 1.7 次语音生成,多出来的约 0.7 次没扣费,\n--   每周约 $58(其中约 $41 来自免费用户)。本卡逐日复现这个比值。\n--\n-- 🔴 **口径陷阱:一条语音消息在 `soulmap_cost_call` 里是两行** ——\n--    `kind='llm'`(先用 claude-haiku 写文案)和 `kind='tts'`(再用 ElevenLabs 合成语音)。\n--    算「生成了几次语音」**只能数 kind='tts'**;数 COUNT(*) 会正好虚高一倍(实测 3.7 而不是 1.7)。\n--    `voice_call`(语音通话)同理,它的另一半是 `kind='stt'`(把用户说的话转成文字)。\n--\n-- 🔴 **实测结论:多出来的那部分几乎可以确定是「在检查能量之前就已经生成了」。**\n--    证据是 `shadow_charges` 和 `vendor_calls` 两列**几乎逐日完全相等**\n--    (11-18 是 255 / 255、11-16 是 733 / 733、11-14 是 461 / 461)——\n--    `soulmap_energy_shadow_charge` 是生成那一刻记的,`soulmap_energy_txn` 是扣费成功才记的,\n--    两者差的 40% 就是「生成了但没扣到费」。这对应 Javier 给 Kang 列的第一个可能性。\n--\n-- 🛑 **11-13 之前的比值全部不可读**(voice 那一行高到 60~390 倍):老 Plus 用户当时还是无限畅聊、\n--    不扣能量,但语音照生成,分母几乎是 0。老 Plus 11-13 17:33 才全部转能量。\n--    ⇒ **只读 11-14 起的行**,近五日 tts 稳定在 1.42~1.85,与 Javier 的 1.7 吻合。\n\nWITH shadow_daily AS (\n    SELECT DATE(charged_at) AS activity_date, kind,\n           COUNT(*) AS shadow_events, COUNT(DISTINCT user_id) AS shadow_users\n    FROM soul_map.soulmap_energy_shadow_charge\n    WHERE charged_at >= CURRENT_DATE - INTERVAL 14 DAY\n      AND kind IN ('tts', 'voice')\n    GROUP BY activity_date, kind\n),\ncharged_daily AS (\n    SELECT DATE(created_at) AS activity_date, source AS kind,\n           COUNT(*) AS charged_events, SUM(amount) AS energy_charged\n    FROM soul_map.soulmap_energy_txn\n    WHERE created_at >= CURRENT_DATE - INTERVAL 14 DAY\n      AND op = 'consume' AND source IN ('tts', 'voice')\n    GROUP BY activity_date, source\n),\nvoice_cost_daily AS (\n    SELECT DATE(call_at) AS activity_date,\n           -- 🛑 别名不能叫 kind:soulmap_cost_call 自己有一个 kind 列,\n           --    MySQL 的 GROUP BY 会优先认表列而不是这里的别名,分组会错。\n           CASE WHEN cost_column = 'voice_message' THEN 'tts' ELSE 'voice' END AS voice_kind,\n           COUNT(*) AS vendor_calls, ROUND(SUM(usd), 2) AS cost_usd\n    FROM soul_map.soulmap_cost_call\n    WHERE call_at >= CURRENT_DATE - INTERVAL 14 DAY\n      AND status = 'ok' AND cost_column IN ('voice_message', 'voice_call')\n      -- 🛑 一条语音消息在 soulmap_cost_call 里是**两行**:kind='llm'(先写文案)和 kind='tts'\n      --    (再合成语音)。算「生成了几次语音」只能数 kind='tts';数 COUNT(*) 会正好虚高一倍。\n      --    voice_call 同理,它的另一半是 kind='stt'(把用户说的话转成文字)。\n      AND kind = 'tts'\n    GROUP BY activity_date, CASE WHEN cost_column = 'voice_message' THEN 'tts' ELSE 'voice' END\n)\nSELECT\n    shadow_daily.activity_date                                           AS activity_date,\n    shadow_daily.kind                                                    AS voice_kind,\n    shadow_daily.shadow_events                                           AS shadow_charges,\n    COALESCE(charged_daily.charged_events, 0)                            AS energy_charges,\n    COALESCE(voice_cost_daily.vendor_calls, 0)                           AS vendor_calls,\n    CASE WHEN COALESCE(charged_daily.charged_events, 0) < 10 THEN NULL\n         ELSE ROUND(1.0 * COALESCE(voice_cost_daily.vendor_calls, 0)\n                    / NULLIF(charged_daily.charged_events, 0), 2) END    AS vendor_calls_per_charge,\n    CASE WHEN COALESCE(charged_daily.charged_events, 0) < 10\n         THEN CONCAT(COALESCE(charged_daily.charged_events, 0), ' 次扣费 · 读不出(分母<10)')\n         ELSE CONCAT(COALESCE(voice_cost_daily.vendor_calls, 0), ' / ',\n                     charged_daily.charged_events) END                   AS numerator_over_denominator,\n    COALESCE(voice_cost_daily.cost_usd, 0)                               AS vendor_cost_usd\nFROM shadow_daily\nLEFT JOIN charged_daily   ON charged_daily.activity_date   = shadow_daily.activity_date\n                         AND charged_daily.kind            = shadow_daily.kind\nLEFT JOIN voice_cost_daily ON voice_cost_daily.activity_date = shadow_daily.activity_date\n                         AND voice_cost_daily.voice_kind    = shadow_daily.kind\nORDER BY shadow_daily.activity_date DESC, shadow_daily.kind\n"
+     }
+    },
+    "id": 473,
+    "parameter_mappings": [],
+    "display": "table",
+    "entity_id": "WVV17ZR7jpbcdOv-rnOE2",
+    "collection_preview": true,
+    "visualization_settings": {},
+    "metabase_version": "v0.49.11 (b894f2d)",
+    "parameters": [],
+    "dataset": false,
+    "created_at": "2026-11-18T16:24:06.152809+08:00",
+    "public_uuid": null
+   },
+   "updated_at": "2026-11-18T16:27:41.528273+08:00",
+   "col": 0,
+   "id": 671,
+   "parameter_mappings": [],
+   "card_id": 473,
+   "entity_id": "lEpcN3Ukci_OyQU7uV-Vr",
+   "visualization_settings": {},
+   "size_y": 6,
+   "dashboard_id": 25,
+   "created_at": "2026-11-18T16:27:41.528273+08:00",
+   "row": 36
+  },
+  {
+   "size_x": 24,
+   "dashboard_tab_id": null,
+   "series": [],
+   "action_id": null,
+   "collection_authority_level": null,
+   "card": {
+    "description": null,
+    "archived": false,
+    "collection_position": null,
+    "table_id": null,
+    "result_metadata": [
+     {
+      "display_name": "activity_date",
+      "field_ref": [
+       "field",
+       "activity_date",
+       {
+        "base-type": "type/Date"
+       }
+      ],
+      "name": "activity_date",
+      "base_type": "type/Date",
+      "effective_type": "type/Date",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/DateTime": {
+         "earliest": "2026-11-25T00:00:00+08:00",
+         "latest": "2026-11-25T00:00:00+08:00"
+        }
+       }
+      }
+     },
+     {
+      "display_name": "purchases",
+      "field_ref": [
+       "field",
+       "purchases",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "purchases",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 14.0,
+         "q1": 14.0,
+         "q3": 14.0,
+         "max": 14.0,
+         "sd": null,
+         "avg": 14.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "paying_users",
+      "field_ref": [
+       "field",
+       "paying_users",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "paying_users",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 12.0,
+         "q1": 12.0,
+         "q3": 12.0,
+         "max": 12.0,
+         "sd": null,
+         "avg": 12.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "gross_usd",
+      "field_ref": [
+       "field",
+       "gross_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "gross_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 37.37,
+         "q1": 37.37,
+         "q3": 37.37,
+         "max": 37.37,
+         "sd": null,
+         "avg": 37.37
+        }
+       }
+      }
+     },
+     {
+      "display_name": "takehome_usd",
+      "field_ref": [
+       "field",
+       "takehome_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "takehome_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 31.76,
+         "q1": 31.76,
+         "q3": 31.76,
+         "max": 31.76,
+         "sd": null,
+         "avg": 31.76
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_usd",
+      "field_ref": [
+       "field",
+       "cost_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 42.86,
+         "q1": 42.86,
+         "q3": 42.86,
+         "max": 42.86,
+         "sd": null,
+         "avg": 42.86
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_chat_usd",
+      "field_ref": [
+       "field",
+       "cost_chat_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_chat_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 20.61,
+         "q1": 20.61,
+         "q3": 20.61,
+         "max": 20.61,
+         "sd": null,
+         "avg": 20.61
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_voice_usd",
+      "field_ref": [
+       "field",
+       "cost_voice_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_voice_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 14.97,
+         "q1": 14.97,
+         "q3": 14.97,
+         "max": 14.97,
+         "sd": null,
+         "avg": 14.97
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_other_usd",
+      "field_ref": [
+       "field",
+       "cost_other_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_other_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 7.28,
+         "q1": 7.28,
+         "q3": 7.28,
+         "max": 7.28,
+         "sd": null,
+         "avg": 7.28
+        }
+       }
+      }
+     },
+     {
+      "display_name": "margin_usd",
+      "field_ref": [
+       "field",
+       "margin_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "margin_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/GrossMargin",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": -11.1,
+         "q1": -11.1,
+         "q3": -11.1,
+         "max": -11.1,
+         "sd": null,
+         "avg": -11.1
+        }
+       }
+      }
+     },
+     {
+      "display_name": "margin_pct",
+      "field_ref": [
+       "field",
+       "margin_pct",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "margin_pct",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/GrossMargin",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": -34.9,
+         "q1": -34.9,
+         "q3": -34.9,
+         "max": -34.9,
+         "sd": null,
+         "avg": -34.9
+        }
+       }
+      }
+     }
+    ],
+    "initially_published_at": null,
+    "can_write": true,
+    "database_id": 2,
+    "enable_embedding": false,
+    "collection_id": 41,
+    "query_type": "native",
+    "name": "产品逐日毛利",
+    "type": "question",
+    "query_average_duration": 6202,
+    "creator_id": 17,
+    "moderation_reviews": [],
+    "updated_at": "2026-11-25T16:45:57.899597+08:00",
+    "made_public_by_id": null,
+    "embedding_params": null,
+    "cache_ttl": null,
+    "dataset_query": {
+     "type": "native",
+     "database": 2,
+     "native": {
+      "query": "-- 能量 · 全公司逐日毛利 · Energy — Company Margin Daily\n--\n-- 2026-11-18 新建。计划第 6 节看板「全公司毛利」。\n--   一行一天:成交笔数 · 标价 · 到手 · 服务成本(拆聊天 / 语音 / 其它)· 毛利 · 毛利率。\n--\n-- 🛑 四个口径:\n--   1. **毛利 = 到手收入 − 服务成本,不含广告花费、不含人力。** 它只回答「这些对话本身赚不赚」。\n--   2. 到手 = `price_usd × takehome_percentage`(现固定 0.85)。\n--   3. 成本是 `soulmap_cost_call` 全部五个组件,**11-06 12:28~13:56 才全部开始记**(口径 24.21)\n--      ⇒ 11-05 及更早的成本是偏低的,那几天的毛利率会虚高。\n--   4. 当天没有任何成交的日子也出一行(收入 0、毛利为负的成本额),不跳过 ——\n--      跳过会让毛利率的趋势看起来比实际好。\n--\n-- 🔴 实测 11-12~11-18 七天里有六天毛利为负,只有 11-16 是正的(+36.6%)。\n--    这是现价下的基线,D-594 要改的就是这个。\n\n-- 2026-11-25 修:到手收入的空值兜底从 0 改成 0.85。`subscription_event_log.takehome_percentage`\n--   2026-11-04 09:52:27 才开始有值,之前全是 NULL(近 30 天窗口里占 132 行 / gross 的 22%)。\n--   原来的 COALESCE(...,0) 会把那一段的到手收入全部算成 0。见口径 24.32。\nWITH revenue_daily AS (\n    SELECT DATE(event_at) AS activity_date,\n           SUM(price_usd)                                   AS gross_usd,\n           SUM(price_usd * COALESCE(takehome_percentage, 0.85)) AS takehome_usd,\n           COUNT(*)                                          AS purchases,\n           COUNT(DISTINCT user_id)                           AS paying_users\n    FROM soul_map.subscription_event_log\n    WHERE environment = 'PRODUCTION'\n      AND event_type IN ('NON_RENEWING_PURCHASE','INITIAL_PURCHASE','RENEWAL')\n      AND price_usd > 0\n      AND event_at >= CURRENT_DATE - INTERVAL 20 DAY\n    GROUP BY activity_date\n),\ncost_daily AS (\n    SELECT DATE(call_at) AS activity_date,\n           SUM(usd)                                                        AS cost_usd,\n           SUM(CASE WHEN cost_column = 'chat_llm'      THEN usd ELSE 0 END) AS cost_chat_usd,\n           SUM(CASE WHEN cost_column IN ('voice_message','voice_call') THEN usd ELSE 0 END) AS cost_voice_usd,\n           SUM(CASE WHEN cost_column IN ('chat_regen','host_create')   THEN usd ELSE 0 END) AS cost_other_usd\n    FROM soul_map.soulmap_cost_call\n    WHERE status = 'ok'\n      AND call_at >= CURRENT_DATE - INTERVAL 20 DAY\n    GROUP BY activity_date\n)\nSELECT\n    COALESCE(revenue_daily.activity_date, cost_daily.activity_date) AS activity_date,\n    COALESCE(revenue_daily.purchases, 0)                            AS purchases,\n    COALESCE(revenue_daily.paying_users, 0)                         AS paying_users,\n    ROUND(COALESCE(revenue_daily.gross_usd, 0), 2)                  AS gross_usd,\n    ROUND(COALESCE(revenue_daily.takehome_usd, 0), 2)               AS takehome_usd,\n    ROUND(COALESCE(cost_daily.cost_usd, 0), 2)                      AS cost_usd,\n    ROUND(COALESCE(cost_daily.cost_chat_usd, 0), 2)                 AS cost_chat_usd,\n    ROUND(COALESCE(cost_daily.cost_voice_usd, 0), 2)                AS cost_voice_usd,\n    ROUND(COALESCE(cost_daily.cost_other_usd, 0), 2)                AS cost_other_usd,\n    ROUND(COALESCE(revenue_daily.takehome_usd, 0)\n          - COALESCE(cost_daily.cost_usd, 0), 2)                    AS margin_usd,\n    CASE WHEN COALESCE(revenue_daily.takehome_usd, 0) <= 0 THEN NULL\n         ELSE ROUND(100.0 * (revenue_daily.takehome_usd - COALESCE(cost_daily.cost_usd, 0))\n                    / revenue_daily.takehome_usd, 1) END            AS margin_pct\nFROM revenue_daily\nLEFT JOIN cost_daily ON cost_daily.activity_date = revenue_daily.activity_date\nUNION\nSELECT cost_daily.activity_date, 0, 0, 0, 0,\n       ROUND(cost_daily.cost_usd, 2), ROUND(cost_daily.cost_chat_usd, 2),\n       ROUND(cost_daily.cost_voice_usd, 2), ROUND(cost_daily.cost_other_usd, 2),\n       ROUND(-cost_daily.cost_usd, 2), NULL\nFROM cost_daily\nLEFT JOIN revenue_daily ON revenue_daily.activity_date = cost_daily.activity_date\nWHERE revenue_daily.activity_date IS NULL\nORDER BY activity_date DESC"
+     }
+    },
+    "id": 475,
+    "parameter_mappings": [],
+    "display": "table",
+    "entity_id": "cp9TNoMZfa9EhNgh3I9J6",
+    "collection_preview": true,
+    "visualization_settings": {},
+    "metabase_version": "v0.49.11 (b894f2d)",
+    "parameters": [],
+    "dataset": false,
+    "created_at": "2026-11-18T16:24:06.502875+08:00",
+    "public_uuid": null
+   },
+   "updated_at": "2026-11-18T16:27:41.528273+08:00",
+   "col": 0,
+   "id": 673,
+   "parameter_mappings": [],
+   "card_id": 475,
+   "entity_id": "MFKlhaD0bQMJVJjsIGRaA",
+   "visualization_settings": {},
+   "size_y": 6,
+   "dashboard_id": 25,
+   "created_at": "2026-11-18T16:27:41.528273+08:00",
+   "row": 48
+  },
+  {
+   "size_x": 24,
+   "dashboard_tab_id": null,
+   "series": [],
+   "action_id": null,
+   "collection_authority_level": null,
+   "card": {
+    "description": null,
+    "archived": false,
+    "collection_position": null,
+    "table_id": null,
+    "result_metadata": [
+     {
+      "display_name": "spend_rank",
+      "field_ref": [
+       "field",
+       "spend_rank",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "spend_rank",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 1.0,
+         "q1": 1.0,
+         "q3": 1.0,
+         "max": 1.0,
+         "sd": null,
+         "avg": 1.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "user_id",
+      "field_ref": [
+       "field",
+       "user_id",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "user_id",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 5.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "country",
+      "field_ref": [
+       "field",
+       "country",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "country",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": "type/Country",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 2.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "purchases",
+      "field_ref": [
+       "field",
+       "purchases",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "purchases",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 94.0,
+         "q1": 94.0,
+         "q3": 94.0,
+         "max": 94.0,
+         "sd": null,
+         "avg": 94.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "takehome_usd",
+      "field_ref": [
+       "field",
+       "takehome_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "takehome_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 347.75,
+         "q1": 347.75,
+         "q3": 347.75,
+         "max": 347.75,
+         "sd": null,
+         "avg": 347.75
+        }
+       }
+      }
+     },
+     {
+      "display_name": "pct_of_all_takehome",
+      "field_ref": [
+       "field",
+       "pct_of_all_takehome",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "pct_of_all_takehome",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 18.6,
+         "q1": 18.6,
+         "q3": 18.6,
+         "max": 18.6,
+         "sd": null,
+         "avg": 18.6
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_usd",
+      "field_ref": [
+       "field",
+       "cost_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 186.4,
+         "q1": 186.4,
+         "q3": 186.4,
+         "max": 186.4,
+         "sd": null,
+         "avg": 186.4
+        }
+       }
+      }
+     },
+     {
+      "display_name": "net_usd",
+      "field_ref": [
+       "field",
+       "net_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "net_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 161.36,
+         "q1": 161.36,
+         "q3": 161.36,
+         "max": 161.36,
+         "sd": null,
+         "avg": 161.36
+        }
+       }
+      }
+     },
+     {
+      "display_name": "user_messages",
+      "field_ref": [
+       "field",
+       "user_messages",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "user_messages",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 16184.0,
+         "q1": 16184.0,
+         "q3": 16184.0,
+         "max": 16184.0,
+         "sd": null,
+         "avg": 16184.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "last_message_date",
+      "field_ref": [
+       "field",
+       "last_message_date",
+       {
+        "base-type": "type/Date"
+       }
+      ],
+      "name": "last_message_date",
+      "base_type": "type/Date",
+      "effective_type": "type/Date",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/DateTime": {
+         "earliest": "2026-11-27T00:00:00+08:00",
+         "latest": "2026-11-27T00:00:00+08:00"
+        }
+       }
+      }
+     },
+     {
+      "display_name": "last_purchase_date",
+      "field_ref": [
+       "field",
+       "last_purchase_date",
+       {
+        "base-type": "type/Date"
+       }
+      ],
+      "name": "last_purchase_date",
+      "base_type": "type/Date",
+      "effective_type": "type/Date",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/DateTime": {
+         "earliest": "2026-11-26T00:00:00+08:00",
+         "latest": "2026-11-26T00:00:00+08:00"
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cancellations",
+      "field_ref": [
+       "field",
+       "cancellations",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "cancellations",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 3.0,
+         "q1": 3.0,
+         "q3": 3.0,
+         "max": 3.0,
+         "sd": null,
+         "avg": 3.0
+        }
+       }
+      }
+     }
+    ],
+    "initially_published_at": null,
+    "can_write": true,
+    "database_id": 2,
+    "enable_embedding": false,
+    "collection_id": 41,
+    "query_type": "native",
+    "name": "大客户与取消",
+    "type": "question",
+    "query_average_duration": 55627,
+    "creator_id": 17,
+    "moderation_reviews": [],
+    "updated_at": "2026-11-27T16:14:44.101041+08:00",
+    "made_public_by_id": null,
+    "embedding_params": null,
+    "cache_ttl": null,
+    "dataset_query": {
+     "type": "native",
+     "database": 2,
+     "native": {
+      "query": "-- 能量 · 大客户与取消 · Energy — Top Spenders & Cancellations\n--\n-- 🔴 2026-11-27 改源:国家列 `user.country_code` → `user.home_country`,输出列名 country_code → country。\n--    理由同「分国家每能量到手」:`country_code` 是账号 / 商店地区,和 `home_country` 仅 65.6% 一致\n--    (`home_country='IN'` 的人里 1,995 个被标成 US、1,461 个被标成 GB)。见口径文件第八·五节。\n--    影响:只改这一列的取值,排名和金额不变。渲染器 cols 同步改。\n--\n-- 2026-11-18 新建。计划第 6 节看板「前 3 名」,以及「退款和骂价格」里能做的那一半。\n--   计划第 2 节:这次改价最坏的情况不是少赚,而是丢掉现在的大客户 ⇒ 前几名要每周单独看。\n--   近 30 天窗口,按到手收入排名取前 20。\n--\n-- 🔴 **「退款」现在没有数据源。** `subscription_event_log` 里没有 REFUND 这一类事件,\n--    只有 `CANCELLATION`(关掉自动续费)和 `UNCANCELLATION`。本卡的 cancellations 列是前者,\n--    **它不是退款** —— 用户关掉续费时这一期的钱并没有退回去。\n--    一次性能量包的退款在这张表里完全看不到。要真做退款,得另外接商店的退款回执。\n--    「骂价格」(应用商店差评、客服工单)同样没有数据源,本卡做不了。\n--\n-- 🛑 两个口径:\n--   1. `pct_of_all_takehome` 的分母是**近 30 天全部到手收入**,不是前 20 名的和。\n--   2. `net_usd` = 这个人的到手收入 − 这个人的服务成本。**会出现负数,那不是算错** ——\n--      实测排第 3 的大客户 30 天聊了 18,931 条,成本 $45.54 高于他付的 $29.75,净 −$15.79。\n--      🛑 **这正是 D-594 针对的那类人:买得不少,但聊得更多。**\n--\n-- 2026-11-19 修:user_id 转成字符串,否则显示成「72,740」(Metabase 对数值列自动加千分位)。\n\n-- 2026-11-25 修:到手收入的空值兜底从 0 改成 0.85。`subscription_event_log.takehome_percentage`\n--   2026-11-04 09:52:27 才开始有值,之前全是 NULL(近 30 天窗口里占 132 行 / gross 的 22%)。\n--   原来的 COALESCE(...,0) 会把那一段的到手收入全部算成 0。见口径 24.32。\nWITH spend_by_user AS (\n    SELECT sel.user_id                                              AS user_id,\n           SUM(sel.price_usd)                                       AS gross_usd,\n           SUM(sel.price_usd * COALESCE(sel.takehome_percentage,0.85)) AS takehome_usd,\n           COUNT(*)                                                 AS purchases,\n           MIN(sel.event_at)                                        AS first_purchase_at,\n           MAX(sel.event_at)                                        AS last_purchase_at\n    FROM soul_map.subscription_event_log sel\n    WHERE sel.environment = 'PRODUCTION'\n      AND sel.event_type IN ('NON_RENEWING_PURCHASE','INITIAL_PURCHASE','RENEWAL')\n      AND sel.price_usd > 0\n      AND sel.event_at >= CURRENT_DATE - INTERVAL 30 DAY\n    GROUP BY sel.user_id\n),\ncost_by_user AS (\n    SELECT user_id, SUM(usd) AS cost_usd\n    FROM soul_map.soulmap_cost_call\n    WHERE status = 'ok' AND call_at >= CURRENT_DATE - INTERVAL 30 DAY\n    GROUP BY user_id\n),\nmessages_by_user AS (\n    SELECT user_id, COUNT(*) AS user_messages, MAX(DATE(add_on)) AS last_message_date\n    FROM soul_map.soulmap_chat_history\n    WHERE role = 'user' AND add_on >= CURRENT_DATE - INTERVAL 30 DAY\n    GROUP BY user_id\n),\ncancellations AS (\n    SELECT user_id, COUNT(*) AS cancellations\n    FROM soul_map.subscription_event_log\n    WHERE event_type = 'CANCELLATION' AND event_at >= CURRENT_DATE - INTERVAL 30 DAY\n    GROUP BY user_id\n),\nranked AS (\n    SELECT spend_by_user.*,\n           ROW_NUMBER() OVER (ORDER BY spend_by_user.takehome_usd DESC) AS spend_rank,\n           SUM(spend_by_user.takehome_usd) OVER ()                      AS takehome_usd_all_users\n    FROM spend_by_user\n)\nSELECT\n    ranked.spend_rank                                        AS spend_rank,\n    -- 🛑 必须转成字符串:Metabase 的 query/json 会把 >=1000 的**数值**列返回成\n    --    带千分位逗号的字符串(\"72,740\"),列按 text 渲染就会原样显示成 72,740。\n    --    用户 ID 不是量,不能带千分位。\n    CAST(ranked.user_id AS CHAR)                             AS user_id,\n    u.home_country                                           AS country,\n    ranked.purchases                                         AS purchases,\n    ROUND(ranked.takehome_usd, 2)                            AS takehome_usd,\n    ROUND(100.0 * ranked.takehome_usd\n          / NULLIF(ranked.takehome_usd_all_users, 0), 1)     AS pct_of_all_takehome,\n    ROUND(COALESCE(cost_by_user.cost_usd, 0), 2)             AS cost_usd,\n    ROUND(ranked.takehome_usd - COALESCE(cost_by_user.cost_usd, 0), 2) AS net_usd,\n    COALESCE(messages_by_user.user_messages, 0)              AS user_messages,\n    messages_by_user.last_message_date                       AS last_message_date,\n    DATE(ranked.last_purchase_at)                            AS last_purchase_date,\n    COALESCE(cancellations.cancellations, 0)                 AS cancellations\nFROM ranked\nLEFT JOIN soul_map.user u                ON u.id = ranked.user_id\nLEFT JOIN cost_by_user          ON cost_by_user.user_id    = CAST(ranked.user_id AS CHAR) COLLATE utf8mb4_unicode_ci\nLEFT JOIN messages_by_user      ON messages_by_user.user_id = CAST(ranked.user_id AS CHAR) COLLATE utf8mb4_unicode_ci\nLEFT JOIN cancellations         ON cancellations.user_id    = ranked.user_id\nWHERE ranked.spend_rank <= 20\nORDER BY ranked.spend_rank"
+     }
+    },
+    "id": 476,
+    "parameter_mappings": [],
+    "display": "table",
+    "entity_id": "CmBKbS6jKlEz_o11u4srz",
+    "collection_preview": true,
+    "visualization_settings": {},
+    "metabase_version": "v0.49.11 (b894f2d)",
+    "parameters": [],
+    "dataset": false,
+    "created_at": "2026-11-18T16:24:06.695159+08:00",
+    "public_uuid": null
+   },
+   "updated_at": "2026-11-18T16:27:41.528273+08:00",
+   "col": 0,
+   "id": 674,
+   "parameter_mappings": [],
+   "card_id": 476,
+   "entity_id": "2wrfJ6ajbEfFD7ScL5fmb",
+   "visualization_settings": {},
+   "size_y": 6,
+   "dashboard_id": 25,
+   "created_at": "2026-11-18T16:27:41.528273+08:00",
+   "row": 54
+  },
+  {
+   "size_x": 24,
+   "dashboard_tab_id": null,
+   "series": [],
+   "action_id": null,
+   "collection_authority_level": null,
+   "card": {
+    "description": null,
+    "archived": false,
+    "collection_position": null,
+    "table_id": null,
+    "result_metadata": [
+     {
+      "display_name": "message_band",
+      "field_ref": [
+       "field",
+       "message_band",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "message_band",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 4.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "messages",
+      "field_ref": [
+       "field",
+       "messages",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "messages",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 41104.0,
+         "q1": 41104.0,
+         "q3": 41104.0,
+         "max": 41104.0,
+         "sd": null,
+         "avg": 41104.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "users",
+      "field_ref": [
+       "field",
+       "users",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "users",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 4122.0,
+         "q1": 4122.0,
+         "q3": 4122.0,
+         "max": 4122.0,
+         "sd": null,
+         "avg": 4122.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_usd",
+      "field_ref": [
+       "field",
+       "cost_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 82.02,
+         "q1": 82.02,
+         "q3": 82.02,
+         "max": 82.02,
+         "sd": null,
+         "avg": 82.02
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_per_message_usd",
+      "field_ref": [
+       "field",
+       "cost_per_message_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_per_message_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.001995,
+         "q1": 0.001995,
+         "q3": 0.001995,
+         "max": 0.001995,
+         "sd": null,
+         "avg": 0.001995
+        }
+       }
+      }
+     },
+     {
+      "display_name": "revenue_per_message_usd",
+      "field_ref": [
+       "field",
+       "revenue_per_message_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "revenue_per_message_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.005263,
+         "q1": 0.005263,
+         "q3": 0.005263,
+         "max": 0.005263,
+         "sd": null,
+         "avg": 0.005263
+        }
+       }
+      }
+     },
+     {
+      "display_name": "margin_per_message_usd",
+      "field_ref": [
+       "field",
+       "margin_per_message_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "margin_per_message_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/GrossMargin",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.003268,
+         "q1": 0.003268,
+         "q3": 0.003268,
+         "max": 0.003268,
+         "sd": null,
+         "avg": 0.003268
+        }
+       }
+      }
+     },
+     {
+      "display_name": "margin_pct",
+      "field_ref": [
+       "field",
+       "margin_pct",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "margin_pct",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/GrossMargin",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 62.1,
+         "q1": 62.1,
+         "q3": 62.1,
+         "max": 62.1,
+         "sd": null,
+         "avg": 62.1
+        }
+       }
+      }
+     },
+     {
+      "display_name": "numerator_over_denominator",
+      "field_ref": [
+       "field",
+       "numerator_over_denominator",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "numerator_over_denominator",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 19.0
+        }
+       }
+      }
+     }
+    ],
+    "initially_published_at": null,
+    "can_write": true,
+    "database_id": 2,
+    "enable_embedding": false,
+    "collection_id": 41,
+    "query_type": "native",
+    "name": "分条数段的每条毛利",
+    "type": "question",
+    "query_average_duration": 30125,
+    "creator_id": 17,
+    "moderation_reviews": [],
+    "updated_at": "2026-11-26T16:43:25.984182+08:00",
+    "made_public_by_id": null,
+    "embedding_params": null,
+    "cache_ttl": null,
+    "dataset_query": {
+     "type": "native",
+     "database": 2,
+     "native": {
+      "query": "-- 分条数段的每条毛利 · Margin by Message Number\n--\n-- 2026-11-26 新建。接替同名的实验卡(原卡 470,当天随能量定价实验 D-594 的七张分组卡一起下线,\n--   SQL 存在 `old/下线的卡/能量定价实验_分条数段的每条毛利.sql`)。\n--   **去掉了 arm 维度和 D-594 模拟那三列**,只留「聊得越多越亏吗」这个指标本身 ——\n--   它和实验无关,实验停了之后定价仍然要看它。\n--\n-- 🛑 本卡**不拆天**(没有 date 列):按条数段整段合计。再按天拆会变成二维,每格分母掉到读不出。\n--\n-- 怎么算出「这个用户和这个角色的第几条」:`soulmap_cost_call` 里一条用户消息会产生多行\n--   (回复、记忆、理解各一次调用),同一条消息共享同一组 (session_id, turn)。\n--   所以先按 (user_id, host_id, session_id, turn) 聚合 = 一条消息及其全部 LLM 成本,\n--   再按 (user_id, host_id) 用 ROW_NUMBER 排序得到序号。\n--\n-- ═══ 🛑 四个必须知道的口径 ═══\n--\n-- ① 🔴 **只看窗口内注册的用户,这不是实验留下的限制,是序号本身要求的。**\n--    `message_no` 是在窗口内从 1 开始数的。老用户窗口内的第 1 条,\n--    实际可能是他和这个角色的第 500 条 ⇒ 放进来会把「1-10 段」里混满老用户的中段对话,\n--    那一段的成本和毛利就不是「刚开始聊」的样子了。\n--    **代价是看不到老用户**,所以本卡读的是「新用户随着聊得深,每条的毛利怎么变」。\n--\n-- ② **`host_id` / `session_id` / `turn` 各有 12~15% 为空,这些行整行排除。**\n--    分母是「三样都齐」的消息。\n--\n-- ③ 每条收入 = 该段消耗的能量 × 每能量到手美元(全窗口到手收入 ÷ 全窗口消耗能量)。\n--    **免费发的能量也在分母里**,所以这个单价已经被免费额度稀释过,\n--    是实际变现率不是标价。现价每条聊天 1 能量。\n--\n-- ④ 到手收入的空值兜底是 **0.85**,不是 0。`subscription_event_log.takehome_percentage`\n--    2026-11-04 09:52:27 才开始有值,用 0 兜底会把前段的到手收入全算成 0。见口径 24.32。\n--\n-- 🛑 排 CityPLX(口径 23.1),**但保留 `app_source='web'`** —— 这是全产品口径的单位经济,\n--    不按端切;而且网页用户没发言就没有成本调用,INNER JOIN 自然不会把他们算进分母。\n--    (网页 2026-11-23 20:48 起开始写 `app_source='web'`,见口径 24.36。)\n-- 🛑 比率的分子 < 10 一律留空(全项目口径)。\n--\n-- 🔴 **窗口为什么是 14 天,不是 30 天** —— 两个理由,口径那个更重要:\n--   ① **成本从 2026-11-06 中午才记齐。** 滚动 14 天的下界永远落在那之后\n--      (今天 11-26 → 下界 11-12),30 天会跨过去,那一段的成本被低估、毛利虚高。\n--   ② 30 天版实测 **49.9 秒**,离 Metabase 的 60 秒上限太近,冷启动会超;14 天是 15.6 秒。\n--   🛑 **这张卡对窗口长度很敏感**:30 天版 101+ 段毛利率 24.6%(143 人),\n--      14 天版 42.3%(91 人) —— 窗口一变,「聊得深的那批人」就换了一批人。\n--      ⇒ **不要拿不同窗口的两次读数直接比**,也不要凭单次读数断言曲线形状。\nWITH window_start AS (\n    SELECT DATE(CURRENT_DATE - INTERVAL 14 DAY) AS t0\n),\nscoped_users AS (\n    -- 见口径 ①:只要窗口内注册的人\n    SELECT CAST(u.id AS CHAR) COLLATE utf8mb4_unicode_ci AS user_key\n    FROM soul_map.`user` u\n    CROSS JOIN window_start\n    WHERE DATE(u.create_time) >= window_start.t0\n      AND COALESCE(u.app_source, '') <> 'city'\n),\ntakehome_per_energy AS (\n    SELECT\n        (SELECT COALESCE(SUM(price_usd * COALESCE(takehome_percentage, 0.85)), 0)\n           FROM soul_map.subscription_event_log\n          WHERE environment = 'PRODUCTION'\n            AND event_type IN ('NON_RENEWING_PURCHASE','INITIAL_PURCHASE','RENEWAL')\n            AND price_usd > 0\n            AND event_at >= (SELECT t0 FROM window_start))\n        /\n        NULLIF((SELECT SUM(amount) FROM soul_map.soulmap_energy_txn\n                 WHERE op = 'consume'\n                   AND created_at >= (SELECT t0 FROM window_start)), 0)\n        AS usd_per_energy_consumed\n),\nchat_turns AS (\n    -- 一行 = 一条用户消息及其全部 LLM 成本\n    SELECT cost.user_id AS user_id, cost.host_id, cost.session_id, cost.turn,\n           MIN(cost.call_at) AS turn_at,\n           SUM(cost.usd)     AS turn_cost_usd\n    FROM soul_map.soulmap_cost_call AS cost\n    INNER JOIN scoped_users ON scoped_users.user_key = cost.user_id\n    WHERE cost.call_at >= (SELECT t0 FROM window_start)\n      AND cost.status = 'ok' AND cost.cost_column = 'chat_llm'\n      AND cost.host_id    IS NOT NULL AND cost.host_id    <> ''\n      AND cost.session_id IS NOT NULL AND cost.session_id <> ''\n      AND cost.turn       IS NOT NULL\n    GROUP BY cost.user_id, cost.host_id, cost.session_id, cost.turn\n),\nnumbered_messages AS (\n    SELECT user_id, host_id, turn_at, turn_cost_usd,\n           ROW_NUMBER() OVER (PARTITION BY user_id, host_id\n                              ORDER BY turn_at, session_id, turn) AS message_no\n    FROM chat_turns\n),\nbanded AS (\n    SELECT\n        CASE WHEN message_no <=  10 THEN '1-10'\n             WHEN message_no <=  20 THEN '11-20'\n             WHEN message_no <=  30 THEN '21-30'\n             WHEN message_no <=  50 THEN '31-50'\n             WHEN message_no <= 100 THEN '51-100'\n             ELSE '101+' END AS message_band,\n        CASE WHEN message_no <=  10 THEN 1 WHEN message_no <=  20 THEN 2\n             WHEN message_no <=  30 THEN 3 WHEN message_no <=  50 THEN 4\n             WHEN message_no <= 100 THEN 5 ELSE 6 END AS band_order,\n        1.0 AS energy_now,          -- 现价:每条聊天 1 能量\n        user_id, turn_cost_usd\n    FROM numbered_messages\n)\nSELECT\n    banded.message_band                                        AS message_band,\n    COUNT(*)                                                   AS messages,\n    COUNT(DISTINCT banded.user_id)                             AS users,\n    ROUND(SUM(banded.turn_cost_usd), 2)                        AS cost_usd,\n    ROUND(SUM(banded.turn_cost_usd) / NULLIF(COUNT(*), 0), 6)  AS cost_per_message_usd,\n    ROUND(SUM(banded.energy_now) * takehome_per_energy.usd_per_energy_consumed\n          / NULLIF(COUNT(*), 0), 6)                            AS revenue_per_message_usd,\n    ROUND((SUM(banded.energy_now) * takehome_per_energy.usd_per_energy_consumed\n           - SUM(banded.turn_cost_usd)) / NULLIF(COUNT(*), 0), 6) AS margin_per_message_usd,\n    -- 分子 < 10 条消息不给比率\n    CASE WHEN COUNT(*) >= 10\n         THEN ROUND(100.0 * (SUM(banded.energy_now) * takehome_per_energy.usd_per_energy_consumed\n                             - SUM(banded.turn_cost_usd))\n              / NULLIF(SUM(banded.energy_now) * takehome_per_energy.usd_per_energy_consumed, 0), 1)\n         END                                                   AS margin_pct,\n    CONCAT(ROUND(SUM(banded.turn_cost_usd), 2), ' USD / ', COUNT(*), ' 条')\n                                                               AS numerator_over_denominator\nFROM banded\nCROSS JOIN takehome_per_energy\nGROUP BY banded.message_band, banded.band_order, takehome_per_energy.usd_per_energy_consumed\nORDER BY banded.band_order\n"
+     }
+    },
+    "id": 479,
+    "parameter_mappings": [],
+    "display": "table",
+    "entity_id": "0bV0wgalWPmsLcw5jvMGQ",
+    "collection_preview": true,
+    "visualization_settings": {},
+    "metabase_version": "v0.49.11 (b894f2d)",
+    "parameters": [],
+    "dataset": false,
+    "created_at": "2026-11-26T16:43:09.738478+08:00",
+    "public_uuid": null
+   },
+   "updated_at": "2026-11-26T16:43:20.541821+08:00",
+   "col": 0,
+   "id": 694,
+   "parameter_mappings": [],
+   "card_id": 479,
+   "entity_id": "W6_C-FiT-0nPiQw30WW0e",
+   "visualization_settings": {},
+   "size_y": 6,
+   "dashboard_id": 25,
+   "created_at": "2026-11-26T16:43:20.541821+08:00",
+   "row": 60
+  },
+  {
+   "size_x": 24,
+   "dashboard_tab_id": null,
+   "series": [],
+   "action_id": null,
+   "collection_authority_level": null,
+   "card": {
+    "description": null,
+    "archived": false,
+    "collection_position": null,
+    "table_id": null,
+    "result_metadata": [
+     {
+      "display_name": "country",
+      "field_ref": [
+       "field",
+       "country",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "country",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": "type/Country",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 1.0,
+         "average-length": 2.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "active_users",
+      "field_ref": [
+       "field",
+       "active_users",
+       {
+        "base-type": "type/BigInteger"
+       }
+      ],
+      "name": "active_users",
+      "base_type": "type/BigInteger",
+      "effective_type": "type/BigInteger",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 3973.0,
+         "q1": 3973.0,
+         "q3": 3973.0,
+         "max": 3973.0,
+         "sd": null,
+         "avg": 3973.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "buyers",
+      "field_ref": [
+       "field",
+       "buyers",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "buyers",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 182.0,
+         "q1": 182.0,
+         "q3": 182.0,
+         "max": 182.0,
+         "sd": null,
+         "avg": 182.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "energy_consumed",
+      "field_ref": [
+       "field",
+       "energy_consumed",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "energy_consumed",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 154468.6,
+         "q1": 154468.6,
+         "q3": 154468.6,
+         "max": 154468.6,
+         "sd": null,
+         "avg": 154468.6
+        }
+       }
+      }
+     },
+     {
+      "display_name": "takehome_usd",
+      "field_ref": [
+       "field",
+       "takehome_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "takehome_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 578.12,
+         "q1": 578.12,
+         "q3": 578.12,
+         "max": 578.12,
+         "sd": null,
+         "avg": 578.12
+        }
+       }
+      }
+     },
+     {
+      "display_name": "cost_usd",
+      "field_ref": [
+       "field",
+       "cost_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "cost_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": "type/Cost",
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 656.41,
+         "q1": 656.41,
+         "q3": 656.41,
+         "max": 656.41,
+         "sd": null,
+         "avg": 656.41
+        }
+       }
+      }
+     },
+     {
+      "display_name": "takehome_usd_per_energy",
+      "field_ref": [
+       "field",
+       "takehome_usd_per_energy",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "takehome_usd_per_energy",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": 0.003743,
+         "q1": 0.003743,
+         "q3": 0.003743,
+         "max": 0.003743,
+         "sd": null,
+         "avg": 0.003743
+        }
+       }
+      }
+     },
+     {
+      "display_name": "numerator_over_denominator",
+      "field_ref": [
+       "field",
+       "numerator_over_denominator",
+       {
+        "base-type": "type/Text"
+       }
+      ],
+      "name": "numerator_over_denominator",
+      "base_type": "type/Text",
+      "effective_type": "type/Text",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Text": {
+         "percent-json": 0.0,
+         "percent-url": 0.0,
+         "percent-email": 0.0,
+         "percent-state": 0.0,
+         "average-length": 24.0
+        }
+       }
+      }
+     },
+     {
+      "display_name": "net_usd",
+      "field_ref": [
+       "field",
+       "net_usd",
+       {
+        "base-type": "type/Decimal"
+       }
+      ],
+      "name": "net_usd",
+      "base_type": "type/Decimal",
+      "effective_type": "type/Decimal",
+      "semantic_type": null,
+      "fingerprint": {
+       "global": {
+        "distinct-count": 1,
+        "nil%": 0.0
+       },
+       "type": {
+        "type/Number": {
+         "min": -78.29,
+         "q1": -78.29,
+         "q3": -78.29,
+         "max": -78.29,
+         "sd": null,
+         "avg": -78.29
+        }
+       }
+      }
+     }
+    ],
+    "initially_published_at": null,
+    "can_write": true,
+    "database_id": 2,
+    "enable_embedding": false,
+    "collection_id": 41,
+    "query_type": "native",
+    "name": "分国家每能量到手",
+    "type": "question",
+    "query_average_duration": 17006,
+    "creator_id": 17,
+    "moderation_reviews": [],
+    "updated_at": "2026-11-27T16:14:22.432448+08:00",
+    "made_public_by_id": null,
+    "embedding_params": null,
+    "cache_ttl": null,
+    "dataset_query": {
+     "type": "native",
+     "database": 2,
+     "native": {
+      "query": "-- 分国家每能量到手 · Revenue per Energy by Country\n--\n-- 🔴 2026-11-27 改源:国家列 `user.country_code` → `user.home_country`,输出列名 country_code → country。\n--    原因:`country_code` 是**账号 / 商店地区**,不是地理国家。实测 11-01 起 13,228 个账号,\n--    它和 `home_country` 只有 **65.6%** 一致 —— `home_country='IN'` 的人里\n--    **1,995 个被标成 US、1,461 个被标成 GB**,近一半印度用户算到了英美头上。\n--    `home_country` 填充 99.99%,就在 user 表上。见口径文件第八·五节(2026-11-13 裁决)。\n--    实测影响(近 30 天):活跃人数 IN 2,109 → **3,971**、US 1,292 → **216**、GB 808 → **整行消失**;\n--    到手收入 IN $368.96 → $578.12、US $140.44 → $62.70。澳洲不受影响(仍是 4 个买家、读不出)。\n--    渲染器 render_dashboard.py 的 cols 同步改。\n--\n-- 2026-11-26 新建。接替同名的实验卡(原卡 474,当天随能量定价实验 D-594 的七张分组卡一起下线,\n--   SQL 存在 `old/下线的卡/能量定价实验_分国家每能量到手.sql`)。\n--   **去掉了 arm 维度**,并把人群从「实验期注册的新用户」放开到**全部活跃用户** ——\n--   这个指标问的是「这个国家的一能量值多少钱」,老用户才是收入主力,只看新用户会读偏。\n--\n-- 🛑 本卡**不拆天**:按国家整段合计。按天拆每国每天的能量消耗掉到读不出。\n--\n-- ═══ 🛑 五个必须知道的口径 ═══\n--\n-- ① **每能量到手 = 该国用户的到手收入 ÷ 该国用户消耗的能量。**\n--    免费发的能量也在分母里 ⇒ 这是**实际变现率,不是标价**。\n--\n-- ② **分母是「谁消耗的能量」,分子是「谁付的钱」,两边不是同一批人** ——\n--    绝大多数消耗能量的人从来没付过钱。这正是这个指标要回答的:\n--    一个国家的用户平均要白用多少能量,才换来一块钱。\n--\n-- ③ 🔴 **人群 = 窗口内有能量消耗、或有购买的用户**(两边取并集),不是该国全部注册用户。\n--    拿全部注册用户当分母会把从不活跃的号算进去,`active_users` 这一列就没法读。\n--\n-- ④ 到手收入的空值兜底是 **0.85**,不是 0。`subscription_event_log.takehome_percentage`\n--    2026-11-04 09:52:27 才开始有值,用 0 兜底会把前段的到手收入全算成 0。见口径 24.32。\n--\n-- ⑤ **窗口 14 天**,和「分条数段的每条毛利」保持一致:成本从 2026-11-06 中午才记齐,\n--    滚动 14 天的下界永远落在那之后。\n--\n-- 🛑 `soulmap_energy_txn.source = 'manual_adjust'` 是后台手工改余额,不算消耗(liwen 588 §1 第 7 项)。\n-- 🛑 排 CityPLX(口径 23.1),**但保留 `app_source='web'`** —— 这是全产品口径的单位经济,\n--    不按端切。网页 2026-11-23 20:48 起开始写 `app_source='web'`,见口径 24.36。\n-- 🛑 **两道「读不出」的闸,任一不过就不给比率**(那一列会写明是哪一道):\n--    ① 能量消耗 < 100 —— 分母太小。\n--    ② 🔴 **买家 < 10 人** —— 分子太小。这一道是实测逼出来的:\n--       澳洲 14 天只有 4 个买家,其中**一个人就占 $404**(11-19~11-26 全平台第一),\n--       每能量到手因此显示 $0.0089、全场最高。那不是「澳洲用户值钱」,\n--       是一个人撑起了一整行。不加这道闸,这张卡最容易被读错的就是这种格子。\n-- 🛑 `HAVING active_users >= 20`:人数太少的国家不单独成行,避免一两个人决定一个国家的读数。\nWITH window_start AS (\n    SELECT DATE(CURRENT_DATE - INTERVAL 14 DAY) AS t0\n),\nenergy_consumed_by_user AS (\n    SELECT txn.user_id AS user_key, SUM(txn.amount) AS energy_consumed\n    FROM soul_map.soulmap_energy_txn AS txn\n    CROSS JOIN window_start\n    WHERE txn.op = 'consume'\n      AND txn.source <> 'manual_adjust'      -- 见卡头\n      AND txn.created_at >= window_start.t0\n    GROUP BY txn.user_id\n),\ntakehome_by_user AS (\n    SELECT sel.user_id AS user_id_int,\n           SUM(sel.price_usd * COALESCE(sel.takehome_percentage, 0.85)) AS takehome_usd\n    FROM soul_map.subscription_event_log AS sel\n    CROSS JOIN window_start\n    WHERE sel.environment = 'PRODUCTION'\n      AND sel.event_type IN ('NON_RENEWING_PURCHASE','INITIAL_PURCHASE','RENEWAL')\n      AND sel.price_usd > 0\n      AND sel.event_at >= window_start.t0\n    GROUP BY sel.user_id\n),\nactive_user_keys AS (\n    -- 见口径 ③:消耗过能量的 ∪ 付过钱的\n    SELECT user_key FROM energy_consumed_by_user\n    UNION\n    SELECT CAST(user_id_int AS CHAR) COLLATE utf8mb4_unicode_ci FROM takehome_by_user\n),\nscoped_users AS (\n    SELECT u.id                                          AS user_id_int,\n           CAST(u.id AS CHAR) COLLATE utf8mb4_unicode_ci AS user_key,\n           u.home_country                                AS country\n    FROM soul_map.`user` AS u\n    INNER JOIN active_user_keys\n            ON active_user_keys.user_key = CAST(u.id AS CHAR) COLLATE utf8mb4_unicode_ci\n    WHERE COALESCE(u.app_source, '') <> 'city'\n),\ncost_by_user AS (\n    SELECT cost.user_id AS user_key, SUM(cost.usd) AS cost_usd\n    FROM soul_map.soulmap_cost_call AS cost\n    CROSS JOIN window_start\n    INNER JOIN scoped_users ON scoped_users.user_key = cost.user_id\n    WHERE cost.status = 'ok' AND cost.call_at >= window_start.t0\n    GROUP BY cost.user_id\n)\nSELECT\n    scoped_users.country                                                 AS country,\n    COUNT(*)                                                             AS active_users,\n    SUM(CASE WHEN takehome_by_user.takehome_usd > 0 THEN 1 ELSE 0 END)   AS buyers,\n    COALESCE(SUM(energy_consumed_by_user.energy_consumed), 0)            AS energy_consumed,\n    ROUND(COALESCE(SUM(takehome_by_user.takehome_usd), 0), 2)            AS takehome_usd,\n    ROUND(COALESCE(SUM(cost_by_user.cost_usd), 0), 2)                    AS cost_usd,\n    -- 两道闸:能量 < 100 或 买家 < 10 都不给比率,见卡头\n    CASE WHEN COALESCE(SUM(energy_consumed_by_user.energy_consumed), 0) < 100\n            OR SUM(CASE WHEN takehome_by_user.takehome_usd > 0 THEN 1 ELSE 0 END) < 10\n         THEN NULL\n         ELSE ROUND(COALESCE(SUM(takehome_by_user.takehome_usd), 0)\n                    / NULLIF(SUM(energy_consumed_by_user.energy_consumed), 0), 6) END\n                                                                         AS takehome_usd_per_energy,\n    CASE WHEN COALESCE(SUM(energy_consumed_by_user.energy_consumed), 0) < 100\n         THEN CONCAT(COALESCE(SUM(energy_consumed_by_user.energy_consumed), 0), ' 能量 · 读不出(分母<100)')\n         WHEN SUM(CASE WHEN takehome_by_user.takehome_usd > 0 THEN 1 ELSE 0 END) < 10\n         THEN CONCAT(ROUND(COALESCE(SUM(takehome_by_user.takehome_usd), 0), 2), ' USD / ',\n                     COALESCE(SUM(energy_consumed_by_user.energy_consumed), 0), ' 能量 · 读不出(买家 ',\n                     SUM(CASE WHEN takehome_by_user.takehome_usd > 0 THEN 1 ELSE 0 END), ' 人 <10)')\n         ELSE CONCAT(ROUND(COALESCE(SUM(takehome_by_user.takehome_usd), 0), 2), ' USD / ',\n                     COALESCE(SUM(energy_consumed_by_user.energy_consumed), 0), ' 能量') END\n                                                                         AS numerator_over_denominator,\n    ROUND(COALESCE(SUM(takehome_by_user.takehome_usd), 0)\n          - COALESCE(SUM(cost_by_user.cost_usd), 0), 2)                  AS net_usd\nFROM scoped_users\nLEFT JOIN energy_consumed_by_user ON energy_consumed_by_user.user_key  = scoped_users.user_key\nLEFT JOIN takehome_by_user        ON takehome_by_user.user_id_int      = scoped_users.user_id_int\nLEFT JOIN cost_by_user            ON cost_by_user.user_key             = scoped_users.user_key\nGROUP BY scoped_users.country\nHAVING active_users >= 20\nORDER BY energy_consumed DESC"
+     }
+    },
+    "id": 480,
+    "parameter_mappings": [],
+    "display": "table",
+    "entity_id": "wBfT6Jtq9hlQooq9FxgQ9",
+    "collection_preview": true,
+    "visualization_settings": {},
+    "metabase_version": "v0.49.11 (b894f2d)",
+    "parameters": [],
+    "dataset": false,
+    "created_at": "2026-11-26T16:43:11.464451+08:00",
+    "public_uuid": null
+   },
+   "updated_at": "2026-11-26T16:43:20.541821+08:00",
+   "col": 0,
+   "id": 695,
+   "parameter_mappings": [],
+   "card_id": 480,
+   "entity_id": "NV2UFCiODzmM7hohRR95d",
+   "visualization_settings": {},
+   "size_y": 6,
+   "dashboard_id": 25,
+   "created_at": "2026-11-26T16:43:20.541821+08:00",
+   "row": 66
+  }
+ ],
+ "param_values": null,
+ "initially_published_at": null,
+ "can_write": true,
+ "tabs": [],
+ "enable_embedding": false,
+ "collection_id": 41,
+ "show_in_getting_started": false,
+ "name": "能量成本与毛利 · Energy Cost & Margin",
+ "width": "fixed",
+ "caveats": null,
+ "collection_authority_level": null,
+ "creator_id": 17,
+ "updated_at": "2026-11-26T16:37:20.5023+08:00",
+ "made_public_by_id": null,
+ "embedding_params": null,
+ "cache_ttl": null,
+ "id": 25,
+ "position": null,
+ "entity_id": "UfB2PPvXNFqzjcRohtzyG",
+ "param_fields": null,
+ "last-edit-info": {
+  "id": 17,
+  "email": "wangchi@letskix.com",
+  "first_name": "Chi",
+  "last_name": "Wang",
+  "timestamp": "2026-11-26T16:43:21+08:00"
+ },
+ "collection": {
+  "authority_level": null,
+  "description": null,
+  "archived": false,
+  "slug": "report",
+  "name": "Report",
+  "personal_owner_id": null,
+  "type": null,
+  "id": 41,
+  "entity_id": "QJDTu1yTFWqYX_48keOOE",
+  "location": "/",
+  "namespace": null,
+  "is_personal": false,
+  "created_at": "2026-07-03T14:06:49.506236+08:00"
+ },
+ "parameters": [],
+ "auto_apply_filters": true,
+ "created_at": "2026-11-18T16:27:41.356616+08:00",
+ "public_uuid": null,
+ "points_of_interest": null
+}
