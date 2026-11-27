@@ -138,6 +138,12 @@ jobs:
         if: always()
         run: python3 log_run.py
 
+      # 2026-11-27:连续几轮抓不到的卡推一条提醒。页面上它们只是「沿用旧值」,
+      # 不报错也不缺卡,下面的 guard 拦不住。脚本自己永远返回 0。
+      - name: check stale cards
+        if: always()
+        run: python3 check_stale_cards.py
+
       - name: guard
         run: |
           n=$(python3 -c "import json;print(len(json.load(open('raw_metrics.json')).get('metrics',{})))")

@@ -107,6 +107,11 @@ if ! fetch; then log "抓数出错或超过 40 分钟,不发布"; python3 log_ru
 # 这一轮抓了多久、哪几张慢、哪几张没抓到 → logs/runs.jsonl
 python3 log_run.py >> "$LOG" 2>&1 || log "⚠️ 记录运行日志失败(不影响发布)"
 
+# 🔴 2026-11-27 新增:连续几轮抓不到的卡要有人知道。
+#    页面上这些卡只是「沿用旧值」,不报错、不缺卡,门槛 35 那条护栏也拦不住 ——
+#    实测 11-25~11-27 有四张卡长期抓不到,一直没人发现。
+python3 check_stale_cards.py >> "$LOG" 2>&1 || log "⚠️ 陈旧卡检查失败(不影响发布)"
+
 # 护栏:抓到的卡太少就不发布,线上保留上一版,别出半截页面
 n=$(python3 -c "import json;print(len(json.load(open('raw_metrics.json')).get('metrics',{})))" 2>/dev/null || echo 0)
 if [ "$n" -lt 35 ]; then log "❌ 只抓到 $n 张卡(门槛 35),不发布,线上保留上一版"
