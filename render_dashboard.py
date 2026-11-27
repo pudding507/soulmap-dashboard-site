@@ -979,13 +979,20 @@ SECTIONS = [
                   ("g_refill","定时回满 Refill","int"),
                   ("g_push_enable","开推送 Push","int"),
                   ("g_recall","召回 Win-back","int"),
+                  # 2026-11-28 从兜底列拆出来的六列,见 SQL 头部同日说明
+                  ("g_checkin","签到 Check-in","int"),
+                  ("g_ad","看广告 Rewarded Ad","int"),
+                  ("g_invite","邀请 Invite","int"),
+                  ("g_gift","活动礼包 Campaign Gift","int"),
+                  ("g_creator","创作者奖励 Creator Reward","int"),
+                  ("g_oldplus","老 Plus 换算 Legacy Plus","int"),
                   ("g_other_bonus","其他来源 Other","int"),
                   ("g_purchase","购买 Purchase","int"),
                   ("g_subscription","订阅额度 Plan","int"),
                   ("g_total","合计发放 Total","int"),
                   ("granted_users","拿到能量的人 Users","int")],
             bar=["g_total","granted_users"],
-            note='一行一天,来源做列:今天一共发了多少能量、从哪来。其他来源是兜底列,没单独成列的来源都在里面,所以八个来源列加起来正好等于合计。改价补偿和换单位不算发放,整个排除在本卡之外。三层能量的过期规则不同,本卡只数发出去多少,不要拿合计当用户手上还有多少,那看能量钱包现状。商品名已不带数字,不能从名字推能量数。｜ Daily energy grants by source. Other is a catch-all, so the eight source columns add up to the total.'
+            note='一行一天,来源做列:今天一共发了多少能量、从哪来。其他来源是兜底列,没单独成列的来源都在里面,所以各个来源列加起来正好等于合计。2026-11-28 从里面拆出了签到、看广告、邀请、活动礼包、创作者奖励、老 Plus 换算六类,拆之前它们全挤在其他来源里,那一列曾经比最大的免费起始还大。改价补偿和换单位不算发放,整个排除在本卡之外。三层能量的过期规则不同,本卡只数发出去多少,不要拿合计当用户手上还有多少,那看能量钱包现状。商品名已不带数字,不能从名字推能量数。｜ Daily energy grants by source. Other is a catch-all, so the source columns add up to the total. Six sources were split out of it on 2026-11-28.'
             )),
    ("energy_wallet_snapshot", "能量钱包现状 · Energy Wallet Snapshot", "table",
        # 2026-11-04 新建(Metabase 卡 460)。原「钱包三层」的存量那一半,一行一个层、没有日期。
