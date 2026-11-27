@@ -60,8 +60,8 @@
    "chat_engaged_new_user_rate",
    "growth_dau",
    "growth_version_adoption",
-   "discover_character_daily_ctr",
-   "discover_character_coverage"
+   "discover_character_coverage",
+   "discover_click_position_distribution"
   ]
  }
 }
