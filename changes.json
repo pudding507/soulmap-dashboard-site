@@ -1,6 +1,114 @@
 {
  "items": [
   {
+   "at": "2026-11-27 18:42",
+   "date": "2026-11-27",
+   "mmdd_hhmm": "11-27 18:42",
+   "what": "Type B 英文 Slot B 从 G69Z-E 换成 G75Z-E",
+   "what_en": "Type B English Slot B switched from G69Z-E to G75Z-E",
+   "note": "同一个模型,换成像 CHAI 的提示词,并加了一个未成年检查 —— 此前 Type B 没有聊天内的年龄检查。每条成本和 Slot A 相当,首段文字变慢(约 4 秒,原来约 1.1 秒)。Slot A 不变。之前的 Slot A / Slot B 对比到这一刻为止。",
+   "note_en": "Same model, prompts rewritten to sound like CHAI, plus a minor-age check inside the chat — Type B had no in-chat age check before. Cost per reply is on par with Slot A; time to first text is slower (about 4 s, previously about 1.1 s). Slot A is unchanged. Earlier Slot A / Slot B comparisons end at this moment.",
+   "type": "维护",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-27 17:41",
+   "date": "2026-11-27",
+   "mmdd_hhmm": "11-27 17:41",
+   "what": "A Host v2 新回复链路上线,实测只覆盖约 2%",
+   "what_en": "A Host v2 reply lane live, measured at only ~2% of Type A turns",
+   "note": "两份来件说法不一样:算法那份写「17:39 上线」并按已生效描述,全组那份写「开关默认关,只有 4 个用户」。11-28 实测:新链路 a2_lane_v1 共 180 轮,同期主链路 a_host_rollout_v1 有 9,096 轮,新链路约占 2%。所以跨 11-27 比 Type A 指标,不能说成「换了回复链路之后」。成本表里 a2_lane 在 source 列,不在 caller 列。",
+   "note_en": "The two changelogs disagree: the algorithm one says 'live at 17:39' and describes it as in effect, while the all-team one says the flag is off by default with only 4 users. Measured on 11-28: the new lane (component='a2_lane_v1') has 180 turns against 9,096 on the existing lane (a_host_rollout_v1) over the same period — about 2%, not a full rollout. So Type A metrics across 11-27 must not be described as 'after the reply lane changed'. In the cost table, a2_lane appears in the source column, not caller.",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-27 17:40",
+   "date": "2026-11-27",
+   "mmdd_hhmm": "11-27 17:40",
+   "what": "Type A 儿童保护检查改为先用快模型",
+   "what_en": "Type A child-protection check now uses the fast model first",
+   "note": "先用快模型判,拿不准才上 pro 复查。检查耗时从约 7.8 秒降到 2.4~3.1 秒。这一条没有开关,所有 Type A 聊天都生效,所以 Type A 的回复速度从这里切,按 build_sha='8a3854328' 读。",
+   "note_en": "The fast model judges first and pro only re-checks when the result is uncertain. Check latency drops from about 7.8 s to 2.4–3.1 s. This change has no feature flag and applies to every Type A chat, so Type A response speed is cut here; read it by build_sha='8a3854328'.",
+   "type": "维护",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-26 14:28",
+   "date": "2026-11-26",
+   "mmdd_hhmm": "11-26 14:28",
+   "what": "网页付款切到 Stripe 正式账户",
+   "what_en": "Website payments switched to the live Stripe account",
+   "note": "这之后 store='stripe' 的单才是真钱,之前都是测试卡。读数四件事:一、order_id 开头 cs_live_ 是正式、cs_test_ 是沙盒;二、网页付款在 subscription_event_log 里的 product_id 是 Stripe 的 prod_ 开头,不是 com.soulmap.energy.*;三、付款页 24 小时不付会过期并记成 user_cancel,result_at 是过期时刻不是用户取消,不能当犹豫时长;四、第一笔正式付款是 11-27 15:22 测试号 88413 的验证单,要剔。",
+   "note_en": "Only store='stripe' orders after this are real money; everything before used test cards. Four things when reading: (1) order_id starting cs_live_ is live, cs_test_ is sandbox; (2) website payments carry Stripe's product_id (prod_…) in subscription_event_log, not com.soulmap.energy.*; (3) an unpaid payment page expires after 24 hours and is recorded as user_cancel, with result_at set to the expiry moment rather than a user cancellation, so it cannot be read as hesitation time; (4) the first live payment, 11-27 15:22, is test account 88413's verification order and must be excluded.",
+   "type": "支付",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-26 11:12",
+   "date": "2026-11-26",
+   "mmdd_hhmm": "11-26 11:12",
+   "what": "新网页在 soulmap.org 上线",
+   "what_en": "New website live on soulmap.org",
+   "note": "这之前的 app_source='web' 账号有 146 个,基本都是团队测试号,要全部剔掉;之后到 11-27 20:00 新增 171 个才是真实用户。网页同日起不卖 $0.49,充值页从 $0.99 起。",
+   "note_en": "The 146 app_source='web' accounts created before this are essentially team test accounts and must all be excluded; the 171 added by 11-27 20:00 are the first real users. From the same day the website no longer sells $0.49 and its recharge page starts at $0.99.",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-25 18:05",
+   "date": "2026-11-25",
+   "mmdd_hhmm": "11-25 18:05",
+   "what": "新用户起始能量 A/B 开跑",
+   "what_en": "New-user starting Energy A/B starts (A 20, B 10)",
+   "note": "新注册用户按 ID 五五开:A 组起始 20(和原来一样),B 组 10,其余流程不变。分组看 soulmap_energy_start_arm。到 11-27 20:01 共 948 人,App 753、网页 195。跨这个时刻比新用户起始余额没有意义;网页和 App 要分开读。",
+   "note_en": "Newly registered users are split 50/50 by ID: group A starts with 20 (as before), group B with 10; everything after that is unchanged. Groups are in soulmap_energy_start_arm. By 11-27 20:01 there were 948 users: 753 on the app, 195 on the website. Comparing new users' starting balance across this moment is meaningless, and the website must be read separately from the app.",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-25 18:03",
+   "date": "2026-11-25",
+   "mmdd_hhmm": "11-25 18:03",
+   "what": "iOS 上已有的 Type B 会话恢复可聊",
+   "what_en": "On iOS, existing Type B chats can continue again",
+   "note": "以前开关生效时连已经在聊的 Type B 会话也藏起来,现在已有会话照常聊,只是开不了新的。iOS 的 Type B 消息量和会话数从这里上升,是规则改了,不是用户行为变了。",
+   "note_en": "Previously the switch also hid Type B chats that were already going; now existing chats continue as normal and only new ones are blocked. iOS Type B message and conversation counts rise from here because the rule changed, not user behaviour.",
+   "type": "其他",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-25 16:40",
+   "date": "2026-11-25",
+   "mmdd_hhmm": "11-25 16:40",
+   "what": "安卓激励广告开始到账",
+   "what_en": "Android rewarded ads start crediting Energy",
+   "note": "此前 AdMob 后台没存回调地址,补上之后第一条回调才到。安卓的能量来源 ad 在这之前恒为 0,不是没人看广告。",
+   "note_en": "The callback URL had never been saved in the AdMob console; the first callback arrived only after it was. Android Energy source 'ad' is zero before this point — that is not users failing to watch ads.",
+   "type": "运营",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
+   "at": "2026-11-24 15:16",
+   "date": "2026-11-24",
+   "mmdd_hhmm": "11-24 15:16",
+   "what": "Type B 印地语回复改用更便宜的服务商",
+   "what_en": "Type B Hinglish replies moved to a cheaper provider",
+   "note": "同一个模型、同一套提示词,只换服务商,和 11-19 英语那次做法一样。阿拉伯语盲测明显变差,没有换。比 Type B 的回复成本要分服务商看,字段是 soulmap_cost_call.provider。",
+   "note_en": "Same model, same prompts, only the provider changed, as in the 11-19 English switch. Arabic tested clearly worse in blind tests and was left alone. When comparing Type B reply cost, split by provider: soulmap_cost_call.provider.",
+   "type": "维护",
+   "is_cutover": true,
+   "on_board": true
+  },
+  {
    "at": "2026-11-24 14:10",
    "date": "2026-11-24",
    "mmdd_hhmm": "11-24 14:10",
@@ -356,5 +464,5 @@
   }
  },
  "stale": false,
- "fetched_at": "2026-11-27 21:20"
+ "fetched_at": "2026-11-28 12:20"
 }
